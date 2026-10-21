@@ -1,0 +1,9 @@
+{
+  "transform": {"scale": [1.0, 1.0, 1.0], "orientation_xyzw": [0.0, 0.0, 0.0, 1.0], "pivot": [0.0, 0.0, 0.0]},
+  "collision": {"mode": "parent_derived"},
+  "face_anchors": [],
+  "animation_binding": {"mode": "static"},
+  "source_realms": [],
+  "intended_realms": ["SR1", "SR2"],
+  "target_parent_availability": {"SR1": ["slime.alpha", "slime.beta"], "SR2": ["slime.alpha", "slime.beta"]}
+}

@@ -1,0 +1,99 @@
+{
+  "case": "glimmer_remix",
+  "description": "Conflicts with glimmer_pack: same bundle path and same content id, differing only in case.",
+  "evidence": {
+    "code": {
+      "assemblies": []
+    },
+    "config_files": [],
+    "content": {
+      "asset_bundles": [
+        {
+          "path": "SRML/Mods/FIXTUREGLIMMER/Glimmer.bundle",
+          "sha256": "bcfca04619d357b7eeffbbdf597b303252980342b6b684aabca00d94a720fa46",
+          "size": 2048
+        }
+      ],
+      "content_files": [],
+      "content_ids": [
+        "slime.FIXTURE_GLIMMER"
+      ]
+    },
+    "extractor": {
+      "id": "fixture.static-extractor",
+      "version": "1.0.0"
+    },
+    "harmony": {
+      "patch_all_calls": 0,
+      "patches": []
+    },
+    "il2cpp": {
+      "il2cpp_type_references": 0,
+      "interop_references": false,
+      "type_injection": false
+    },
+    "manifest_id": null,
+    "mod_id": "fixture.glimmer_remix",
+    "native": {
+      "detour_indicators": [],
+      "function_pointer_hooks": false,
+      "pinvoke_modules": []
+    },
+    "references": [],
+    "reflection": {
+      "dynamic_invoke": false,
+      "emit": false,
+      "non_public_access": false,
+      "type_lookup_by_name": false
+    },
+    "schema": "bridge-mod-static-evidence",
+    "schema_version": 1,
+    "synthetic": true
+  },
+  "expect": {
+    "classification": "CONTENT_ONLY",
+    "diagnostic_codes": [],
+    "parse": "OK",
+    "portability": {
+      "SR1": "PORTABLE",
+      "SR2": "ADAPTER_REQUIRED"
+    },
+    "rule": "R5",
+    "unit_status": {
+      "SR1": "READY",
+      "SR2": "PENDING_ADAPTER"
+    }
+  },
+  "input": {
+    "document": {
+      "author": "Fixture Author",
+      "dependencies": [],
+      "id": "fixture.glimmer_remix",
+      "name": "Fixture Glimmer Remix",
+      "version": "1.0.0"
+    },
+    "files": [
+      {
+        "path": "SRML/Mods/FixtureGlimmerRemix/modinfo.json",
+        "sha256": "4d65a870b743590dcdab91ac3ab0d204ea58c2f55ef5684aed8c1b2ed7de039a",
+        "size": 128
+      },
+      {
+        "path": "SRML/Mods/FIXTUREGLIMMER/Glimmer.bundle",
+        "sha256": "bcfca04619d357b7eeffbbdf597b303252980342b6b684aabca00d94a720fa46",
+        "size": 2048
+      }
+    ],
+    "format": "SRML_MODINFO",
+    "raw_text": null,
+    "source": {
+      "kind": "LOCAL_PATH",
+      "path": "SRML/Mods/FixtureGlimmerRemix/modinfo.json",
+      "provider_id": null,
+      "ref": null,
+      "synthetic": true
+    }
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

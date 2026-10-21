@@ -1,0 +1,161 @@
+{
+  "behaviour_profile": {
+    "capabilities": {
+      "diet.fire_feeding": {
+        "mode": "UNSUPPORTED"
+      },
+      "hazard.aura": {
+        "mode": "NATIVE"
+      },
+      "movement.flight": {
+        "adapter": "bridge.adapter.flight",
+        "implemented": false,
+        "mode": "BRIDGE_ADAPTER"
+      },
+      "standard.diet": {
+        "mode": "NATIVE"
+      },
+      "standard.plort_production": {
+        "mode": "NATIVE"
+      },
+      "standard.vacpack": {
+        "mode": "NATIVE"
+      }
+    },
+    "realm": "SR2",
+    "schema": "bridge-target-behaviour-profile",
+    "schema_version": 1,
+    "synthetic": true
+  },
+  "build_fingerprint": "synthetic-sr2-target-build-1",
+  "facts_evidence": "synthetic copy of lab facts",
+  "loader": "MelonLoader",
+  "material_profile": {
+    "realm": "SR2",
+    "schema": "bridge-target-material-profile",
+    "schema_version": 1,
+    "synthetic": true,
+    "templates": [
+      {
+        "alpha_modes": [
+          "BLEND",
+          "OPAQUE"
+        ],
+        "families": [
+          "slime_body"
+        ],
+        "id": "fixture_slime",
+        "shader": "Fixture/SR2/Slime",
+        "supports": {
+          "albedo.texture": {
+            "property": "_FixtureAlbedo",
+            "required": true
+          },
+          "gradient.top": {
+            "property": "_FixtureTop",
+            "required": false
+          },
+          "mask.texture": {
+            "property": "_FixtureMask",
+            "required": false
+          }
+        },
+        "uv_sets": [
+          0
+        ]
+      },
+      {
+        "alpha_modes": [
+          "BLEND"
+        ],
+        "families": [
+          "vfx"
+        ],
+        "id": "fixture_vfx",
+        "shader": "Fixture/SR2/Particle",
+        "supports": {
+          "albedo.texture": {
+            "property": "_FixtureMain",
+            "required": false
+          }
+        },
+        "uv_sets": [
+          0
+        ]
+      }
+    ]
+  },
+  "realm": "SR2",
+  "registration": {
+    "ATTACH_BEHAVIOUR": {
+      "api": "synthetic.fixture.SR2.ATTACH_BEHAVIOUR",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "BIND_PERSISTENCE": {
+      "api": "synthetic.fixture.SR2.BIND_PERSISTENCE",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "BUILD_MATERIALS": {
+      "api": "synthetic.fixture.SR2.BUILD_MATERIALS",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "BUILD_PREFAB": {
+      "api": "synthetic.fixture.SR2.BUILD_PREFAB",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "REFERENCE_NATIVE_PLORT": {
+      "api": "synthetic.fixture.SR2.REFERENCE_NATIVE_PLORT",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "REGISTER_DIET": {
+      "api": "synthetic.fixture.SR2.REGISTER_DIET",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "REGISTER_ICON": {
+      "api": "synthetic.fixture.SR2.REGISTER_ICON",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "REGISTER_LOCALIZATION": {
+      "api": "synthetic.fixture.SR2.REGISTER_LOCALIZATION",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "REGISTER_MARKET": {
+      "api": "synthetic.fixture.SR2.REGISTER_MARKET",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "REGISTER_PEDIA": {
+      "api": "synthetic.fixture.SR2.REGISTER_PEDIA",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "REGISTER_PLORT": {
+      "api": "synthetic.fixture.SR2.REGISTER_PLORT",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "REGISTER_SLIME_DEFINITION": {
+      "api": "synthetic.fixture.SR2.REGISTER_SLIME_DEFINITION",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    },
+    "RESERVE_CANONICAL_IDENTITY": {
+      "api": "synthetic.fixture.SR2.RESERVE_CANONICAL_IDENTITY",
+      "evidence": "SYNTHETIC",
+      "local_query": null
+    }
+  },
+  "runtime": "IL2CPP",
+  "schema": "bridge-target-profile",
+  "schema_version": 1,
+  "synthetic": true,
+  "unity": "2021.3.28f1"
+}

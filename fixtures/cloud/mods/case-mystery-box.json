@@ -1,0 +1,64 @@
+{
+  "case": "mystery_box",
+  "description": "SR2 Melon with metadata but no static evidence: must stay UNKNOWN with low confidence.",
+  "evidence": null,
+  "expect": {
+    "classification": "UNKNOWN",
+    "diagnostic_codes": [],
+    "parse": "OK",
+    "portability": {
+      "SR1": "UNKNOWN",
+      "SR2": "UNKNOWN"
+    },
+    "rule": "R0",
+    "unit_status": {
+      "SR1": "PENDING_ADAPTER",
+      "SR2": "PENDING_ADAPTER"
+    }
+  },
+  "input": {
+    "document": {
+      "additional_files": [],
+      "assembly": {
+        "file": {
+          "path": "Mods/FixtureMysteryBox.dll",
+          "sha256": "1dd1e00d519e75ceb7eb02ef6a55b7ec634a3de8b8c52e2418d2a16ad55dcb4e",
+          "size": 4096
+        },
+        "name": "FixtureMysteryBox",
+        "target_framework": "net6.0"
+      },
+      "declared_id": "fixture.mystery_box",
+      "dependencies": [],
+      "extractor": {
+        "id": "fixture.melon-attribute-reader",
+        "version": "1.0.0"
+      },
+      "game_versions": [
+        "0.6.2"
+      ],
+      "melon_games": [
+        {
+          "developer": "MonomiPark",
+          "name": "SlimeRancher2"
+        }
+      ],
+      "melon_info": {
+        "author": "Fixture Author",
+        "name": "Fixture Mystery Box",
+        "type_name": "Fixture.FixtureMysteryBox.Entry",
+        "version": "2.0.0-beta"
+      },
+      "platform_domain": "IL2CPP",
+      "schema": "bridge-melon-metadata",
+      "schema_version": 1,
+      "synthetic": true
+    },
+    "files": [],
+    "format": "MELON_METADATA",
+    "raw_text": null,
+    "source": null
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

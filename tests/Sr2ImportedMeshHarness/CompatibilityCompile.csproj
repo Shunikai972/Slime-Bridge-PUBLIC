@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net472;net6.0</TargetFrameworks>
+    <Nullable>enable</Nullable><LangVersion>8.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <BaseOutputPath>bin/compat/</BaseOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../mods/shared/MiniJson.cs" Link="MiniJson.cs" />
+    <Compile Include="../../mods/shared/NativeMesh*.cs" Link="Production/%(Filename)%(Extension)" />
+    <Compile Include="../../mods/shared/LabSpecPathGuard.cs" Link="Production/LabSpecPathGuard.cs" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,55 @@
+{
+  "case": "melon_no_game",
+  "description": "Universal Melon without MelonGame and no realm hint.",
+  "evidence": null,
+  "expect": {
+    "classification": null,
+    "diagnostic_codes": [
+      "MANIFEST_REALM_UNDETERMINED"
+    ],
+    "parse": "REJECTED",
+    "portability": null,
+    "rule": null,
+    "unit_status": null
+  },
+  "input": {
+    "document": {
+      "additional_files": [],
+      "assembly": {
+        "file": {
+          "path": "Mods/FixtureNoGame.dll",
+          "sha256": "38bd42cdaca9cd5f6b7e1a7aa3385b35e466d22a404d080a43bc816993c8b94d",
+          "size": 4096
+        },
+        "name": "FixtureNoGame",
+        "target_framework": "net6.0"
+      },
+      "declared_id": "fixture.melon_no_game",
+      "dependencies": [],
+      "extractor": {
+        "id": "fixture.melon-attribute-reader",
+        "version": "1.0.0"
+      },
+      "game_versions": [
+        "0.6.2"
+      ],
+      "melon_games": [],
+      "melon_info": {
+        "author": "Fixture Author",
+        "name": "Fixture Melon No Game",
+        "type_name": "Fixture.FixtureNoGame.Entry",
+        "version": "1.0.0"
+      },
+      "platform_domain": "IL2CPP",
+      "schema": "bridge-melon-metadata",
+      "schema_version": 1,
+      "synthetic": true
+    },
+    "files": [],
+    "format": "MELON_METADATA",
+    "raw_text": null,
+    "source": null
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

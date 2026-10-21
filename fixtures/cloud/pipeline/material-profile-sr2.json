@@ -1,0 +1,44 @@
+{
+  "realm": "SR2",
+  "schema": "bridge-material-profile",
+  "schema_version": 1,
+  "shaders": {
+    "Fixture/SlimeBody": {
+      "family": "slime_body",
+      "properties": {
+        "_BodyTex": {
+          "required": true,
+          "semantic": "albedo.texture"
+        },
+        "_Mask": {
+          "required": false,
+          "semantic": "mask.texture"
+        },
+        "_TopColor": {
+          "required": false,
+          "semantic": "gradient.top"
+        }
+      },
+      "render_state": {
+        "alpha_mode": "BLEND",
+        "cull": "BACK",
+        "zwrite": false
+      }
+    },
+    "Fixture/Vfx": {
+      "family": "vfx",
+      "properties": {
+        "_MainTex": {
+          "required": false,
+          "semantic": "albedo.texture"
+        }
+      },
+      "render_state": {
+        "alpha_mode": "BLEND",
+        "cull": "OFF",
+        "zwrite": false
+      }
+    }
+  },
+  "synthetic": true
+}

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <OutputPath>bin/native/</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(SR1ManagedPath)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(SR1ManagedPath)/UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Compile Include="../../mods/sr1-bridge/ImportedAnimationProbe.cs" />
+    <Compile Include="../../mods/sr1-bridge/ImportedSourceAnimation.cs" />
+    <Compile Include="NativeContract.cs" />
+  </ItemGroup>
+</Project>

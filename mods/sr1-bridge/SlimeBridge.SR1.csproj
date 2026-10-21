@@ -1,0 +1,97 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <SR1LabPath Condition="'$(SR1LabPath)' == ''">../../Lab/Games/SR1</SR1LabPath>
+    <AssemblyName>SlimeBridge.SR1</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="SRML">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/SRML.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.JSONSerializeModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="DOTween">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/DOTween.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.AnimationModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.ScreenCaptureModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../shared/BackgroundGameFocus.cs" Link="Shared/BackgroundGameFocus.cs" />
+    <Compile Include="../shared/BridgeCommands.cs" Link="Shared/BridgeCommands.cs" />
+    <Compile Include="../shared/InventoryRules.cs" Link="Shared/InventoryRules.cs" />
+    <Compile Include="../shared/RegistrySnapshotFormat.cs" Link="Shared/RegistrySnapshotFormat.cs" />
+    <Compile Include="../shared/DietSnapshotFormat.cs" Link="Shared/DietSnapshotFormat.cs" />
+    <Compile Include="../shared/ImportedSpeciesSpec.cs" Link="Shared/ImportedSpeciesSpec.cs" />
+    <Compile Include="../shared/LabSpecPathGuard.cs" Link="Shared/LabSpecPathGuard.cs" />
+    <Compile Include="../shared/MiniJson.cs" Link="Shared/MiniJson.cs" />
+    <Compile Include="../shared/PerformanceTuner.cs" Link="Shared/PerformanceTuner.cs" />
+    <Compile Include="../shared/SanctuaryLayout.cs" Link="Shared/SanctuaryLayout.cs" />
+    <Compile Include="../shared/SanctuaryProgress.cs" Link="Shared/SanctuaryProgress.cs" />
+    <Compile Include="../shared/TravelAgent.cs" Link="Shared/TravelAgent.cs" />
+    <Compile Include="../shared/TravelOverlay.cs" Link="Shared/TravelOverlay.cs" />
+    <Compile Include="../shared/TravelThrottle.cs" Link="Shared/TravelThrottle.cs" />
+    <Compile Include="../shared/TravelCarry.cs" Link="Shared/TravelCarry.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="modinfo.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

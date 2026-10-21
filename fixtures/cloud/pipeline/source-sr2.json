@@ -1,0 +1,5765 @@
+{
+  "build": {
+    "fingerprint": "synthetic-sr2-build-1",
+    "label": "synthetic fixture"
+  },
+  "data_evidence": "SYNTHETIC",
+  "objects": [
+    {
+      "attributes": null,
+      "hash": "32386f0a26825d316c833e36f69cdc4f5c3562c83fefef7fd66c394ec25018b0",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Azure/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "bae7b72d7344487f4d3a50c038324f6b36a808fd0b2ad5c9bedb81d6d9d8d786",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "d186b9570539561680ea19f099aebfd7b64a4cf3834f6f867c0dc74fcb77009c",
+      "kind": "transform",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Bone0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_child",
+          "slot": "",
+          "target": "Fixture/Azure/Bone1",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "8f2a4514d166d1c868b01e48bf44f18b978bed6fde9ab0e19f019ceaf4cc0835",
+      "kind": "transform",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Bone1",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "0aa8c9b3dd44db065688fbdf619c0d58a6428c88f1b18a5be80439fb62b285c0",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "de5aa5426ca3dc46270eb8dc045f583b8aa7b93fed0a6a8df5579c38c74834a4",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Azure/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Azure/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "e873a1a535c224d36cafac936533f3a599a4a14b4d2fc876d83c5d910f241b43",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Azure/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "4eb2b6e53afe08ded5441b409d8218f9bfa3f6a4651fdf1c2e04d15e5117fbb7",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "30d4c9c91c2a4fc771a777d853b0bfdc64f1dcfbcd7531d29cf5d334d3cab60b",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Azure/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "efb1e8e0227f5619fa7070696a54c9132547a0a7d77e2992c2c2a3878082025d",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "5a85007d06a261c040e2cad890848e8fcc4f9dc00e0f1b5fbf01e9e6cd333524",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Azure/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "88cfcd23dbddf641258b56df11a9be4783ff3ad9dd4b4491e4e450c49458223f",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "bcc37b0b7b71f2f905c75b1ea6894d580d071585179f1e0ee6d04768ea1a812c",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "18169e2cc68c1cb4a4f7038e903d70ad6a762c8544a49f60bc7706e368e99e5f",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "0aa6324462a4a788017b6378da2dbcd8e97d89fef10dfd90a1f987a98fcbb56b",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Azure/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Azure/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "6d7868b4229a1b18a4b782564fe09b1b3d6a358c79a7980000479f910c26295d",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Azure/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Azure/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": true,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "af4f1962bf31c8594916a29a28f00a6ebcb23d7a27e4c708979afbad146b5d52",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.azure.intro",
+        "title_key": "fixture.azure.title"
+      },
+      "hash": "44d35928d979ff80e3e5547c310518a3f4b0dac3a7baf1b6e08a52c8b14ae177",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Azure/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "25444ba4e9a1785f66294070a6c4f2ce2a16822235e4543bf5c528955073383b",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "b4d66848cdf53015f25fe03f4a957d30acd04900ca164e6aa60591970242d379",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Azure/Renderer",
+          "target_kind": "skinned_renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_child",
+          "slot": "",
+          "target": "Fixture/Azure/Bone0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Azure/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Azure/Animator",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "d9395c97044ac8a09de175d6afe87303fd8e64a395199df3096bc62525cded38",
+      "kind": "skinned_renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Azure/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Azure/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Azure/Material0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_bone",
+          "slot": "root",
+          "target": "Fixture/Azure/Bone0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_bone",
+          "slot": "0",
+          "target": "Fixture/Azure/Bone0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_bone",
+          "slot": "1",
+          "target": "Fixture/Azure/Bone1",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "d739ec8907191e89a08bf3307ab1f1a3d84fb0c8b780925d2c6743e94d441cb6",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Ember/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "type": "Fixture.Sparkle"
+      },
+      "hash": "4ac5afb328cea54e87cc931c2f1ed7af84c85fb81b1a8e1d01ffb5f7c1fc52d1",
+      "kind": "behaviour",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Behaviour0",
+      "references": []
+    },
+    {
+      "attributes": {
+        "type": "Fixture.Glow"
+      },
+      "hash": "5d6b68829912b02cb01b5cf97b78844dabdc4f24336e95d471e05e0411604f07",
+      "kind": "behaviour",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Behaviour1",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "1dcdbcf99e47ccf2829b0a2ce77cd64e0c2f385a95772e380e2db8b479744808",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "7be17e2d8011434b31b87ade0dce21345105782573acd3533ad140a0cccfea7e",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "a90206fd1dd3718ff5d5c81b059e5ca026237c82579c9cfd79e997e93c8a9bbf",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Ember/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Ember/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "88239b62f3d861c6ff99d398d6fe813f87533f054791595e8cca15b03ca2bc39",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Ember/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "71e14d947d3707d92daec865c737b36eba8a692668c1c3ed6c90ef68c1c73ae7",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "95b1d9060e397f971f594a6e440e9d923c464f5d466d6335d7da3bcfa2d247af",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Ember/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "602ec2683513ba436def05d6446a512fb6c0f3e490eee1a2ab62ca1f9e3a34c6",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "cdc85e6ae638d128185b47865da5822c1398be4c9d56409f5c3ff44435ad6ae5",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Ember/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "11b3f6768b51c6190170616d07b2e39516f712bba619ca92e287fc38a9270cf5",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "7d3236a1013d8edde737502f53b4bd9df8194c9ef4d7cb43ed9bfc9ebe19b8d2",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "973b57d364495aa5a3c7b8740aa1423c588c8d225b03c86ab6a3b4ec9ee324e7",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "cd0f0ad13e3444d3e98e163153483887c6170a73256b813764075efb3cf3a62e",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Ember/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Ember/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "b5739bbbd7fad8b58d915909b1308f9877b6147a93d99470228994ae7b13660c",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Ember/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Ember/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "64a1110bcd06d407adeda2ced60a6f29b38ded117276836cad2a15f7da831ecb",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.ember.intro",
+        "title_key": "fixture.ember.title"
+      },
+      "hash": "ae494ddfe1b04daf09264f32aa80d08e656e28f627c2de3932a128bab9af4b43",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Ember/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "4583378d1eb028b11bbc3300ed3a599dc0a0739450278eafbd706c04331d12ce",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "60109cb3290219d6bc04688c786b32ddacc9237614a0be423cc59930cbed0e96",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Ember/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Ember/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Ember/Animator",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_vfx",
+          "slot": "",
+          "target": "Fixture/Ember/Vfx",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_behaviour",
+          "slot": "",
+          "target": "Fixture/Ember/Behaviour0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_behaviour",
+          "slot": "",
+          "target": "Fixture/Ember/Behaviour1",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "d4c50c9912a8710ea0432e1e4fde12d27dff0f711db87f5ec9e823fa3c9af691",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Ember/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Ember/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "54f356b0426cb49a7121e332969993b219fe1798061250b101e2b7d481b8e58d",
+      "kind": "vfx",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/Vfx",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "",
+          "target": "Fixture/Ember/VfxMaterial",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_MainTex",
+            "type": "texture",
+            "value": "Fixture/Ember/VfxTex"
+          }
+        ],
+        "shader": "Fixture/Vfx"
+      },
+      "hash": "ada8fe2b5386ec024c5c49a012e1b3f20dbb0a98419c7712bf01f8769a41ec7a",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/VfxMaterial",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/Vfx",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_MainTex",
+          "target": "Fixture/Ember/VfxTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "77f45a4a3130ef2f1489e8209ad6eed99e97921b9527d2ef085a276453bbc089",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Ember/VfxTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "356b8d1b970d36204d6b3cff22783d56f2e165a93d0f6ee8eb4ca7c877a0eb5f",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Flicker/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "type": "Fixture.Blink"
+      },
+      "hash": "ef6e10ab26352e37cd236eda8d6261db87bc0d24b9445641023d0432e87939b6",
+      "kind": "behaviour",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Behaviour0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "9c57486cc0dccb68ee675df76ca61c7a8ebaaa836416fd3252a4c53458c10fe4",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "926bb2f1dc7a3edb08c346fb6e361bc46448d27fb7351522d5ce2fa7d77d0c62",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "3c59ec5c4a330576ac2eb5c0d26ac2d23e53471703cbaaee8c0c6b9e1f06bf86",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Flicker/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Flicker/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "184670c94578ff8dd902371a39e7d05b3af20cc69bf39477260ee156c6421600",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Flicker/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "0ed320484282ce0e05fcaab129422a3b6173df4d672b399cb820f77837b98dfd",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "5f1d24450bb3e491e4516611756a2836fa6f77fd7f804838c1dab8962b4c07bc",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Flicker/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "f6ab5f1700e524c885ab3438c71de26112209bf8296e1cb1ffd9b6b4237cd354",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "5c49396bc264221ab16dab3e9fc3b9687a5ab9544c74d1c47822b5c2ecd0d23c",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Flicker/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "0a1ff936d1565b5252210fdfa50853e0082ab55abe7fa414dc48e4509a5fb2f1",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "45cb58c2b02df160f2b259327442f588e8bd84103bc886b1682fd22f1c59c6a9",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "4a64070d0d7034dd09998cc9e82c0dbdb7d2a24f840f54355860ffd75d957b2f",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "77edf18c4e89d3d9faf4e9b5b5c5e4392320d21c71dad59eff3a3fabdf07e0e1",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Flicker/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Flicker/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "bd0a128ee41ef0a8480159e2ffe5f24fe055bb5e519665bf46ba641efaa2f9e1",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Flicker/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Flicker/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "4844d3c9318325964820dc7f6edbcf7a17e088fb39561c5f3429c92a7f14c237",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.flicker.intro",
+        "title_key": "fixture.flicker.title"
+      },
+      "hash": "b759b35b489f65edc60ed50c7b24663c61eb9032be60dd91af3466a180114d62",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Flicker/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "2704e5cdd42eac8bbcbb1133ab916e82e2674d1f7c36931c803c2a0bded5976b",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "ef8a434045d254a93d17310fffe7f706970b80c1719821fa41e9107025dd0570",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Flicker/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Flicker/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Flicker/Animator",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_behaviour",
+          "slot": "",
+          "target": "Fixture/Flicker/Behaviour0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "17fdf23ab1eea41177493ba11fbee4da992488488908ecc4a93577e3a61bc83a",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Flicker/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Flicker/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Flicker/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "4a6d6a74f2247d35af4a5e968890715dfe12323a01b6e4585fc1dba4909087ac",
+      "kind": "food",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Food/Berry",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "6e4276ef7ee9802cf8014ac7135bd3032af7ae43b177f2ae79aeb6ae9263c36d",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Gale/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "type": "Fixture.Wings"
+      },
+      "hash": "db0b1e9f329fcf3b1624a929df1bd5a95f5a521dafe3b7d07e140d47e1df702b",
+      "kind": "behaviour",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Behaviour0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "171e85d603df525512db63835063fffe630f618f066de2c8d6723e61daa7ae6c",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "bf0437030724a5c18f5bd27de891eb224773ef8dae8cb65477f46b596bdd88a8",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "34bf95b5b8dbf0dd34213b0fe41195dc90872d3a147fa5b3410ff3303df0d924",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Gale/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Gale/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "fb0f95288af77b5137b5a8f5374b308132cd714c22c5c49ebb52ef1d19419260",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Gale/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "0fb5f2439be0660e3e698d0cd2fa130843edd604caf28141ac9d4c192b82b03d",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "df3f0955e9f3d24da619c3e37387be9ad46d09f621222b68ddb206df36d73575",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Gale/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "687ada87acc7fe6f1ad4010422e4d44b67e96d745441bef5146d6fac7dc5dece",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "b0c93ddab84b35ee5a428ff25bedd321fa90c1e7979d842963ed6b4eb932e3c7",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Gale/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "697558f20709dd6b9ea4127224396b51abea973497f20b36ded1f23e313b6ae9",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "65b03dd6fb1e626ea871a9592fe53494af9b2813742f2c5e0c79eed395190dd5",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "8497e8bf8dc7e20eff4a8aaf2406fe30a0611af3d2b3fae2a3414cc969001f00",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "ae79aa1b10ceea97cb61bd8a486798a3a85d7e253580ec4e1a164871e2b8c6c4",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Gale/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Gale/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "df05ae277f0fcdfc1ee41149fd4530de04dc7aa5995a4cd3cb24bd5e5cdfa146",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Gale/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Gale/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "52ba63e52a4216cd5c684c1b1b6b725a28edb0b90ead0eaafc931452fbd4ee54",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.gale.intro",
+        "title_key": "fixture.gale.title"
+      },
+      "hash": "da936aa3edc17904ff0dc90fdf21b8e5617b594312f3e79643a4b548e254f23c",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Gale/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "67b63c1dd91fc7070fc9b93abf2a456025548207642a54d57d8bae580c806711",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "dfefda0e6ef8cebb2697d028f608c905a3b9285c1616be65bf76bb711fe73167",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Gale/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Gale/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Gale/Animator",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_behaviour",
+          "slot": "",
+          "target": "Fixture/Gale/Behaviour0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "5aea6ed4b158faa2ed8c1284ebc938ef720050b789ac0a290155b20a1c3befbc",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Gale/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Gale/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Gale/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "8c9a3a00c0edb30cca5c9716e27f9006484e7cd1a227681554cd8832f67c1c33",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Hollow/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "b8625121540b60c131e910dca77fd8e4c248549dd16d7d91a34fe814206a77a1",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "cbbdf4b31f21c801a829517db619323e5d392877b3eae6024f7f7b7d69fdfa0f",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "df96c93c83ba54e63a4a1073515a7f03513f0c0800cdbd4ff9d7382607fc1b29",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Hollow/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Hollow/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "48f9f8e3c6847ae8600ad5936f899cef12b7688bfaa0f797308717b73ad249ad",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Hollow/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "7c12af8a71922421901d89d79b045ee123735f4c3c1708312c4c8cbaa44d409d",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "4ae526e59f87b9b9ea1b54e61dcc867536035d36c997ff41a1f4e6fc0c40bb0c",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Hollow/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "dc98f10c827f17aa8071242f3c0a087457c01c362a7faa2a10ee6ab0d06cff49",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "1326a2e0d476c96136f84902f89e15035036a7e48dc46c1d4a084c9142e00861",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Hollow/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "d39fa52e035d9b369184f5c82fc329fa1741f8f762cd5e949ce3165aba199786",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "57d5772af891bf4b94ec8d14727aad9ee8e0538beeaceb1eb43123d2fa26680e",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "fa14db86e990d826cd024d5cccb56fdbb7a9ce22acb867bc192abbb8db39258e",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "081d0ffc355277546c025c356db7b8bd329feb4547b7c9bf2344099d63219e75",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Hollow/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Hollow/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "9d0f73fe55785227e2b671a05ff3012c45b2b3e6c3e9558501db7a0c59e5be20",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Hollow/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Hollow/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.hollow.intro",
+        "title_key": "fixture.hollow.title"
+      },
+      "hash": "6d90a6793e455ca1e3b9f9cbc81820e43a001d75e94b9a31999263243f39dad6",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Hollow/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "9143914925d58aa2ae7aee55d2ebfe99304480965756b93ed96215a24bac40ec",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "3c1cb4d2ae6a20ac00bd96a28033826a4dae69f07426b084f5bb9f1942032dfc",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Hollow/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Hollow/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Hollow/Animator",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "709aa13471dcf68bd416dca36401867a1185a4b7cfe5786cff0adb5423748fc7",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Hollow/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Hollow/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Hollow/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "0053643a87adaa1b63225052083f61748d5fc54a85fe6c4237419eee762f8647",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Moss/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "93404705f092d1b5ec3e962a532904efcc2a6cc98b8fbb48d0936130a5572e8c",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "69af42b2d4d919cc4d76542846f295e1a51a3513f6abd76ebbc738d55daedca4",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "ee1ef0b8e8ecf7c2c65e19f146f5e19a894a5a40b4ab1fa0e575a46b1c17f113",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Moss/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Moss/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "e37005c79d05fca7484da79f53be4e51b1a0672722432d230fbf63fd74c0a0cc",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Moss/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "faa9d0c8f936fd9a76794c27275a9557feac3fc611fe705d861140da43453e0d",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "8dabfb2a1ab3fa36d0dfc9788430bdd99b122a397af4568b18e60359e448d0b6",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Moss/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "c0f2e0269e536e98f3602320108febb417b22dcd2981d79884e196b121b607f7",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "602f3f819529308dba0033cb0d93eb09c8f3428140ce3b5773f14acc99086423",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Moss/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "00469a29d71801c715ea9a4bbd2eda1d620c60f3eb7d1676608f1bf997991394",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "31a263b79ab69a4c833347a672c890eade17dab77a8a69293eb5d193bdad58e9",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "9178fa4222b0af1e4b3683ade24a34c6a03ccf144814ab13001f532a22222368",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Market",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Moss/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Moss/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "282ba8e6744c4a8cf66e609cbe8faae5ddf1a3b2c98fa768afbfaa4cce4fcf5f",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Moss/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Moss/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "d65be77df8d22fc52dc5d6c2885c036dfcdbf3ee6d94639981821fe29347efcb",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.moss.intro",
+        "title_key": "fixture.moss.title"
+      },
+      "hash": "6861a8773e3340c64c53b89cd56ebbdbdb4919c4d9e0a2043dcdda559640f07d",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Moss/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "4220ee220fd6c4d9267644822069fda1c247efc95875cee6957ee1bfe41fa68f",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "e53975f8c9e2a0c11a2521d71130105f3597b80ccbea59563e00cb9400ec464c",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Moss/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Moss/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Moss/Animator",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "b0ee93fe26c79f03bbcb12fe49d4929d6829488dadb666b1749d6f40dfc4ef06",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Moss/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Moss/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Moss/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "98dda302982dac270371af9baf8360e09be7bf3a6d9517e96ec4ad234e285d6d",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Murk/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "b99f82613ff4464cfd2382b02321e4df21ba8611cc5fdbca827024ca4411cbfc",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "1c72b49ac6259c3acef3c71f03678dc64da1567313a4548e3d339ff1bd1f3cda",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "c1f9a3400491e54ff2c65f7542d5a8be9f23d33deebbaff467a826e384fec38d",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Murk/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Murk/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "03efda7365c5b248bb76da03a2e565c78261ee96f7fa328e3609bb8ad55b8b8a",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Murk/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "055c5cf61133bb21e7f08308ed82e002c8c1a0069db32f9ef574db1b46bf9c61",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "24ff6384a1c6f33864ca7ff526dcb4e6d736aec1378f627f4771969003278bdc",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Murk/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "7f58c6139d01fb574d51602ef70c607238079c6582819538231b4e85139bfc6e",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "7b1c5a024ab0e2dbf3c58e7410c13ab63b87843e9a4d5854699165342320282e",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Murk/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "83c8fc9e2a6f0152c4e861287eaf54cef05b01be1dbdb170d6f278207399cee3",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "25e13532447c684e7bdefea16246a6b1284a8dd0ec7bda5109b2c79a0b7fbc7c",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "62d5bd5868e424a0712eebd5985398b2176fef56bbf732237d5153e511469432",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "d0e3b5633616dc93bfbf9f26cfac62b47b7c514e5bec44a4398863158365ec3b",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Murk/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Murk/Mask"
+          }
+        ],
+        "shader": "Fixture/Mystery"
+      },
+      "hash": "705b9e752c11d14b38af6c0cb349ee99712575af54e17d6876d99a5e1806c65c",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/Mystery",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Murk/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Murk/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "4114d6ec4f15daeea9f08b4e62411f083a42c46aba492a214ea72cf2f8e303e2",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.murk.intro",
+        "title_key": "fixture.murk.title"
+      },
+      "hash": "adda40d05af14ed8684b9cff24058be28a72c3b72435210c15e4a5f9df5c09a4",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Murk/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "f59884eedfee6328e9325215d5ab94c3c3ea8e028ab61dd70e0ba8d849e634bc",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "2e04d7a38cac6ea12f2dbe5e1bbb03a28a8961f452cb328839373bd46e181fff",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Murk/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Murk/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Murk/Animator",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "9087969c442b45492e4315c7f026f6cb5766d739ce9a461678f8bda0b8f04bf3",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Murk/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Murk/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Murk/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "f7a67465d53bf2c67077f3caa18f57ab9e972e2766285b2e5c3022f969cc6f57",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Opal/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "05cb213f86dab5ad95faa2f0653f1a97128c3a1bb4ab95b429aae7e45bb328ed",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "4916d790917079541ba1bc958953e2aae660c28d0d4b4baa477b87b924fbcdc9",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "8a04221746f673b5595d93ece829aa691cf7b84ab5f5672ed5cec0df2be59559",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Opal/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Opal/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "f9693b8790560a89d5a88f4fa4167912cccba21feb00bc7135906ff884751c3e",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Opal/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "605c0a9cb24f2f6ac609a2a6c9225702495e55535150a7f405d1161f18aa274c",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "ff4d8e342ef92fe97183750928436a54250b1ad3033e150a9a20441a88255e85",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Opal/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "77c2a5a9ba21f3067f0f0d831d69e29be0b0172447baa904b3f55bcc044fbf03",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "b25cdf05b60790d14f57bda594a4163a4f88fd22fca35cdcd558292843e868cc",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Opal/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "4dfaae180acb11cac14471ba87edefac27d3e1041e9c15f2ab43c90b90757dfd",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "d233c40d199200ca868f32420bc67f9bc6cea5e6ed11e5ac0964296b24dfd6ef",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "444af94b39bfe0d79607c1c59dfef5b67d4284766966324bc9418f9590130467",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "810592916c0afaa835d412ad5b7d6bf46e913107e0865f73f0f5dbd6eb8c98de",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Opal/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Opal/Mask"
+          },
+          {
+            "name": "_Iridescence",
+            "type": "float",
+            "value": 0.7
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "6e413f9a66e9ef7589586bcce16f954c384deecd9eb532968c792cc216547357",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Opal/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Opal/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "d9d924ca259b786965a25966def71193209505101e645a67814c506a9716b614",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.opal.intro",
+        "title_key": "fixture.opal.title"
+      },
+      "hash": "3447aa22eb3827a93081ad4caa25e0ccd8e2aa91d639f6fac9993068ad364728",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Opal/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "ae9e7036f1c6578f8de5c065dbf4fea2658e855dabfda1df18072b42f4e2e4b3",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "194fb54ac5fed6f3ea8270510421f1904355cefee63b434a7ea7d3de23190d42",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Opal/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Opal/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Opal/Animator",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "4aea7a6544e3286c3d55e5dcd7b91a21178d74a2aee02fc34dd669b0777a4793",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Opal/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Opal/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Opal/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "7a651e1996d3820dea5eb755ba1b56bbb1b3fbf6d2772f261dea35673fb65051",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Pink/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "4a79c3b369c2f7644addd7b0f3cedc979acd22a5cc0d922d32c90cd2e903f2f9",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "860daecf61392e6c7a2216e03fa6ae64bb611faa8e64fa398db947211a89962b",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "0e1f0dcbc465b9f4b0f6e7aba0773a9880cfc6192c626ef178bb0546a23fcafd",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Pink/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Pink/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "3db3db10d78d057172e970d2fcb8c01b6e9c60526287e5e587d4df55a84b3d78",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Pink/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "12c192e772d197395858eb7e67cd90680516ba15e271a24e9c6da1189e7353f1",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "de3d6bfa09d1073a9a4d9fd62986519a538ed928c71037df5179c85f72e63441",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Pink/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "b561a63a0aca897c1a6b6976ec6d6bcbaa8c9c63a615d6cebf36c8534267b2a5",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "0e6dbc6c8da9c5320f15c2419671edd93711d522dc9b022b266e2a2d78a291b0",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Pink/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "6bed63b9ae85a56b570c583c186fdce550664ee6c07d9badf17cdb20fc48f943",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "ee8989b730657e92fa2bd2e259ff0b91567b538a7817dd9120995e27f62f0a79",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "f74a683944df3f795af396f215d5833d98b92f00003cf4ea7332f48d279c883a",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "bf24d6eff8ea7e84ed40004efc23365dcbbe1d9cce06cf64f8c32299cd05412d",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Pink/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Pink/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "8c1dd06cdd1a1d8360683fb56ec19a669ebd19b6f67d85c736f26e8b3896d412",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Pink/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Pink/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "b8b76d2922c9c3a9ab4f072d024d704bebee5c2a1e260eb8fb76641b8bc5822e",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.pink.intro",
+        "title_key": "fixture.pink.title"
+      },
+      "hash": "69c7b28e3c86df64f1e2dfed5b70844727ec63d998471c6dfc18df48ae292aee",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Pink/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "1eea0a013f109a304a341da4937d9ec51ce577fda6eb7932ac0a1432e0d1143c",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "7a6fc916dfdce59dc438b8c7e6943da4d87451f743a46078699f1a6d9001fb3b",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Pink/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Pink/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Pink/Animator",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "8f28cac1bfefcde5a8d0bac533627f5edee6e4b89c127a73a791681cf42d2c96",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Pink/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Pink/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Pink/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "c86a4d805032d3cce15c4697f67a57876702e1b29784feb2fd13c08f6362e635",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Prism/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "9928fbb69b84280347d53e978c3c7f86350f1a32ff5c80e98c4f77ff2fa49881",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "90071cea0fef12b898a0922e79d42c3d55e2e7cd793b59d0fd1ba588b37f7413",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Body1",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "c79e5aa7c3c78422a2a0c335eb438c6c872308f83eb585bef9243aa428ccd873",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Body2",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "8734d8024bfeafb4d4e0f9b67b9fe03601a2eb8d07acef17b9e389572707925e",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "9ed68f0230064311e42685f6daf612e5b7f46b812bcad441e77331c6d5475634",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Prism/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Prism/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "a24eb7bafe7362add54a2b49ce845b94069292d26a9f1606a539cd2f890854b6",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Prism/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "0ace7fe14fa8db57553aa02961e132e2108bd0439e1d083fecc54ef1c9e385a9",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "6640e5e9a7799eb8cabe27aa6d65da7c573626bb062c40a3dd7e8026b586c1b3",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Prism/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "b5ce5ce1f317d1885bfd2548c91d6d65771f42e074095a44e972dd7161da60c8",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "c6b0126cb73cbd1eb109d44a43e598b705b60d3549415a8c5c967f1b8d8997fe",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Prism/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "aa646ccb4f285111ab04ffb33123992f88e3da0d12b08ef8a84140bd39b281bd",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "ca1a98e83cd22f3e23426023ce59f04efd31e3c31b4650d0b81a8c5da4ab22fe",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "d8e5d8c50ab6f22f67a69777d76787b52e084e9207c25990258644433bb4e5e8",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "1b8a83be8dea1cab780e0951648858c57509a2e00ac5a3d0787d3674ea06d72a",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Prism/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Prism/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "74e7e8eff5c7beec3f69d2cb7859feeb2b9f0d5b342d2e981330278ee7db2d44",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Prism/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Prism/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Prism/Body1"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.5,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Prism/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "72ce22702109ac64f03026fa096518c8e99b8563c0a03cbaac446bdd8479b184",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Material1",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Prism/Body1",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Prism/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Prism/Body2"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.6000000000000001,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Prism/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "8debe78a5f6cfeccd1a1c245fbddb8940afcea9f3f8bde73e570013e75fc0bb9",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Material2",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Prism/Body2",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Prism/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 3,
+        "vertex_count": 123
+      },
+      "hash": "4a790e168d932f1c5b3d73b1907b1926659f10945723838e2dbb5edeb20a9f74",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.prism.intro",
+        "title_key": "fixture.prism.title"
+      },
+      "hash": "d67eb49dd402fc7ed538ce0d79df82f8f1929c2c109654f2852891ea49f645ca",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Prism/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "146e7fc76a72d56e612b2ac97819c2238635811ca3f768a2a8af4ad1f01f1e4a",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "739e89b998da707ea3229fa880d6859d80f056512d803ca1f32b3ecb5dcc6914",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Prism/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Prism/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Prism/Animator",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "945c2a0e5cfe3512a7b55a6cc18dc88db3f5e41c504f293884afc9589894597d",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Prism/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Prism/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Prism/Material0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "1",
+          "target": "Fixture/Prism/Material1",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "2",
+          "target": "Fixture/Prism/Material2",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "6f16c6513dabba69ccb2a5ef0c46546204bc33d4b989947d6c5973edd3001d64",
+      "kind": "shader",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Shader/Fixture/Mystery",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "ae0df5a16343972d4abcd4680a59424381bb04832ef46d8bc400392268ecd7af",
+      "kind": "shader",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Shader/Fixture/SlimeBody",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "75e43eedcc5c0d7eb9590cdfbf92d018de5ff83833a68205f99ca56b9a4bfa5a",
+      "kind": "shader",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Shader/Fixture/Vfx",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "d7bb381b9495624089290e2526615ceab5be14ea1eb5a32326c85c45afc34f80",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Twin/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "af1d60dc598791f13ff99934a47707076edefe1b52d7c0808a2f2a294a858962",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "a8d5650f8709244e1c8e2f8a226a938216352a5985b96db44618ca065b649af9",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "1fb2cf2c3d6c84a76531b323ffd4a4692f708bf060921846633a7fa0cf6226f8",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Twin/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Twin/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "1f8e156aaad54e82c5ff7c02e02561181f08c7f82a2d62a316cbe354323d440c",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Twin/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "81c7d1cb39ba31959b3de9fd5e5b5d9d510f7364afb095f26313445889af4753",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "37f0c984675279ff0dc6409291e0d1292fb0855c7da5f172fb57123cc258a81c",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Twin/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "07a24a603744ee3df4912a54feedf4f78082f0a363c2b92771e95fdfca2c4c4e",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "6ef3c15ea8022b9e707bceb2906160b8f878b44951b0ee4acb468ab8739bb6b7",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Twin/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "29d4e835ab7c09032a23ac6eb775adaf5049bfabbc2db50868974b02890c1d88",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "864b96dca1911d6ebb4e4eabd88c2c78a1ec988dddb09a336da04dce43a52000",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "d89337507fa7133260a9760f24c96e7dec3471d5c8f58311846af010b4b808d2",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "73c36aadf333bd44c355027ba33915c9ecf515964ef31bf8d6b0701451c7b397",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Twin/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Twin/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "ec8406a598b82001130b1c474b7d4a8b437c4cc533c2f7c4be202a5e5b44cf41",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Twin/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Twin/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "1cd8698724c263abcbd6ac370dc120e8a34cbfaf24db63cd575e2d9c14b6f6b2",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.twin.intro",
+        "title_key": "fixture.twin.title"
+      },
+      "hash": "606937369f2fe496f1d7b5354dd3059ebb4fce65a2a22d557d277f5d158d638a",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Twin/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "fb67f71adbeefb6c8bd8c2be698ed2500dcccd7a92eeedf1a3344734c530e55e",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "358f593e1eac7b6e3549072b54446286b953eb72e23c5b5c9557a00c85953acf",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Twin/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Twin/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Twin/Animator",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "79fac1055a249b758364ed33a847e8c04c501b8e46735580e7b720771273c620",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Twin/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Twin/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "21b1a91742fb9ec38eb619705ae6d09c987521dd28907563eea25abecb22dd5e",
+      "kind": "animator",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Animator",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_clip",
+          "slot": "",
+          "target": "Fixture/Twin_/Clip0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "04a6fd81e418eede181cae453291e9e69ac86e9b2a2fb272c521b26808ebf45f",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Body0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "2f3c44df96a7e4015d46d22e6d06f5760b971fd7805b98bf39e2a459c7b07a9b",
+      "kind": "animation_clip",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Clip0",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "14150ce92d2d078bc44b1aaf006bba46e7c0fc3c94432737591cf61ed93f3103",
+      "kind": "face",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Face",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Twin_/Face/Neutral",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_expression",
+          "slot": "",
+          "target": "Fixture/Twin_/Face/Blink",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "4ee68ca18799873d00ff302049a795e70aabf317f1ed8a2266eb312c6359dfb8",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Face/Blink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Twin_/Face/BlinkTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "5c8906d777ce5d4dca4383c0d46e9890f28f6ae2275fc14fe8dd8dee1fd7b94b",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Face/BlinkTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "d5c60b4c31c8b830aeee11a17ad17ea7b093df1359028477e659622ef86d4958",
+      "kind": "face_expression",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Face/Neutral",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "face",
+          "target": "Fixture/Twin_/Face/NeutralTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "20eb0ca4aa1bdefb450d53b2734307cf05e5c2ac9a8e747e506263841bcf2f0b",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Face/NeutralTex",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "a5543a8f84938d742a38ed04ef3a6fc0f8889b8ab4593ead415c4b3e15472fea",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Icon",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "",
+          "target": "Fixture/Twin_/IconTex",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "3b2ae79305944efecc413591e2c6b58fe0f4758193e580cfc2d4866775aed622",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/IconTex",
+      "references": []
+    },
+    {
+      "attributes": {
+        "keys": 2,
+        "table": "fixture"
+      },
+      "hash": "8c40e715919e3b92ad2090ea780c3d8514081ba1c5607ecf39441ed0bdc5d3b6",
+      "kind": "localization",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Loc",
+      "references": []
+    },
+    {
+      "attributes": {
+        "base_value": 12,
+        "saturation": 4
+      },
+      "hash": "5ba192090abfde09c02e6bc1b4d7665b7b665103f9c119c8a73db49de39737ed",
+      "kind": "market",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Market",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "44aac0053667292085d879af6f22ca9230811cc65017b6be5eac8d4c8f68f6ae",
+      "kind": "texture",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Mask",
+      "references": []
+    },
+    {
+      "attributes": {
+        "properties": [
+          {
+            "name": "_BodyTex",
+            "type": "texture",
+            "value": "Fixture/Twin_/Body0"
+          },
+          {
+            "name": "_TopColor",
+            "type": "color",
+            "value": [
+              0.9,
+              0.4,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "name": "_Mask",
+            "type": "texture",
+            "value": "Fixture/Twin_/Mask"
+          }
+        ],
+        "shader": "Fixture/SlimeBody"
+      },
+      "hash": "12634910fdeef2a5494914c13fac34c1deb9043eebd312e7d7b702d0a53afc95",
+      "kind": "material",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Material0",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_shader",
+          "slot": "",
+          "target": "Fixture/Shader/Fixture/SlimeBody",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_BodyTex",
+          "target": "Fixture/Twin_/Body0",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_texture",
+          "slot": "_Mask",
+          "target": "Fixture/Twin_/Mask",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "skinned": false,
+        "submeshes": 1,
+        "vertex_count": 121
+      },
+      "hash": "04d48b779a8b2ae9a76b3c8c971d7c3cdfcf43734d847aa0a842c1653532e26b",
+      "kind": "mesh",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Mesh",
+      "references": []
+    },
+    {
+      "attributes": {
+        "intro_key": "fixture.twin_.intro",
+        "title_key": "fixture.twin_.title"
+      },
+      "hash": "254c0c32f8b7e508109a305b7d5dab0e28e10061babaa0a961d2555f042aa229",
+      "kind": "pedia",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Pedia",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_localization",
+          "slot": "",
+          "target": "Fixture/Twin_/Loc",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "5c24528a459b54ea62cb967cbaf68e39867127d171a384e21e9ade5326d4266d",
+      "kind": "icon",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/PlortIcon",
+      "references": []
+    },
+    {
+      "attributes": null,
+      "hash": "59a49854b5e78a6d48ce168068ee7381189d08e3e9528750caa2b7c1c09108a6",
+      "kind": "prefab",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Prefab",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_component",
+          "slot": "",
+          "target": "Fixture/Twin_/Renderer",
+          "target_kind": "renderer"
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_face",
+          "slot": "",
+          "target": "Fixture/Twin_/Face",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_animator",
+          "slot": "",
+          "target": "Fixture/Twin_/Animator",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "e4965bb34ae21a59144c0374d263d7014ae989a62790ac09b0d11d95ba6cf096",
+      "kind": "renderer",
+      "provenance": "synthetic fixture",
+      "ref": "Fixture/Twin_/Renderer",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_mesh",
+          "slot": "",
+          "target": "Fixture/Twin_/Mesh",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "uses_material",
+          "slot": "0",
+          "target": "Fixture/Twin_/Material0",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "8ae0c9bf446fdfa23c8bc16d4b8541f30bb91379e333e7f2cd89c1e4df567bbf",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.AzurePlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Azure/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Azure/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "e4ac7d66451f6d0ed364452a9f8fa76b343329b2a84dbe7cf128893c558fefa7",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.EmberPlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Ember/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Ember/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "57d5a859d350a329efc48bf31295668cb734ef7e41640ab3c787060fd34bc958",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.FlickerPlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Flicker/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Flicker/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "ad153a508de1ba6e8d77b3057635665a9f644e7d49774cec9a9f85185a466434",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.GalePlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Gale/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Gale/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "19565d876e7970f348a554a1ee1fd61b0d6dc82c47d6e6b6289659c5b9b3f362",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.HollowPlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Hollow/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Hollow/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "120a55fbce7f8927f774389dcb0e8664ba22cdc777b42f2d9396a6a1b7ef8ea9",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.MossPlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Moss/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Moss/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "02d4e2a5cfd186d08ef38830a2f4a414bfc3159e71b50655aec42a231ba5dc48",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.MurkPlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Murk/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Murk/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "746d9b03020e608913f4b04c20eb26d02d96570bc773bf3f3b04cbdb270e0aba",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.OpalPlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Opal/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Opal/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "9c6e46e89d149419343a6f2a072e9ef521f494ea033247cafccba6568f58f0c0",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.PinkPlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Pink/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Pink/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "28632af8638983b357764fae1bdc5c00bb948356fc85dcaaa28fe7f18def5036",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.PrismPlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Prism/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Prism/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "e24f2a843786be8c832bebada10ec1cc4bcc419d6a0ec1903f67d2f212184d40",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.TwinPlort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Twin/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Twin/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": null,
+      "hash": "868d8548050d38d58d3f944027dc3ca796a9bc7ef5789ed684b1a51f310ea63c",
+      "kind": "plort_definition",
+      "provenance": "synthetic fixture",
+      "ref": "IdentifiableType.Twin_Plort",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Twin_/PlortIcon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_market",
+          "slot": "",
+          "target": "Fixture/Twin_/Market",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "d1b838c93594170a2acf5860b701823cdf32600a48bfda7d12e762e545043aca",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Azure",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Azure/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.AzurePlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Azure/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Azure/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "336e7f64bd480c744105b116fc16e460b64b84abbee3a1136799e9b16841509d",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Ember",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Ember/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.EmberPlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Ember/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Ember/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "d48e9dc4be840b088d5fb6a41ca3e39bca57e16d430a77d13fb6cbcfb9acb6a4",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Flicker",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Flicker/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.FlickerPlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Flicker/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Flicker/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "23e19c49d96753b8d2e461b2f4f2f048ae10c1f856c2d1064d2aa790ee9dd85d",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Gale",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Gale/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.GalePlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Gale/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Gale/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "c7eb156694e3bd0f0245a451720e829875eefe06f09c1819b6c461258958b964",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Hollow",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Hollow/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.HollowPlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Hollow/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Hollow/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "ed5947c1c78db60d6e78bd57d95d3739e9bd5a47d1780b3686f67d8da86fac50",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Moss",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Moss/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.MossPlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Moss/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Moss/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "4af5b956d40620e054d8861980b08316c9526029563cbb69b39eacbc963fd22d",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Murk",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Murk/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.MurkPlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Murk/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Murk/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "0231129b84ca8332738bf94d99e33dad67921f0f3378dcf8770452b81c28c75d",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Opal",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Opal/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.OpalPlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Opal/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Opal/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "516f9e9c1e6f0210c7b8b525859907b82ad33a2dd6bb005fe7991f0dc2e181da",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Pink",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Pink/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.PinkPlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Pink/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Pink/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "28569ecfd7cf44a965a004a3db4a23324e3a763ffc10dd9ff181fa7866f677f4",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Prism",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Prism/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.PrismPlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Prism/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Prism/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "282407b649e27613906d2b7d66d0047ac5bd2b07dc1bb84d6596247c88d05a09",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Twin",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Twin/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.TwinPlort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Twin/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Twin/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    },
+    {
+      "attributes": {
+        "food_groups": [
+          "fixture_fruit"
+        ]
+      },
+      "hash": "c9ef52a0003b76166f01a5bde99b35ea9c56185f959039e888c9a599aa50543a",
+      "kind": "slime_definition",
+      "provenance": "synthetic fixture",
+      "ref": "SlimeDefinition.Twin_",
+      "references": [
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_prefab",
+          "slot": "",
+          "target": "Fixture/Twin_/Prefab",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "produces_plort",
+          "slot": "",
+          "target": "IdentifiableType.Twin_Plort",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_icon",
+          "slot": "",
+          "target": "Fixture/Twin_/Icon",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "has_pedia",
+          "slot": "",
+          "target": "Fixture/Twin_/Pedia",
+          "target_kind": null
+        },
+        {
+          "candidates": null,
+          "critical": null,
+          "provenance": "synthetic fixture",
+          "relation": "favourite",
+          "slot": "",
+          "target": "Fixture/Food/Berry",
+          "target_kind": null
+        }
+      ]
+    }
+  ],
+  "realm": "SR2",
+  "registry": {
+    "build": {
+      "fingerprint": "synthetic-sr2-build-1",
+      "label": "synthetic fixture"
+    },
+    "data_evidence": "SYNTHETIC",
+    "diagnostics": [],
+    "entries": [
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "516f9e9c1e6f0210c7b8b525859907b82ad33a2dd6bb005fe7991f0dc2e181da",
+        "display_name": "Pink",
+        "native_ref": "SlimeDefinition.Pink",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.PinkPlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "9c6e46e89d149419343a6f2a072e9ef521f494ea033247cafccba6568f58f0c0",
+        "display_name": "Pink plort",
+        "native_ref": "IdentifiableType.PinkPlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "d1b838c93594170a2acf5860b701823cdf32600a48bfda7d12e762e545043aca",
+        "display_name": "Azure",
+        "native_ref": "SlimeDefinition.Azure",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.AzurePlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "8ae0c9bf446fdfa23c8bc16d4b8541f30bb91379e333e7f2cd89c1e4df567bbf",
+        "display_name": "Azure plort",
+        "native_ref": "IdentifiableType.AzurePlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "28569ecfd7cf44a965a004a3db4a23324e3a763ffc10dd9ff181fa7866f677f4",
+        "display_name": "Prism",
+        "native_ref": "SlimeDefinition.Prism",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.PrismPlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "28632af8638983b357764fae1bdc5c00bb948356fc85dcaaa28fe7f18def5036",
+        "display_name": "Prism plort",
+        "native_ref": "IdentifiableType.PrismPlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "336e7f64bd480c744105b116fc16e460b64b84abbee3a1136799e9b16841509d",
+        "display_name": "Ember",
+        "native_ref": "SlimeDefinition.Ember",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.EmberPlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "e4ac7d66451f6d0ed364452a9f8fa76b343329b2a84dbe7cf128893c558fefa7",
+        "display_name": "Ember plort",
+        "native_ref": "IdentifiableType.EmberPlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "23e19c49d96753b8d2e461b2f4f2f048ae10c1f856c2d1064d2aa790ee9dd85d",
+        "display_name": "Gale",
+        "native_ref": "SlimeDefinition.Gale",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.GalePlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "ad153a508de1ba6e8d77b3057635665a9f644e7d49774cec9a9f85185a466434",
+        "display_name": "Gale plort",
+        "native_ref": "IdentifiableType.GalePlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "ed5947c1c78db60d6e78bd57d95d3739e9bd5a47d1780b3686f67d8da86fac50",
+        "display_name": "Moss",
+        "native_ref": "SlimeDefinition.Moss",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.MossPlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "120a55fbce7f8927f774389dcb0e8664ba22cdc777b42f2d9396a6a1b7ef8ea9",
+        "display_name": "Moss plort",
+        "native_ref": "IdentifiableType.MossPlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "c7eb156694e3bd0f0245a451720e829875eefe06f09c1819b6c461258958b964",
+        "display_name": "Hollow",
+        "native_ref": "SlimeDefinition.Hollow",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.HollowPlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "19565d876e7970f348a554a1ee1fd61b0d6dc82c47d6e6b6289659c5b9b3f362",
+        "display_name": "Hollow plort",
+        "native_ref": "IdentifiableType.HollowPlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "d48e9dc4be840b088d5fb6a41ca3e39bca57e16d430a77d13fb6cbcfb9acb6a4",
+        "display_name": "Flicker",
+        "native_ref": "SlimeDefinition.Flicker",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.FlickerPlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "57d5a859d350a329efc48bf31295668cb734ef7e41640ab3c787060fd34bc958",
+        "display_name": "Flicker plort",
+        "native_ref": "IdentifiableType.FlickerPlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "0231129b84ca8332738bf94d99e33dad67921f0f3378dcf8770452b81c28c75d",
+        "display_name": "Opal",
+        "native_ref": "SlimeDefinition.Opal",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.OpalPlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "746d9b03020e608913f4b04c20eb26d02d96570bc773bf3f3b04cbdb270e0aba",
+        "display_name": "Opal plort",
+        "native_ref": "IdentifiableType.OpalPlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "4af5b956d40620e054d8861980b08316c9526029563cbb69b39eacbc963fd22d",
+        "display_name": "Murk",
+        "native_ref": "SlimeDefinition.Murk",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.MurkPlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "02d4e2a5cfd186d08ef38830a2f4a414bfc3159e71b50655aec42a231ba5dc48",
+        "display_name": "Murk plort",
+        "native_ref": "IdentifiableType.MurkPlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "282407b649e27613906d2b7d66d0047ac5bd2b07dc1bb84d6596247c88d05a09",
+        "display_name": "Twin",
+        "native_ref": "SlimeDefinition.Twin",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.TwinPlort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "e24f2a843786be8c832bebada10ec1cc4bcc419d6a0ec1903f67d2f212184d40",
+        "display_name": "Twin plort",
+        "native_ref": "IdentifiableType.TwinPlort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "slime",
+        "definition_hash": "c9ef52a0003b76166f01a5bde99b35ea9c56185f959039e888c9a599aa50543a",
+        "display_name": "Twin_",
+        "native_ref": "SlimeDefinition.Twin_",
+        "numeric_id": null,
+        "produces": [
+          "IdentifiableType.Twin_Plort"
+        ],
+        "quarantine": null,
+        "role": "base"
+      },
+      {
+        "base_slimes": [],
+        "canonical_evidence": [],
+        "canonical_id": null,
+        "content_kind": "plort",
+        "definition_hash": "868d8548050d38d58d3f944027dc3ca796a9bc7ef5789ed684b1a51f310ea63c",
+        "display_name": "Twin_ plort",
+        "native_ref": "IdentifiableType.Twin_Plort",
+        "numeric_id": null,
+        "produces": [],
+        "quarantine": null,
+        "role": null
+      }
+    ],
+    "realm": "SR2",
+    "schema": "bridge-registry-snapshot",
+    "schema_version": 1,
+    "traversal": {
+      "completeness": "COMPLETE",
+      "expected_count": 24,
+      "observed_count": 24,
+      "registry_identity": "SR2:synthetic"
+    }
+  },
+  "roots": {},
+  "schema": "bridge-content-source",
+  "schema_version": 1,
+  "synthetic": true
+}

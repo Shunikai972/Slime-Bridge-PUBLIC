@@ -1,0 +1,17 @@
+{
+  "schema": "bridge-user-largo-catalog",
+  "schema_version": 1,
+  "evidence": "SYNTHETIC EXAMPLE ONLY: replace IDs, aliases, rules and target context with an explicitly approved canonical catalog",
+  "species": [
+    {"canonical_id": "slime.alpha", "aliases": ["alpha", "a"]},
+    {"canonical_id": "slime.beta", "aliases": ["beta", "b"]}
+  ],
+  "parent_capabilities": {
+    "slime.alpha": ["standard.diet"],
+    "slime.beta": ["standard.plort_production"]
+  },
+  "target_context": {
+    "SR1": {"native": [], "parents": ["slime.alpha", "slime.beta"]},
+    "SR2": {"native": [], "parents": ["slime.alpha", "slime.beta"]}
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "case": "melon_lantern",
+  "description": "SR2 Melon (provider metadata) that only uses catalogued MelonLoader lifecycle/attribute members.",
+  "evidence": {
+    "code": {
+      "assemblies": [
+        {
+          "assembly_name": "FixtureMelonLantern",
+          "path": "Mods/FixtureMelonLantern.dll",
+          "sha256": "bd7490ae81c64e2b78d68041db54221d8b4d2f748abd19d7a16743bf2ca35476",
+          "size": 4096
+        }
+      ]
+    },
+    "config_files": [],
+    "content": {
+      "asset_bundles": [],
+      "content_files": [],
+      "content_ids": []
+    },
+    "extractor": {
+      "id": "fixture.static-extractor",
+      "version": "1.0.0"
+    },
+    "harmony": {
+      "patch_all_calls": 0,
+      "patches": []
+    },
+    "il2cpp": {
+      "il2cpp_type_references": 0,
+      "interop_references": false,
+      "type_injection": false
+    },
+    "manifest_id": null,
+    "mod_id": "fixture.melon_lantern",
+    "native": {
+      "detour_indicators": [],
+      "function_pointer_hooks": false,
+      "pinvoke_modules": []
+    },
+    "references": [
+      {
+        "assembly": "System.Runtime",
+        "members": [],
+        "types": [
+          "System.Object"
+        ]
+      },
+      {
+        "assembly": "MelonLoader",
+        "members": [
+          "MelonLoader.MelonGameAttribute::.ctor",
+          "MelonLoader.MelonInfoAttribute::.ctor",
+          "MelonLoader.MelonMod::.ctor",
+          "MelonLoader.MelonMod::OnInitializeMelon",
+          "MelonLoader.MelonMod::OnUpdate"
+        ],
+        "types": [
+          "MelonLoader.MelonGameAttribute",
+          "MelonLoader.MelonInfoAttribute",
+          "MelonLoader.MelonMod"
+        ]
+      }
+    ],
+    "reflection": {
+      "dynamic_invoke": false,
+      "emit": false,
+      "non_public_access": false,
+      "type_lookup_by_name": false
+    },
+    "schema": "bridge-mod-static-evidence",
+    "schema_version": 1,
+    "synthetic": true
+  },
+  "expect": {
+    "classification": "KNOWN_API_GAMEPLAY",
+    "diagnostic_codes": [],
+    "parse": "OK",
+    "portability": {
+      "SR1": "ADAPTER_REQUIRED",
+      "SR2": "PORTABLE"
+    },
+    "rule": "R3",
+    "unit_status": {
+      "SR1": "PENDING_ADAPTER",
+      "SR2": "READY"
+    }
+  },
+  "input": {
+    "document": {
+      "additional_files": [],
+      "assembly": {
+        "file": {
+          "path": "Mods/FixtureMelonLantern.dll",
+          "sha256": "bd7490ae81c64e2b78d68041db54221d8b4d2f748abd19d7a16743bf2ca35476",
+          "size": 4096
+        },
+        "name": "FixtureMelonLantern",
+        "target_framework": "net6.0"
+      },
+      "declared_id": "fixture.melon_lantern",
+      "dependencies": [],
+      "extractor": {
+        "id": "fixture.melon-attribute-reader",
+        "version": "1.0.0"
+      },
+      "game_versions": [
+        "0.6.2"
+      ],
+      "melon_games": [
+        {
+          "developer": "MonomiPark",
+          "name": "SlimeRancher2"
+        }
+      ],
+      "melon_info": {
+        "author": "Fixture Author",
+        "name": "Fixture Melon Lantern",
+        "type_name": "Fixture.FixtureMelonLantern.Entry",
+        "version": "1.2.0"
+      },
+      "platform_domain": "IL2CPP",
+      "schema": "bridge-melon-metadata",
+      "schema_version": 1,
+      "synthetic": true
+    },
+    "files": [],
+    "format": "MELON_METADATA",
+    "raw_text": null,
+    "source": null
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

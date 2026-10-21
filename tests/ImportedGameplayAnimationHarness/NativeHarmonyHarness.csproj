@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net472</TargetFramework><LangVersion>latest</LangVersion><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+ <ItemGroup>
+  <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all"/>
+  <Reference Include="0Harmony"><HintPath>$(SR1ManagedPath)/0Harmony.dll</HintPath><Private>true</Private></Reference>
+  <Compile Include="NativeHarmonyProgram.cs"/><Compile Include="EngineStub.cs"/><Compile Include="GameHooksStub.cs"/><Compile Include="ImportedAnimationProbeStub.cs"/>
+  <Compile Include="../../mods/sr1-bridge/ImportedSourceAnimation.cs" Link="Production/ImportedSourceAnimation.cs"/>
+  <Compile Include="../../mods/sr1-bridge/ImportedGameplayAnimation.cs" Link="Production/ImportedGameplayAnimation.cs"/>
+  <Compile Include="../../mods/sr1-bridge/ImportedGameplayAnimationPatch.cs" Link="Production/ImportedGameplayAnimationPatch.cs"/>
+  <Compile Include="../../mods/sr1-bridge/ImportedVisualMarker.cs" Link="Production/ImportedVisualMarker.cs"/>
+ </ItemGroup>
+</Project>

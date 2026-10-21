@@ -1,0 +1,117 @@
+{
+  "case": "uncatalogued_tool",
+  "description": "SR1 code mod referencing an uncatalogued SRML type and game types: evidence present, still UNKNOWN.",
+  "evidence": {
+    "code": {
+      "assemblies": [
+        {
+          "assembly_name": "FixtureUncatalogued",
+          "path": "SRML/Mods/FixtureUncatalogued/FixtureUncatalogued.dll",
+          "sha256": "1a52f558330fba00c388eb4f47fa96acb22aecceab7f6ac25744582951b01359",
+          "size": 4096
+        }
+      ]
+    },
+    "config_files": [],
+    "content": {
+      "asset_bundles": [],
+      "content_files": [],
+      "content_ids": []
+    },
+    "extractor": {
+      "id": "fixture.static-extractor",
+      "version": "1.0.0"
+    },
+    "harmony": {
+      "patch_all_calls": 0,
+      "patches": []
+    },
+    "il2cpp": {
+      "il2cpp_type_references": 0,
+      "interop_references": false,
+      "type_injection": false
+    },
+    "manifest_id": null,
+    "mod_id": "fixture.uncatalogued_tool",
+    "native": {
+      "detour_indicators": [],
+      "function_pointer_hooks": false,
+      "pinvoke_modules": []
+    },
+    "references": [
+      {
+        "assembly": "SRML",
+        "members": [
+          "SRML.FixtureRegistry::Register",
+          "SRML.ModEntryPoint::.ctor"
+        ],
+        "types": [
+          "SRML.FixtureRegistry",
+          "SRML.ModEntryPoint"
+        ]
+      },
+      {
+        "assembly": "Assembly-CSharp",
+        "members": [],
+        "types": [
+          "FixtureGame.MarketBoard"
+        ]
+      }
+    ],
+    "reflection": {
+      "dynamic_invoke": false,
+      "emit": false,
+      "non_public_access": false,
+      "type_lookup_by_name": true
+    },
+    "schema": "bridge-mod-static-evidence",
+    "schema_version": 1,
+    "synthetic": true
+  },
+  "expect": {
+    "classification": "UNKNOWN",
+    "diagnostic_codes": [],
+    "parse": "OK",
+    "portability": {
+      "SR1": "UNKNOWN",
+      "SR2": "UNKNOWN"
+    },
+    "rule": "R4",
+    "unit_status": {
+      "SR1": "PENDING_ADAPTER",
+      "SR2": "PENDING_ADAPTER"
+    }
+  },
+  "input": {
+    "document": {
+      "author": "Fixture Author",
+      "dependencies": [],
+      "id": "fixture.uncatalogued_tool",
+      "name": "Fixture Uncatalogued Tool",
+      "version": "1.0.0"
+    },
+    "files": [
+      {
+        "path": "SRML/Mods/FixtureUncatalogued/modinfo.json",
+        "sha256": "bdd3a1e51f2a3cbe1e32229c1358e30dc2fc121c164c7ed2055a669e452945b5",
+        "size": 128
+      },
+      {
+        "path": "SRML/Mods/FixtureUncatalogued/FixtureUncatalogued.dll",
+        "sha256": "1a52f558330fba00c388eb4f47fa96acb22aecceab7f6ac25744582951b01359",
+        "size": 4096
+      }
+    ],
+    "format": "SRML_MODINFO",
+    "raw_text": null,
+    "source": {
+      "kind": "LOCAL_PATH",
+      "path": "SRML/Mods/FixtureUncatalogued/modinfo.json",
+      "provider_id": null,
+      "ref": null,
+      "synthetic": true
+    }
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

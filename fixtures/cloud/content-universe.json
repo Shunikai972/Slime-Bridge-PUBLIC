@@ -1,0 +1,209 @@
+{
+  "schema": "cloud-fixture-v1",
+  "synthetic": true,
+  "builds": {
+    "SR1": "fixture-build-a",
+    "SR2": "fixture-build-b"
+  },
+  "definitions": [
+    {
+      "canonical_id": "slime.shared_test",
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "expected_synthetic_classification": "SHARED_NATIVE",
+      "prefab": "prefab.test",
+      "diet": {
+        "food_groups": [
+          "fixture_fruit"
+        ],
+        "favourite": "food.test",
+        "produces": [
+          "plort.shared_test"
+        ]
+      },
+      "plort": {
+        "canonical_id": "plort.shared_test",
+        "collectible": true,
+        "market": {
+          "base_value": 7
+        }
+      },
+      "icon": "icon.test",
+      "pedia": {
+        "name_key": "fixture.shared_test.name",
+        "description_key": "fixture.shared_test.description"
+      },
+      "behaviour_capabilities": [
+        "standard.vacpack",
+        "standard.diet"
+      ]
+    },
+    {
+      "canonical_id": "slime.amber_test",
+      "realms": [
+        "SR1"
+      ],
+      "expected_synthetic_classification": "SR1_ONLY",
+      "prefab": "prefab.test",
+      "diet": {
+        "food_groups": [
+          "fixture_fruit"
+        ],
+        "favourite": "food.test",
+        "produces": [
+          "plort.amber_test"
+        ]
+      },
+      "plort": {
+        "canonical_id": "plort.amber_test",
+        "collectible": true,
+        "market": {
+          "base_value": 7
+        }
+      },
+      "icon": "icon.test",
+      "pedia": {
+        "name_key": "fixture.amber_test.name",
+        "description_key": "fixture.amber_test.description"
+      },
+      "behaviour_capabilities": [
+        "standard.vacpack",
+        "standard.diet"
+      ]
+    },
+    {
+      "canonical_id": "slime.azure_test",
+      "realms": [
+        "SR2"
+      ],
+      "expected_synthetic_classification": "SR2_ONLY",
+      "prefab": "prefab.test",
+      "diet": {
+        "food_groups": [
+          "fixture_fruit"
+        ],
+        "favourite": "food.test",
+        "produces": [
+          "plort.azure_test"
+        ]
+      },
+      "plort": {
+        "canonical_id": "plort.azure_test",
+        "collectible": true,
+        "market": {
+          "base_value": 7
+        }
+      },
+      "icon": "icon.test",
+      "pedia": {
+        "name_key": "fixture.azure_test.name",
+        "description_key": "fixture.azure_test.description"
+      },
+      "behaviour_capabilities": [
+        "standard.vacpack",
+        "standard.diet"
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "id": "prefab.test",
+      "kind": "prefab",
+      "dependencies": [
+        "mesh.test",
+        "material.test",
+        "face.test",
+        "anim.test"
+      ]
+    },
+    {
+      "id": "mesh.test",
+      "kind": "mesh",
+      "dependencies": [],
+      "synthetic_geometry": {
+        "vertices": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0
+          ],
+          [
+            0,
+            1,
+            0
+          ]
+        ],
+        "triangles": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "id": "material.test",
+      "kind": "material",
+      "dependencies": [
+        "texture.test"
+      ],
+      "semantics": {
+        "base_color": [
+          0.6,
+          0.4,
+          0.2,
+          1
+        ],
+        "roughness": 0.8,
+        "shader_model": "fixture-soft-lit"
+      }
+    },
+    {
+      "id": "texture.test",
+      "kind": "texture",
+      "dependencies": [],
+      "synthetic_pixels": [
+        [
+          255,
+          255,
+          255,
+          255
+        ]
+      ]
+    },
+    {
+      "id": "face.test",
+      "kind": "face",
+      "dependencies": [
+        "texture.test"
+      ],
+      "expressions": [
+        "neutral",
+        "blink"
+      ]
+    },
+    {
+      "id": "anim.test",
+      "kind": "animation",
+      "dependencies": [
+        "mesh.test"
+      ],
+      "clips": [
+        "idle"
+      ]
+    },
+    {
+      "id": "icon.test",
+      "kind": "icon",
+      "dependencies": [
+        "texture.test"
+      ]
+    }
+  ]
+}

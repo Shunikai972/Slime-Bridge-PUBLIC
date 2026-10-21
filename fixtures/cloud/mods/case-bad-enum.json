@@ -1,0 +1,56 @@
+{
+  "case": "bad_enum",
+  "description": "Unknown loader enum in a provider manifest.",
+  "evidence": null,
+  "expect": {
+    "classification": null,
+    "diagnostic_codes": [
+      "MANIFEST_SCHEMA_INVALID"
+    ],
+    "parse": "REJECTED",
+    "portability": null,
+    "rule": null,
+    "unit_status": null
+  },
+  "input": {
+    "document": {
+      "authors": [
+        "Fixture Author"
+      ],
+      "dependencies": [],
+      "files": [],
+      "game_versions": [],
+      "id": "fixture.bad_enum",
+      "load_after": [],
+      "load_before": [],
+      "loader": "BEPINEX",
+      "name": "Fixture Bad Enum",
+      "native_id": "fixture.bad_enum",
+      "provides_assemblies": [],
+      "realm": "SR1",
+      "schema": "bridge-mod-manifest",
+      "schema_version": 1,
+      "source": {
+        "kind": "PROVIDER",
+        "path": null,
+        "provider_id": "fixture.mod-provider",
+        "ref": "fixture/fixture.bad_enum",
+        "synthetic": true
+      },
+      "version": {
+        "parts": [
+          1,
+          0,
+          0
+        ],
+        "text": "1.0.0"
+      }
+    },
+    "files": [],
+    "format": "BRIDGE_MANIFEST",
+    "raw_text": null,
+    "source": null
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

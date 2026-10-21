@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "note": "Builds on which detection and (where stated) conversion were actually exercised. Fingerprints are SHA-256 of the listed files; an unlisted build is reported as UNRECOGNIZED / KNOWN_ENGINE_NEW_BUILD, never assumed compatible.",
+  "entries": [
+    {
+      "game": "SR1",
+      "unity_version": "2019.4.29f1",
+      "backend": "mono",
+      "game_version": "1.4.4",
+      "validated": [
+        "detect"
+      ],
+      "fingerprint": {
+        "SlimeRancher.exe": "ebea48bc817146cc97a1a7cf23078c404e11d5000d17772278d42ce47361c587",
+        "UnityPlayer.dll": "a6dc4be78ad7b74962c179cf914828f005727a0d29edd6e5e5adb8c7e12aafa0",
+        "SlimeRancher_Data/Managed/Assembly-CSharp.dll": "65eb0e111fd6aa4c9b2ea0c6e17758b17a4d91fc097c3423af443e21237e9a2b"
+      },
+      "game_version_reported": "1.4.3",
+      "notes": "PlayerSettings.bundleVersion reports 1.4.3 although the distribution folder is labelled 1.4.4; the fingerprint is authoritative."
+    },
+    {
+      "game": "SR2",
+      "unity_version": "2021.3.28f1",
+      "backend": "il2cpp",
+      "game_version": "0.6.2",
+      "validated": [
+        "detect"
+      ],
+      "fingerprint": {
+        "SlimeRancher2.exe": "f600f01e96bb9720bccea974ed3bfc0212be5f25103793bd6b8703a99a18b03b",
+        "UnityPlayer.dll": "6673961406f3fc693ad80a5987b02eb4fe859ac198baa15dc8fe848d4f6f5ec4",
+        "GameAssembly.dll": "91f636542e76fdc2904228bc2ccef74bb77eda1229d83b4d82713d392bc40465",
+        "SlimeRancher2_Data/il2cpp_data/Metadata/global-metadata.dat": "50962da11e0f533c742335d2931f9b0f100883660a4be1c385e30c2c841aefe9"
+      },
+      "game_version_reported": "0.6.2 [20250115013847-97426]"
+    }
+  ]
+}

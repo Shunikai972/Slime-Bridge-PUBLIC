@@ -1,0 +1,36 @@
+{
+  "case": "broken_json",
+  "description": "Truncated modinfo.json text.",
+  "evidence": null,
+  "expect": {
+    "classification": null,
+    "diagnostic_codes": [
+      "MOD_JSON_MALFORMED"
+    ],
+    "parse": "REJECTED",
+    "portability": null,
+    "rule": null,
+    "unit_status": null
+  },
+  "input": {
+    "document": null,
+    "files": [
+      {
+        "path": "SRML/Mods/FixtureBroken/modinfo.json",
+        "sha256": "507f7969dc027d7e740c94b14af5d08a6b859425f2115d51d713fae113a6c6e6",
+        "size": 60
+      }
+    ],
+    "format": "SRML_MODINFO",
+    "raw_text": "{\"id\": \"fixture.broken_json\", \"name\": \"Fixture Broken\", \"version\": ",
+    "source": {
+      "kind": "LOCAL_PATH",
+      "path": "SRML/Mods/FixtureBroken/modinfo.json",
+      "provider_id": null,
+      "ref": null,
+      "synthetic": true
+    }
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

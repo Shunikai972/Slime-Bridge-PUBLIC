@@ -1,0 +1,99 @@
+{
+  "case": "cycle_a",
+  "description": "Dependency cycle with cycle_b.",
+  "evidence": {
+    "code": {
+      "assemblies": []
+    },
+    "config_files": [
+      {
+        "path": "SRML/Mods/FixtureCycleA/fixturecyclea.ini",
+        "sha256": "7ac93993d836273d4cdd8a50c901b091b91299f8a17eaff1c78b3cf6dcf5a285",
+        "size": 32
+      }
+    ],
+    "content": {
+      "asset_bundles": [],
+      "content_files": [],
+      "content_ids": []
+    },
+    "extractor": {
+      "id": "fixture.static-extractor",
+      "version": "1.0.0"
+    },
+    "harmony": {
+      "patch_all_calls": 0,
+      "patches": []
+    },
+    "il2cpp": {
+      "il2cpp_type_references": 0,
+      "interop_references": false,
+      "type_injection": false
+    },
+    "manifest_id": null,
+    "mod_id": "fixture.cycle_a",
+    "native": {
+      "detour_indicators": [],
+      "function_pointer_hooks": false,
+      "pinvoke_modules": []
+    },
+    "references": [],
+    "reflection": {
+      "dynamic_invoke": false,
+      "emit": false,
+      "non_public_access": false,
+      "type_lookup_by_name": false
+    },
+    "schema": "bridge-mod-static-evidence",
+    "schema_version": 1,
+    "synthetic": true
+  },
+  "expect": {
+    "classification": "CONFIG_ONLY",
+    "diagnostic_codes": [],
+    "parse": "OK",
+    "portability": {
+      "SR1": "PORTABLE",
+      "SR2": "ADAPTER_REQUIRED"
+    },
+    "rule": "R6",
+    "unit_status": {
+      "SR1": "READY",
+      "SR2": "PENDING_ADAPTER"
+    }
+  },
+  "input": {
+    "document": {
+      "author": "Fixture Author",
+      "dependencies": [
+        "fixture.cycle_b"
+      ],
+      "id": "fixture.cycle_a",
+      "name": "Fixture Cycle A",
+      "version": "1.0.0"
+    },
+    "files": [
+      {
+        "path": "SRML/Mods/FixtureCycleA/modinfo.json",
+        "sha256": "27ce1f8e54b03a3c57a1122779ee5624ecbef74fef0f18d29a8cd57fd8010f1a",
+        "size": 128
+      },
+      {
+        "path": "SRML/Mods/FixtureCycleA/fixturecyclea.ini",
+        "sha256": "7ac93993d836273d4cdd8a50c901b091b91299f8a17eaff1c78b3cf6dcf5a285",
+        "size": 32
+      }
+    ],
+    "format": "SRML_MODINFO",
+    "raw_text": null,
+    "source": {
+      "kind": "LOCAL_PATH",
+      "path": "SRML/Mods/FixtureCycleA/modinfo.json",
+      "provider_id": null,
+      "ref": null,
+      "synthetic": true
+    }
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

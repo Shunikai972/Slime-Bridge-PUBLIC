@@ -24,7 +24,7 @@ No Steam SR1/SR2 and no Epic SR2 install exists on this machine.
 
 ## Shared profile folders (isolation caveat)
 
-The lab copies still use the per-user Unity folders `%USERPROFILE%\AppData\LocalLow\Monomi Park\Slime Rancher` (SR1) and `...\LocalLow\MonomiPark\SlimeRancher2` (SR2), plus `HKCU\Software\Monomi Park\Slime Rancher` and `HKCU\Software\MonomiPark\SlimeRancher2`. Snapshots taken before any lab launch: `um backup` sets `slimebridge-prelab-sr1` and `slimebridge-prelab-sr2` in `~/.universal-modder/backups`. After the SR1 oracle runs, `um backup diff` showed only `Player.log`/`Player-prev.log` changes and Unity analytics churn; no save file changed. Redirecting saves for the lab is still a TODO before any test that loads or writes a save.
+The lab copies still use the per-user Unity folders `%USERPROFILE%\AppData\LocalLow\Monomi Park\Slime Rancher` (SR1) and `...\LocalLow\MonomiPark\SlimeRancher2` (SR2), plus `HKCU\Software\Monomi Park\Slime Rancher` and `HKCU\Software\MonomiPark\SlimeRancher2`. Snapshots taken before any lab launch: `um backup` sets `slimebridge-prelab-sr1` and `slimebridge-prelab-sr2` in a local backup folder. After the SR1 oracle runs, the backup diff showed only `Player.log`/`Player-prev.log` changes and Unity analytics churn; no save file changed. Redirecting saves for the lab is still a TODO before any test that loads or writes a save.
 
 ## Loader/API facts used so far
 

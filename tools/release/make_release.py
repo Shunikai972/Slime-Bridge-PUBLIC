@@ -85,7 +85,10 @@ def build_plugins(refs, stage):
     for realm, (project, prop, tfm, names) in PLUGINS.items():
         ref = Path(refs[realm]).resolve()
         print(f'== build {realm} plugin against {ref}')
-        proc = subprocess.run([exe, 'build', str(ROOT / project), '-c', 'Release', '-nologo', '-v', 'q', f'-p:{prop}={ref}'],
+        # Deterministic build with the source root mapped to /_/ so no local path (user name, folders) ends up in the DLL/PDB.
+        proc = subprocess.run([exe, 'build', str(ROOT / project), '-c', 'Release', '-nologo', '-v', 'q', '--no-incremental',
+                               f'-p:{prop}={ref}', '-p:Deterministic=true', '-p:ContinuousIntegrationBuild=true',
+                               f'-p:PathMap={ROOT}=/_/'],
                               cwd=ROOT, env=env, capture_output=True, text=True, encoding='utf-8', errors='replace')
         if proc.returncode != 0:
             print((proc.stdout or '')[-4000:], (proc.stderr or '')[-2000:])
@@ -103,6 +106,12 @@ def build_plugins(refs, stage):
 
 def scan(stage):
     problems = []
+    home = Path.home().name.encode('utf-8').lower()
+    for rel in ALLOWED_BINARIES:
+        path = stage / rel
+        data = path.read_bytes().lower() if path.is_file() else b''
+        if os.fsencode(str(ROOT.parent)).lower() in data or (len(home) > 2 and b'\\users\\' + home in data):
+            problems.append(f'{rel} (contains a local build path)')
     for path in stage.rglob('*'):
         if not path.is_file():
             continue

@@ -8,7 +8,7 @@ using SlimeBridge.Shared;
 namespace SlimeBridge.SR2
 {
     /// <summary>
-    /// Executes BridgeHost inventory commands against the native SR2 vacpack (Il2Cpp.Ammo).
+    /// Executes BridgeHost inventory commands against the native SR2 vacpack (Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager).
     /// HTTP runs on worker tasks; every native read/mutation happens on the Unity main thread in Tick().
     /// Mutating ops are journaled (INTENT fsynced before the native call, DONE after) so a redelivered
     /// or replayed command is never applied twice.
@@ -24,7 +24,7 @@ namespace SlimeBridge.SR2
         private readonly string _token;
         private readonly bool _labGiveAllowed;
         private readonly bool _labCreate;
-        private readonly Func<Il2Cpp.AutoSaveDirector, bool>? _storageBinding;
+        private readonly Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool>? _storageBinding;
         private CounterpartCreator? _creation;
         private readonly Func<bool>? _background;
         private BackgroundIntroSkipper? _intro;
@@ -46,11 +46,11 @@ namespace SlimeBridge.SR2
             : this(url, token, labGiveAllowed, journal, log, false) { }
 
         private InventoryAgent(string url, string token, bool labGiveAllowed, OpJournal? journal, Action<string> log, bool labCreate,
-            Func<Il2Cpp.AutoSaveDirector, bool>? storageBinding = null)
+            Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool>? storageBinding = null)
             : this(url, token, labGiveAllowed, journal, log, labCreate, storageBinding, null) { }
 
         private InventoryAgent(string url, string token, bool labGiveAllowed, OpJournal? journal, Action<string> log, bool labCreate,
-            Func<Il2Cpp.AutoSaveDirector, bool>? storageBinding, Func<bool>? background)
+            Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool>? storageBinding, Func<bool>? background)
         {
             _url = url.TrimEnd('/');
             _token = token;
@@ -63,7 +63,7 @@ namespace SlimeBridge.SR2
         }
 
         public static InventoryAgent? Create(bool labOracle, Action<string> log, bool labCreate = false,
-            Func<Il2Cpp.AutoSaveDirector, bool>? storageBinding = null)
+            Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool>? storageBinding = null)
         {
             var url = Environment.GetEnvironmentVariable("SLIMEBRIDGE_URL");
             var token = Environment.GetEnvironmentVariable("SLIMEBRIDGE_TOKEN");
@@ -197,7 +197,7 @@ namespace SlimeBridge.SR2
                 var ammo = state.Ammo;
                 result.Before = Count(ammo, type);
                 result.After = result.Before;
-                result.CanAdd = ammo.CouldAddToSlot(type);
+                result.CanAdd = ammo.CouldAdd(type);
                 if (command.Kind == "query") { result.Ok = true; return result; }
 
                 if (command.Kind == "lab_give" && !_labGiveAllowed) return Refuse(result, "lab_give refused outside lab oracle");
@@ -300,7 +300,7 @@ namespace SlimeBridge.SR2
             return result;
         }
 
-        private static int Count(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type)
+        private static int Count(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type)
         {
             var total = 0;
             var slots = ammo.Slots;
@@ -313,7 +313,7 @@ namespace SlimeBridge.SR2
             return total;
         }
 
-        private static int FindSlot(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type)
+        private static int FindSlot(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type)
         {
             var slots = ammo.Slots;
             for (var i = 0; i < slots.Length; i++)
@@ -325,17 +325,17 @@ namespace SlimeBridge.SR2
         }
 
         /// <summary>Native add of the whole count to one slot: the existing stack, else the first empty unlocked slot.</summary>
-        private static bool AddToVac(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type, int count)
+        private static bool AddToVac(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type, int count)
         {
             var existing = FindSlot(ammo, type);
-            if (existing >= 0) return ammo.MaybeAddToSpecificSlot(type, null, existing, count, false);
+            if (existing >= 0) return ammo.AddToSlot(type, existing, count);
             var slots = ammo.Slots;
             for (var i = 0; i < slots.Length; i++)
             {
                 var slot = slots[i];
                 if (slot == null || !slot.IsUnlocked) continue;
                 if (slot.Id != null && slot.Count > 0) continue;
-                if (ammo.MaybeAddToSpecificSlot(type, null, i, count, false)) return true;
+                if (ammo.AddToSlot(type, i, count)) return true;
             }
             return false;
         }

@@ -131,16 +131,16 @@ namespace SlimeBridge.SR2
                 var name = group == null ? "" : group.name;
                 if (director == null || loader == null || loader.IsSceneLoadInProgress ||
                     !name.StartsWith("MainMenu", StringComparison.Ordinal)) return;
-                var storage = director.StorageProvider;
+                var storage = director.Storage();
                 var initialized = storage != null && storage.IsInitialized();
-                if (!initialized || director.ProfileManager == null || director.loadedGame) return;
+                if (!initialized || !director.ProfileLoaded() || director.GameLoaded()) return;
                 _saveDiagnosticsLogged = true;
                 LoggerInstance.Msg("lab native slot probe: " + SaveSlotProbe.Capture(director));
                 var available = director.AvailableGamesByGameName();
                 var hasContinue = director.HasContinue();
                 var selected = hasContinue ? director.GetSaveToContinue() : null;
-                LoggerInstance.Msg("lab save services: menu=" + name + " loaded=" + director.loadedGame +
-                    " profile=" + (director.ProfileManager != null) + " storageReady=" + initialized +
+                LoggerInstance.Msg("lab save services: menu=" + name + " loaded=" + director.GameLoaded() +
+                    " profile=" + (director.ProfileLoaded()) + " storageReady=" + initialized +
                     " groups=" + (available == null ? "unknown" : available.Count.ToString()) +
                     " hasContinue=" + hasContinue + " selected=" +
                     (selected == null ? "none" : selected.Name + "/" + selected.SaveName) + " t+" + Since());
@@ -194,9 +194,9 @@ namespace SlimeBridge.SR2
                 var menuSettled = sceneLoader != null && !sceneLoader.IsSceneLoadInProgress &&
                                   (sceneLoader.IsCurrentSceneGroupMainMenu() || groupName.StartsWith("MainMenu", StringComparison.Ordinal));
                 var reason = game == null ? "no game context" : director == null ? "no autosave director"
-                    : inGame ? "already in game" : director.loadedGame ? "game already loaded"
+                    : inGame ? "already in game" : director.GameLoaded() ? "game already loaded"
                     : !menuSettled ? "main menu scene group not settled (group '" + groupName + "', busy=" + (sceneLoader != null && sceneLoader.IsSceneLoadInProgress) + ")"
-                    : wanted != null && (director.StorageProvider == null || !director.StorageProvider.IsInitialized())
+                    : wanted != null && (director.Storage() == null || !director.Storage().IsInitialized())
                         ? "native storage not initialized"
                     : wanted == null && !director.HasContinue() ? "no continue save" : null;
                 if (reason != null)
@@ -217,7 +217,7 @@ namespace SlimeBridge.SR2
                         return;
                     }
                     if (UnityEngine.Time.realtimeSinceStartup < _nextTargetLookupSeconds) return;
-                    Il2CppSystem.Collections.Generic.List<Il2Cpp.GameData.Summary>? saves;
+                    Il2CppSystem.Collections.Generic.List<Il2CppMonomiPark.SlimeRancher.Persist.Summary>? saves;
                     try { saves = director.GetSavesByGameName(wanted); }
                     catch (Exception ex)
                     {
@@ -313,7 +313,7 @@ namespace SlimeBridge.SR2
             {
                 var game = Il2Cpp.GameContext.Instance;
                 var state = Il2Cpp.SceneContext.Instance == null ? null : Il2Cpp.SceneContext.Instance.PlayerState;
-                if (game == null || game.LookupDirector == null || state == null || state.Ammo == null || !game.AutoSaveDirector.loadedGame)
+                if (game == null || game.LookupDirector == null || state == null || state.Ammo == null || !game.AutoSaveDirector.GameLoaded())
                     return;
                 _diagnosticsLogged = true;
                 var refs = new System.Collections.Generic.List<string>();

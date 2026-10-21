@@ -1,4 +1,5 @@
 // Synthetic regression fixtures; no games, deployments or native save files are exercised.
+using Il2CppMonomiPark.SlimeRancher;
 using System.Reflection;
 using Il2Cpp;
 using Il2CppMonomiPark.SlimeRancher.DataModel;

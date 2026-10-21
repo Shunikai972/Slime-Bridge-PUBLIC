@@ -1,4 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Optional, git-ignored: mods/local.props sets SR1LabPath / SR2LabPath to your own game folders. -->
+  <Import Project="../local.props" Condition="Exists('../local.props')" />
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <LangVersion>latest</LangVersion>
@@ -82,6 +84,7 @@
     <Compile Include="../shared/DietSnapshotFormat.cs" Link="Shared/DietSnapshotFormat.cs" />
     <Compile Include="../shared/ImportedSpeciesSpec.cs" Link="Shared/ImportedSpeciesSpec.cs" />
     <Compile Include="../shared/LabSpecPathGuard.cs" Link="Shared/LabSpecPathGuard.cs" />
+    <Compile Include="../shared/PlayerContent.cs" Link="Shared/PlayerContent.cs" />
     <Compile Include="../shared/MiniJson.cs" Link="Shared/MiniJson.cs" />
     <Compile Include="../shared/PerformanceTuner.cs" Link="Shared/PerformanceTuner.cs" />
     <Compile Include="../shared/SanctuaryLayout.cs" Link="Shared/SanctuaryLayout.cs" />

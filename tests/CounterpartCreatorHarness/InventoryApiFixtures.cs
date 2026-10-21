@@ -10,7 +10,11 @@ namespace Il2Cpp
     { public string ReferenceId = "fixture.identifiable"; }
     public sealed class LookupDirector
     { public bool TryFindIdentifiableTypeByReferenceId(string id, out IdentifiableType? type) { type = null; return false; } }
-    public sealed class Ammo
+}
+namespace Il2CppMonomiPark.SlimeRancher.Player
+{
+    using Il2Cpp;
+    public sealed class AmmoSlotManager
     {
         public sealed class Slot { public IdentifiableType? Id; public int Count; public bool IsUnlocked; }
         public Slot[] Slots = Array.Empty<Slot>();

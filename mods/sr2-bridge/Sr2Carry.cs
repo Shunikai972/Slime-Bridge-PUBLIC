@@ -25,7 +25,7 @@ namespace SlimeBridge.SR2
             return _byCanonical = map;
         }
 
-        private static Il2Cpp.Ammo? Vac() => Il2Cpp.SceneContext.Instance?.PlayerState?.Ammo;
+        private static Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager? Vac() => Il2Cpp.SceneContext.Instance?.PlayerState?.Ammo;
 
         internal static Dictionary<string, int> Snapshot(string mode)
         {
@@ -57,7 +57,7 @@ namespace SlimeBridge.SR2
                 var table = ByCanonical();
                 foreach (var item in offered)
                 {
-                    if (!table.TryGetValue(CarryNames.Canonical(item.Key), out var type) || !ammo.CouldAddToSlot(type)) continue;
+                    if (!table.TryGetValue(CarryNames.Canonical(item.Key), out var type) || !ammo.CouldAdd(type)) continue;
                     var remaining = item.Value;
                     var slots = ammo.Slots;
                     for (var pass = 0; pass < 2 && remaining > 0; pass++)
@@ -70,7 +70,7 @@ namespace SlimeBridge.SR2
                             if (pass == 0 ? !match : !empty) continue;
                             // The native add refuses what does not fit: try the whole remainder, then smaller amounts.
                             for (var attempt = remaining; attempt > 0; attempt /= 2)
-                                if (ammo.MaybeAddToSpecificSlot(type, null, i, attempt, false)) { remaining -= attempt; break; }
+                                if (ammo.AddToSlot(type, i, attempt)) { remaining -= attempt; break; }
                         }
                     var added = item.Value - remaining;
                     if (added > 0) accepted[item.Key] = added;

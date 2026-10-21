@@ -111,9 +111,10 @@ class NativeProbeSourceTests(unittest.TestCase):
         for forbidden in ('LoadNewGame(', 'CreateNew(', 'BeginLoad(', 'SaveAllNow(',
                           'SaveGameAndFlush(', 'StoreGameData(', 'ApplySelectedValue(', 'Initialize('):
             self.assertNotIn(forbidden, text)
-        for required in ('GameBasedDefinitions', 'new GameSettingsModel(', 'SetGameIconForNewGame(',
-                         'new GameV06', '_isLoadSummary = false', '.Load(stream, false)',
-                         'stream.Position = 0', 'GameIconIndex.IndexTable', 'SHA256',
+        # SR2 1.x: saves are GameV11, icon indexes are plain arrays, stock new-game definitions are reported as not mapped.
+        for required in ('stock definitions unavailable on SR2 1.x', 'new GameSettingsModel(', 'SetGameIconForNewGame(',
+                         'new GameV11', '_isLoadSummary = false', '.Load(stream, false)',
+                         'stream.Position = 0', 'GameIconIndex[settings.GameIconId]', 'SHA256',
                          'SaveSlotSelection.SelectFree', 'DIAGNOSTIC_ONLY', 'FileMode.CreateNew',
                          '.Flush(true)', 'File.Move(', 'ReparsePoint'):
             self.assertIn(required, text)

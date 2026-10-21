@@ -15,31 +15,28 @@
   function multiplayer(S) {
     const M = L.mp || { servers: { favourites: [], recent: [], directory_enabled: true }, host: { name: 'My Ranch', port: 7777, mode: 'HYBRID' } };
     const host = S.host, running = host.state === 'RUNNING';
+    const srmp = M.srmp || { state: 'no_game', loader: false }, srmpState = srmp.state || 'no_game', content = M.content || {};
+    const srmpPill = srmpState === 'current' ? 'good' : (srmpState === 'outdated' || srmpState === 'other') ? 'warn' : 'muted';
     return `<div class="page">
   <div class="page-title"><h1>${t('nav.multiplayer')}</h1><p>${t('mp.sub')}</p></div>
   <div class="grid cols-2">
     <section class="panel stack">
-      <h2>${slime('tabby', { size: 40, cls: 'idle' })} ${t('mp.join')}</h2>
-      <p class="muted">${t('mp.join_body')}</p>
-      <div class="field"><label>${t('mp.address')}</label><div class="row" style="flex-wrap:nowrap"><input class="input" id="mp-addr" placeholder="ranch.example:7777" spellcheck="false" autocomplete="off"><button class="btn btn--sky" data-act="mp-join">${icon('link')} ${t('mp.connect')}</button></div></div>
-      ${M.error ? `<p class="err">${esc(M.error)}</p>` : ''}
-      <div class="field"><label>${t('mp.favourites')}</label>${addrChips(M.servers.favourites, M.servers.favourites)}</div>
-      <div class="field"><label>${t('mp.recent')}</label>${addrChips(M.servers.recent, M.servers.favourites)}</div>
-      <span class="pill warn">${t('mp.adapter')}</span>
+      <div class="row between"><h2>${slime('tabby', { size: 40, cls: 'idle' })} ${t('mp.srmp')}</h2><span class="pill ${srmpPill}">${t('mp.srmp_s_' + srmpState)}</span></div>
+      <p class="muted">${t('mp.srmp_body')}</p>
+      ${srmp.loader === false && srmpState !== 'no_game' ? `<p class="err">${t('mp.srmp_noloader')}</p>` : ''}
+      <div class="row">
+        ${['missing', 'outdated'].includes(srmpState) && srmp.loader ? `<button class="btn btn--sky" data-act="mp-srmp" data-arg="install">${icon('download')} ${t(srmpState === 'missing' ? 'mp.srmp_install' : 'mp.srmp_update')}</button>` : ''}
+        ${['current', 'outdated', 'other'].includes(srmpState) ? `<button class="btn btn--ghost" data-act="mp-srmp" data-arg="remove">${t('mp.srmp_remove')}</button>` : ''}
+      </div>
+      <p class="faint small">${t('mp.srmp_how')}</p>
     </section>
     <section class="panel stack">
-      <h2>${slime('hunter', { size: 40, cls: 'idle', flip: true })} ${t('mp.host')}</h2>
-      <p class="muted">${t('mp.host_body')}</p>
-      <div class="field"><label>${t('mp.name')}</label><input class="input" id="mp-name" value="${esc(M.host.name)}" maxlength="48"></div>
-      <div class="field"><label>${t('mp.mode')}</label>${segment('mp-mode', 'mode', M.host.mode, [['HYBRID', t('mp.m_hybrid')], ['SR1_ONLY', 'SR1'], ['SR2_ONLY', 'SR2']])}</div>
-      <div class="field"><label>${t('mp.port')}</label><input class="input" id="mp-port" type="number" min="1024" max="65535" value="${esc(M.host.port)}" style="max-width:160px"></div>
-      <div class="row"><button class="btn btn--ghost" data-act="mp-save">${t('mp.save')}</button><button class="btn btn--bridge" disabled data-tip="${esc(t('mp.host_disabled'))}">${icon('play')} ${t('mp.start')}</button></div>
+      <h2>${slime('hunter', { size: 40, cls: 'idle', flip: true })} ${t('mp.content')}</h2>
+      <p class="muted">${t('mp.content_body')}</p>
+      ${Object.keys(content).length ? Object.entries(content).map(([realm, hash]) => `<div class="field"><label>${esc(realm)}</label><div class="mono">${esc(String(hash).slice(0, 12))}</div></div>`).join('') : `<p class="faint small">${t('mp.content_none')}</p>`}
+      <span class="pill muted">${t('mp.sr2_online')}</span>
     </section>
   </div>
-  <section class="panel stack">
-    <h2>${t('mp.browser')}</h2>
-    <div class="empty">${slime('cotton', { size: 70, cls: 'hop', dur: 2.4 })}<div><b>${t('mp.empty_t')}</b><p class="muted">${t('mp.empty_b')}</p></div></div>
-  </section>
   <section class="panel stack">
     <div class="row between"><h2>${t('mp.bridgehost')}</h2><span class="pill ${running ? 'good live' : 'muted'}">${running ? t('mp.hostrun') : t('mp.hoststop')}</span></div>
     <p class="muted">${t('mp.bridgehost_body')}</p>

@@ -10,6 +10,7 @@ import copy
 import json
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 from unittest import mock
 
@@ -123,8 +124,13 @@ class ImportSpecBuilderTests(unittest.TestCase):
         self.assertEqual(entry['plort']['native_id'], entry['native_id'] + 1)
         again, _ = self.build()
         self.assertEqual(json.dumps(sr1_spec, sort_keys=True), json.dumps(again, sort_keys=True))
+        # The committed table (bridge/content/species_ids.json) decides before any previous spec: every install agrees.
         previous = {'slime.ringtail': (920000, 920001)}
         reused, _ = self.build(previous)
+        self.assertEqual(reused['entries'][0]['native_id'], BI.committed_species_ids('SR1')['slime.ringtail'][0])
+        # A species the table does not know keeps the id its previous spec gave it.
+        with unittest.mock.patch.object(BI, 'committed_species_ids', return_value={}):
+            reused, _ = self.build(previous)
         self.assertEqual(reused['entries'][0]['native_id'], 920000)
 
     def test_unmappable_source_fails_closed_to_pending(self):

@@ -46,6 +46,8 @@ namespace SlimeBridge.Shared
         {
             var labExe = Environment.GetEnvironmentVariable("SLIMEBRIDGE_LAB_EXE");
             if (!string.IsNullOrEmpty(labExe)) yield return labExe;
+            var playerHome = PlayerContent.Home;          // normal installs: the launcher's <game>/SlimeBridge/content.json
+            if (!string.IsNullOrEmpty(playerHome)) yield return playerHome!;
             string? mainModule = null;
             try { mainModule = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName; }
             catch (Exception) { }

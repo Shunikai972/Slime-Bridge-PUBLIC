@@ -175,7 +175,7 @@ namespace SlimeBridge.SR2
             // lookup tables, which were built before the imported definitions existed. Rebuild
             // them from the live content so imported types can serialize (save op otherwise
             // fails/throwing on an imported vacpack item).
-            try { world.Director.ResetLookupTables(); log("species ops: persistence lookup tables reset"); }
+            try { log("species ops: persistence lookup tables refreshed (" + world.Director.RefreshPersistence().ToString(CultureInfo.InvariantCulture) + " types)"); }
             catch (Exception ex) { log("species ops: lookup reset failed: " + ex.GetType().Name); }
             Run(world, log);
         }
@@ -236,7 +236,7 @@ namespace SlimeBridge.SR2
                         case "vac_add":
                         {
                             var slotJson = SlotJson(ammo, type);
-                            try { details.Add("\"could_add_global\": " + (ammo.CouldAddToSlot(type) ? "true" : "false")); }
+                            try { details.Add("\"could_add_global\": " + (ammo.CouldAdd(type) ? "true" : "false")); }
                             catch (Exception ex) { details.Add("\"could_add_global\": " + RegistrySnapshotFormat.Quote("threw: " + ex.GetType().Name)); }
                             details.Add("\"slots_full\": " + SlotsDetailJson(ammo, type));
                             var ok = AddToVac(ammo, type, count);
@@ -284,9 +284,9 @@ namespace SlimeBridge.SR2
                             break;
                         case "save_roundtrip":
                         {
-                            if (world.Director.SavedGame == null) { problems.Add("no loaded native save"); break; }
+                            if (world.Director.CurrentGame() == null) { problems.Add("no loaded native save"); break; }
                             details.Add("\"save_preflight\": " + RegistrySnapshotFormat.Quote(
-                                "loaded=" + (world.Director.loadedGame ? "1" : "0") + "/savedgame=1"));
+                                "loaded=" + (world.Director.GameLoaded() ? "1" : "0") + "/savedgame=1"));
                             // Direct native probe: distinguishes SaveAllNow refusal from the
                             // persistence wrapper's current-state checks. Runs before the
                             // persistence baseline capture so the wrapper still sees exactly
@@ -450,7 +450,7 @@ namespace SlimeBridge.SR2
         }
 
         /// <summary>Removes every item a failed add actually added.</summary>
-        private static void RevertAdded(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type, int before,
+        private static void RevertAdded(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type, int before,
             List<string> details, List<string> problems)
         {
             var added = Count(ammo, type) - before;
@@ -470,7 +470,7 @@ namespace SlimeBridge.SR2
         }
 
         /// <summary>Re-adds every item a failed decrement/release actually removed.</summary>
-        private static void RestoreRemoved(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type, int before, string context,
+        private static void RestoreRemoved(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type, int before, string context,
             List<string> details, List<string> problems)
         {
             var missing = before - Count(ammo, type);
@@ -483,7 +483,7 @@ namespace SlimeBridge.SR2
                 : context + ": NATIVE RESTORE FAILED, " + (before - restoredCount).ToString(CultureInfo.InvariantCulture) + " item(s) still missing (count now " + restoredCount.ToString(CultureInfo.InvariantCulture) + ")");
         }
 
-        private static int Count(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type)
+        private static int Count(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type)
         {
             var total = 0;
             var slots = ammo.Slots;
@@ -496,7 +496,7 @@ namespace SlimeBridge.SR2
             return total;
         }
 
-        private static int FindSlot(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type)
+        private static int FindSlot(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type)
         {
             var slots = ammo.Slots;
             for (var i = 0; i < slots.Length; i++)
@@ -507,17 +507,17 @@ namespace SlimeBridge.SR2
             return -1;
         }
 
-        private static bool AddToVac(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type, int count)
+        private static bool AddToVac(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type, int count)
         {
             var existing = FindSlot(ammo, type);
-            if (existing >= 0) return ammo.MaybeAddToSpecificSlot(type, null, existing, count, false);
+            if (existing >= 0) return ammo.AddToSlot(type, existing, count);
             var slots = ammo.Slots;
             for (var i = 0; i < slots.Length; i++)
             {
                 var slot = slots[i];
                 if (slot == null || !slot.IsUnlocked) continue;
                 if (slot.Id != null && slot.Count > 0) continue;
-                if (ammo.MaybeAddToSpecificSlot(type, null, i, count, false)) return true;
+                if (ammo.AddToSlot(type, i, count)) return true;
             }
             return false;
         }
@@ -535,7 +535,7 @@ namespace SlimeBridge.SR2
                     {
                         var group = groups[g];
                         if (group == null) continue;
-                        var members = group.MemberTypes;
+                        var members = group.ImmediateMemberTypes;
                         var contains = members != null && members.Contains(type);
                         string isMember;
                         string hasRuntime;
@@ -556,7 +556,7 @@ namespace SlimeBridge.SR2
             return sb.ToString();
         }
 
-        private static string SlotsDetailJson(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type)
+        private static string SlotsDetailJson(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type)
         {
             var sb = new StringBuilder("[");
             var slots = ammo.Slots;
@@ -575,7 +575,7 @@ namespace SlimeBridge.SR2
                 {
                     var def = slot.Definition;
                     defName = def == null ? "" : (def.name ?? "");
-                    accepts = def != null && def.Predicate(type) ? "true" : "false";
+                    accepts = def != null && def.IsAllowed(type) ? "true" : "false";
                 }
                 catch (Exception ex) { accepts = "threw:" + ex.GetType().Name; }
                 sb.Append(", \"slot_def\": ").Append(RegistrySnapshotFormat.Quote(defName));
@@ -585,7 +585,7 @@ namespace SlimeBridge.SR2
             return sb.ToString();
         }
 
-        private static string SlotJson(Il2Cpp.Ammo ammo, Il2Cpp.IdentifiableType type)
+        private static string SlotJson(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type)
         {
             var sb = new StringBuilder("[");
             var slots = ammo.Slots;

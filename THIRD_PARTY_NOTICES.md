@@ -25,6 +25,14 @@ The header logo, the offline slimes/plorts and the landscape in the launcher are
 
 News, key art and slime pictures shown in the launcher are **Monomi Park, LLC** materials, loaded at run time from slimerancher.com / monomipark.com (and their CDN) and cached locally under the ignored `Lab/Launcher/cache/`; none is bundled or committed. They are shown under Monomi Park's Fan Content Policy (https://www.slimerancher.com/fan-content-policy): SlimeBridge is unofficial Fan Content, not approved/endorsed by Monomi Park. Portions of the materials used are property of Monomi Park, LLC. ©Monomi Park LLC.
 
+## SRMP Revival (bundled in release zips: `plugins/SRMP/`)
+
+The release zip carries an unmodified build of SRMP Revival (a maintained fork of SRMP, Slime Rancher multiplayer) so the
+launcher can install it for online play. It is a separate program under the **GNU GPL v3** (its license travels with it as
+`plugins/SRMP/LICENSE-GPL-3.0.txt`); its complete corresponding source is published at
+https://github.com/Shunikai972/Slime-rancher-multiplayer-public-mode. SlimeBridge does not link to it; the two mods share a
+game process only.
+
 ## Python packages (installed from PyPI by `Install-SlimeBridge.cmd`, not bundled)
 
 | Package | License | Role |

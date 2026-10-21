@@ -1,3 +1,6 @@
+// Slime Rancher 2 0.6 native counterpart creator (LoadNewGame internals). Compiled by its test harness only; the shipped
+// plugin targets SR2 1.x and uses CounterpartCreator.V1.cs (SLIMEBRIDGE_SR2), where these internals no longer exist.
+#if !SLIMEBRIDGE_SR2
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -32,7 +35,7 @@ namespace SlimeBridge.SR2
         { _owned = owned; _result = result; _startedAt = UnityEngine.Time.realtimeSinceStartup; }
 
         public static CounterpartCreator? Begin(BridgeCommand command, OpJournal journal, int pid, out CommandResult? immediate,
-            Func<Il2Cpp.AutoSaveDirector, bool>? storageBinding = null)
+            Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool>? storageBinding = null)
         {
             immediate = NewResult(command);
             var result = immediate;
@@ -65,7 +68,7 @@ namespace SlimeBridge.SR2
                 if (!MenuIdle(director) || _association != null || traversal.FreeSlot == null || Matching(traversal, name).Count != 0)
                 { result.Reason = "fresh native vacancy or idle-menu recheck failed"; return null; }
                 var slot = traversal.FreeSlot.Value;
-                var metadata = new Il2Cpp.AutoSaveDirector.LoadNewGameMetadata { saveSlotIndex = slot, gameSettingsModel = stock.Model };
+                var metadata = new Il2CppMonomiPark.SlimeRancher.AutoSaveDirector.LoadNewGameMetadata { saveSlotIndex = slot, gameSettingsModel = stock.Model };
                 var association = new Association(director, metadata, name, slot, stock, storageBinding!);
                 if (!BindingCurrent(storageBinding, director))
                 { result.Reason = "owned native storage binding lost before intent"; return null; }
@@ -148,7 +151,7 @@ namespace SlimeBridge.SR2
         }
 
         /// <summary>Read-only traversal and detached read; never dispatches or flushes.</summary>
-        public static CommandResult Reconcile(BridgeCommand command, Func<Il2Cpp.AutoSaveDirector, bool>? storageBinding = null)
+        public static CommandResult Reconcile(BridgeCommand command, Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool>? storageBinding = null)
         {
             var result = NewResult(command); result.CanCreate = false;
             if (!CreationId.IsMatch(command.CreationId ?? "")) { result.Reason = "invalid creation id"; return result; }
@@ -172,18 +175,18 @@ namespace SlimeBridge.SR2
         { _result.Ok = _result.Persisted = false; _result.Verified = false; _result.Uncertain = true; _result.Reason = reason; Finish(); return _result; }
         private void Finish()
         { _finished = true; _owned.Terminal = true; if (_owned.NameConsumed && ReferenceEquals(_association, _owned)) _association = null; }
-        private static bool BindingCurrent(Func<Il2Cpp.AutoSaveDirector, bool>? binding, Il2Cpp.AutoSaveDirector director)
+        private static bool BindingCurrent(Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool>? binding, Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director)
         { try { return binding != null && binding(director); } catch (Exception) { return false; } }
-        private static bool StorageReady(Il2Cpp.AutoSaveDirector director) =>
+        private static bool StorageReady(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director) =>
             director._StorageProvider_k__BackingField != null && director._StorageProvider_k__BackingField.IsInitialized() && director.ProfileManager != null;
-        private static bool MenuIdle(Il2Cpp.AutoSaveDirector director)
+        private static bool MenuIdle(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director)
         {
             var loader = Il2Cpp.SystemContext.Instance?.SceneLoader; var group = loader?._currentSceneGroup;
             return StorageReady(director) && !director.loadedGame && Il2Cpp.SceneContext.Instance?.PlayerState == null && loader != null &&
                 !loader.IsSceneLoadInProgress && group != null && group.name.StartsWith("MainMenu", StringComparison.Ordinal);
         }
 
-        private static Traversal Capture(Il2Cpp.AutoSaveDirector director)
+        private static Traversal Capture(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director)
         {
             if (!StorageReady(director)) throw new InvalidOperationException("native storage not ready");
             var count = director.SaveSlotCount; var raw = director._StorageProvider_k__BackingField!.GetAvailableGames();
@@ -265,7 +268,7 @@ namespace SlimeBridge.SR2
         }
         private static List<Il2Cpp.GameData.Summary> Matching(Traversal traversal, string name) =>
             traversal.Rows.FindAll(row => row.Name == name || row.SaveName == name || row.SaveName.StartsWith(name + "_", StringComparison.Ordinal));
-        private static void Verify(Il2Cpp.AutoSaveDirector director, Traversal traversal, string name, int? expectedSlot, Stock stock, CommandResult result, Dictionary<string, string>? beforeFlush = null)
+        private static void Verify(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director, Traversal traversal, string name, int? expectedSlot, Stock stock, CommandResult result, Dictionary<string, string>? beforeFlush = null)
         {
             result.Verified = false; result.SaveFile = result.Sha256 = "";
             var rows = Matching(traversal, name); result.Before = result.After = rows.Count;
@@ -310,7 +313,7 @@ namespace SlimeBridge.SR2
             { result.Reason = "single native flush did not produce one exact changed/new payload"; return; }
             result.SaveFile = newest; result.Sha256 = digest; result.Verified = true; result.Reason = "";
         }
-        private static Dictionary<string, string> Fingerprints(Il2Cpp.AutoSaveDirector director, List<Il2Cpp.GameData.Summary> rows)
+        private static Dictionary<string, string> Fingerprints(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director, List<Il2Cpp.GameData.Summary> rows)
         {
             var hashes = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var row in rows)
@@ -333,8 +336,8 @@ namespace SlimeBridge.SR2
             var harmony = new HarmonyLib.Harmony("slimebridge.sr2.counterpart");
             try
             {
-                var move = AccessTools.Method(typeof(Il2Cpp.AutoSaveDirector._LoadNewGame_Coroutine_d__53), "MoveNext", Type.EmptyTypes);
-                var name = AccessTools.Method(typeof(Il2Cpp.AutoSaveDirector), "GetGameSaveFileName", new[] { typeof(string) });
+                var move = AccessTools.Method(typeof(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector._LoadNewGame_Coroutine_d__53), "MoveNext", Type.EmptyTypes);
+                var name = AccessTools.Method(typeof(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector), "GetGameSaveFileName", new[] { typeof(string) });
                 if (move == null || move.ReturnType != typeof(bool) || name == null || name.ReturnType != typeof(string)) throw new InvalidOperationException("exact hook signatures unavailable");
                 // Native LoadNewGame DIRECTLY allocates its iterator. A coroutine factory hook misses it.
                 harmony.Patch(move, prefix: new HarmonyMethod(typeof(CounterpartCreator), nameof(MovePrefix)), finalizer: new HarmonyMethod(typeof(CounterpartCreator), nameof(MoveFinalizer)));
@@ -343,7 +346,7 @@ namespace SlimeBridge.SR2
             }
             catch (Exception ex) { try { harmony.UnpatchSelf(); } catch { } error = ex.GetType().Name + ": " + ex.Message; return false; }
         }
-        private static bool MovePrefix(Il2Cpp.AutoSaveDirector._LoadNewGame_Coroutine_d__53 __instance, out Association? __state, ref bool __result)
+        private static bool MovePrefix(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector._LoadNewGame_Coroutine_d__53 __instance, out Association? __state, ref bool __result)
         {
             __state = _scope; _scope = null; // Unrelated/nested iterator masks any matched outer scope.
             var armed = _association;
@@ -377,7 +380,7 @@ namespace SlimeBridge.SR2
         }
         private static Exception? MoveFinalizer(Association? __state, Exception? __exception)
         { _scope = __state; return __exception; } // normal AND exceptional exits: no scope leak or swallowed error
-        private static bool NamePrefix(Il2Cpp.AutoSaveDirector __instance, ref string __result)
+        private static bool NamePrefix(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector __instance, ref string __result)
         {
             var armed = _scope;
             if (armed == null || armed.NameConsumed || !ReferenceEquals(_association, armed) || __instance.Pointer != armed.Director.Pointer) return true;
@@ -387,16 +390,16 @@ namespace SlimeBridge.SR2
         }
         private sealed class Association
         {
-            internal readonly Il2Cpp.AutoSaveDirector Director;
-            internal readonly Il2Cpp.AutoSaveDirector.LoadNewGameMetadata Metadata;
+            internal readonly Il2CppMonomiPark.SlimeRancher.AutoSaveDirector Director;
+            internal readonly Il2CppMonomiPark.SlimeRancher.AutoSaveDirector.LoadNewGameMetadata Metadata;
             internal readonly string GameName;
             internal readonly int Slot;
             internal readonly Stock Stock;
-            internal readonly Func<Il2Cpp.AutoSaveDirector, bool> StorageBinding;
+            internal readonly Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool> StorageBinding;
             internal IntPtr Iterator;
             internal bool NameConsumed, Terminal;
             internal string? AbortReason;
-            internal Association(Il2Cpp.AutoSaveDirector director, Il2Cpp.AutoSaveDirector.LoadNewGameMetadata metadata, string name, int slot, Stock stock, Func<Il2Cpp.AutoSaveDirector, bool> storageBinding)
+            internal Association(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director, Il2CppMonomiPark.SlimeRancher.AutoSaveDirector.LoadNewGameMetadata metadata, string name, int slot, Stock stock, Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool> storageBinding)
             { Director = director; Metadata = metadata; GameName = name; Slot = slot; Stock = stock; StorageBinding = storageBinding; }
         }
         private sealed class Stock
@@ -414,7 +417,7 @@ namespace SlimeBridge.SR2
             internal readonly string Name;
             internal readonly int Slot;
             internal readonly Stock Stock;
-            internal readonly Func<Il2Cpp.AutoSaveDirector, bool> Guard;
+            internal readonly Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool> Guard;
             internal CompletedWorld(Association owned, IntPtr saved)
             {
                 Director = owned.Director.Pointer; Saved = saved; Metadata = owned.Metadata.Pointer; Iterator = owned.Iterator;
@@ -428,9 +431,9 @@ namespace SlimeBridge.SR2
         {
             internal readonly Il2Cpp.GameContext Game;
             internal readonly Il2Cpp.SceneContext Scene;
-            internal readonly Il2Cpp.AutoSaveDirector Director;
+            internal readonly Il2CppMonomiPark.SlimeRancher.AutoSaveDirector Director;
             internal readonly string Name;
-            internal WorldReading(Il2Cpp.GameContext game, Il2Cpp.SceneContext scene, Il2Cpp.AutoSaveDirector director, string name)
+            internal WorldReading(Il2Cpp.GameContext game, Il2Cpp.SceneContext scene, Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director, string name)
             { Game = game; Scene = scene; Director = director; Name = name; }
         }
         private static bool CompletionCurrent(Association owned, IntPtr saved)
@@ -448,13 +451,13 @@ namespace SlimeBridge.SR2
                 OwnedIdentityCurrent(director, saved, owned.GameName, owned.Slot) &&
                 Il2Cpp.SceneContext.Instance?.Pointer == scene.Pointer && GameplayIdle();
         }
-        private static bool NamedIdentityCurrent(Il2Cpp.AutoSaveDirector director, IntPtr saved, string name)
+        private static bool NamedIdentityCurrent(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director, IntPtr saved, string name)
         {
             var current = Il2Cpp.GameContext.Instance?.AutoSaveDirector;
             return current != null && current.Pointer == director.Pointer && current.SavedGame?.Pointer == saved &&
                 current.SavedGame.GetName() == name && (!current.loadedGame || current._currentGameName == name);
         }
-        private static bool OwnedIdentityCurrent(Il2Cpp.AutoSaveDirector director, IntPtr saved, string name, int slot) =>
+        private static bool OwnedIdentityCurrent(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director, IntPtr saved, string name, int slot) =>
             NamedIdentityCurrent(director, saved, name) && !director.loadedGame && director.newGameMetadata == null &&
             director.SavedGame!.GameState?.SaveSlotIndex == slot;
         private static bool GameplayIdle()
@@ -519,3 +522,4 @@ namespace SlimeBridge.SR2
         }
     }
 }
+#endif

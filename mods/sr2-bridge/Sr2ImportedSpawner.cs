@@ -28,8 +28,9 @@ namespace SlimeBridge.SR2
         {
             _cache = null; Bindings.Clear(); _cacheRoot = null; _repoRoot = null; RootCaches.Clear();
             _cacheProblem = "cache not requested";
-            var rootPath = Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_CACHE_ROOT");
-            if (!string.IsNullOrEmpty(rootPath) && labExecutable)
+            var rootPath = labExecutable ? Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_CACHE_ROOT") : null;
+            if (string.IsNullOrEmpty(rootPath) && PlayerContent.TryGet("SR2", out var player)) rootPath = player.CacheRoot;
+            if (!string.IsNullOrEmpty(rootPath))
             {
                 try
                 {

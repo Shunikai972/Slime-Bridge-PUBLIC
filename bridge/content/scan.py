@@ -304,7 +304,13 @@ def scan_sr1_export(assets_root: Path, game_build: str | None = None) -> dict:
 def scan_sr2_catalog(path: Path) -> dict:
     """Index addressable definition paths only; names imply no parent or active status."""
     path = Path(path)
-    catalog = json.loads(path.read_text(encoding='utf-8'))
+    if path.suffix == '.json' and not path.is_file() and path.with_suffix('.bin').is_file():
+        path = path.with_suffix('.bin')            # SR2 1.x ships the Addressables 2 binary catalog
+    if path.suffix == '.bin':
+        from bridge.content.addressables_bin import internal_ids
+        catalog = {'m_InternalIds': internal_ids(path), 'm_BuildResultHash': None}
+    else:
+        catalog = json.loads(path.read_text(encoding='utf-8'))
     if not isinstance(catalog.get('m_InternalIds'), list):
         raise ValueError('Addressables m_InternalIds missing')
     definitions = []

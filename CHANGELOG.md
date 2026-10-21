@@ -22,8 +22,15 @@ First public preview.
 - Static GLB reader for user Largo imports.
 - One-click Windows installer (`Install-SlimeBridge.cmd`), self-check, release script.
 
+- Slime Rancher 2 1.x support (Unity 6, MelonLoader 0.7.3): SR2 plugin ported to the 1.x save, vacpack, currency and
+  cutscene APIs; extractor reads the Addressables 2 binary catalog (`catalog.bin`) and skips 1.x radiant appearances and
+  3D noise textures.
+- Normal game installs: the launcher writes `<game>/SlimeBridge/content.json` so the plugins load the extracted content
+  even when the game is started from Steam or Epic (same path containment as the developer LAB).
+- Online: the Multi page installs/updates/removes SRMP Revival (bundled, GPL-3.0) and shows the content fingerprint;
+  imported species ids are fixed in `bridge/content/species_ids.json` so every install agrees.
+
 ### Known limitations
-- In-game multiplayer networking is not connected yet (server core, list and fingerprint only).
-- Imported species are armed only in a developer LAB copy of the game (`Lab/Games/<SR1|SR2>`); player installs get the
-  plugin, the island, the portal and travel.
-- Creating a brand-new SR2 save from the portal is not available: link an existing SR2 save.
+- Slime Rancher 2 online is not available yet; SRMP two-player sessions with imported content still need a two-PC test.
+- Creating a brand-new SR2 save from the portal is not available on SR2 1.x: link an existing SR2 save.
+- The SR2 1.x Hyper slime and its Largos are not extracted yet (new renderer components).

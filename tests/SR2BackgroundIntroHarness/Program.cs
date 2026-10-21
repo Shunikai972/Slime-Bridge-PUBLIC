@@ -56,7 +56,7 @@ internal static class Program
     internal sealed class World : IDisposable
     {
         internal const string Id = "0123456789abcdef0123456789abcdef";
-        internal readonly Il2Cpp.AutoSaveDirector Director;
+        internal readonly Il2CppMonomiPark.SlimeRancher.AutoSaveDirector Director;
         internal readonly InventoryAgent Agent;
         internal readonly OpJournal Journal;
         internal readonly string JournalPath;
@@ -74,7 +74,7 @@ internal static class Program
             var constructors = typeof(InventoryAgent).GetConstructors(BindingFlags.NonPublic | BindingFlags.Instance);
             var ctor = constructors.OrderByDescending(c => c.GetParameters().Length).First();
             var args = new List<object?> { "http://127.0.0.1:1", "synthetic-not-a-credential", false, journal ? Journal : null, (Action<string>)(m => Log.Add(m)), lab,
-                (Func<Il2Cpp.AutoSaveDirector, bool>)(d => { OnStorage?.Invoke(); return StorageCurrent && d.Pointer == Director.Pointer; }) };
+                (Func<Il2CppMonomiPark.SlimeRancher.AutoSaveDirector, bool>)(d => { OnStorage?.Invoke(); return StorageCurrent && d.Pointer == Director.Pointer; }) };
             if (ctor.GetParameters().Length == 8) args.Add(defaultFocus ? null : (Func<bool>)(() => Focus()));
             Agent = (InventoryAgent)ctor.Invoke(args.ToArray());
             Set(Agent, "_nextPoll", float.PositiveInfinity);

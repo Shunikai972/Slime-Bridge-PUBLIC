@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def prepare(work):
     sources = ['mods/shared/BridgeCommands.cs', 'mods/shared/SaveSlotSelection.cs',
         'mods/sr2-bridge/CounterpartCreator.cs', 'mods/sr2-bridge/InventoryAgent.cs',
-        'mods/sr2-bridge/NativeStorageBinding.cs', 'mods/sr2-bridge/NativeStockDefinitions.cs',
+        'mods/sr2-bridge/NativeStorageBinding.cs', 'mods/sr2-bridge/NativeStockDefinitions.cs', 'tests/CounterpartCreatorHarness/Sr2CompatFixture.cs',
         'tests/CounterpartCreatorHarness/InventoryApiFixtures.cs']
     for rel in ['mods/sr2-bridge/BackgroundIntroSkipper.cs', 'mods/shared/BackgroundGameFocus.cs']:
         if (ROOT / rel).exists():

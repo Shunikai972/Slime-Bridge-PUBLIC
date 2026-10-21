@@ -149,8 +149,7 @@ imported definition object itself; nothing numeric is cast.
 ## Placeholder policy (honest states)
 
 - Visuals: `PLACEHOLDER_TEMPLATE` — imported species render with the target-native template's
-  meshes/materials while carrying their own logical identity. Final visuals belong to the later
-  visual phase.
+  meshes/materials while carrying their own logical identity. Final visuals belong to the later visual phase.
 - Largos: `can_largofy=false` for all imported entries for now (largos reserved); recorded in the
   spec blockers.
 - Icons: imported slimes reuse the template appearance icon; imported plorts clone the template

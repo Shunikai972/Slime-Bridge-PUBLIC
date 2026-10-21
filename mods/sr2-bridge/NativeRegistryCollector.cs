@@ -206,7 +206,7 @@ namespace SlimeBridge.SR2
                             var members = new DietEntry.GroupMembers { Group = name };
                             try
                             {
-                                var memberTypes = group.MemberTypes;
+                                var memberTypes = group.ImmediateMemberTypes;
                                 if (memberTypes != null)
                                     for (var mi = 0; mi < memberTypes.Count && members.Members.Count < 16; mi++)
                                     {

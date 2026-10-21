@@ -39,13 +39,23 @@ namespace SlimeBridge.SR1
             _runId = runId;
         }
 
-        internal static bool Requested => Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_SPEC") != null;
+        internal static bool Requested => Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_SPEC") != null || PlayerContent.TryGet("SR1", out _);
 
         public static SpeciesRegistrar? TryCreate(bool labExecutable)
         {
             var spec = Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_SPEC");
             var outDir = Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_OUT");
-            if (!labExecutable || string.IsNullOrEmpty(spec) || string.IsNullOrEmpty(outDir)) return null;
+            var runId = Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_RUN") ?? "";
+            if (!labExecutable || string.IsNullOrEmpty(spec) || string.IsNullOrEmpty(outDir))
+            {
+                // Normal install: the launcher's pointer file, validated by PlayerContent (same containment as below).
+                if (!PlayerContent.TryGet("SR1", out var player))
+                {
+                    if (PlayerContent.Problem.Length > 0) UnityEngine.Debug.Log("[SlimeBridge] imported content disabled: " + PlayerContent.Problem);
+                    return null;
+                }
+                spec = player.Spec; runId = PlayerContent.RunId("SR1"); outDir = PlayerContent.RunOutput(player, runId);
+            }
             if (!Path.IsPathRooted(spec) || !File.Exists(spec) || !Path.IsPathRooted(outDir) || !Directory.Exists(outDir)) return null;
             // Runtime containment: the mod enforces the Bridge-owned roots itself (the Python
             // callers are not trusted), with reparse refusal so junctions cannot redirect the spec
@@ -66,7 +76,6 @@ namespace SlimeBridge.SR1
                 UnityEngine.Debug.Log("[SlimeBridge] import output refused: " + outReason);
                 return null;
             }
-            var runId = Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_RUN") ?? "";
             if (runId.Length < 8 || runId.Length > 64 || runId.Any(c => !char.IsLetterOrDigit(c) && c != '-')) return null;
             var registrar = new SpeciesRegistrar(spec, outDir, runId);
             Current = registrar;

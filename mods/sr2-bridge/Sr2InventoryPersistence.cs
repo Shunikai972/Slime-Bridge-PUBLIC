@@ -14,9 +14,11 @@ namespace SlimeBridge.SR2
     {
         private readonly Il2Cpp.GameContext _game;
         private readonly Il2Cpp.SceneContext _scene;
-        private readonly Il2Cpp.AutoSaveDirector _director;
+        private readonly Il2CppMonomiPark.SlimeRancher.AutoSaveDirector _director;
         private readonly Il2Cpp.FileStorageProvider _provider;
-        private readonly IntPtr _gamePtr, _scenePtr, _directorPtr, _savedPtr, _providerPtr, _ammoPtr, _lookupPtr, _playerPtr;
+        private readonly IntPtr _gamePtr, _scenePtr, _directorPtr, _providerPtr, _ammoPtr, _lookupPtr, _playerPtr;
+        private readonly string? _savedName;
+        private readonly int _savedSlot;
         private readonly string _identity, _root;
         private readonly Il2Cpp.IdentifiableType _type;
         private readonly Dictionary<string, string> _before;
@@ -25,7 +27,7 @@ namespace SlimeBridge.SR2
         {
             _game = game; _scene = scene; _identity = identity; _type = type;
             _director = game.AutoSaveDirector ?? throw new InvalidOperationException("native director unavailable");
-            var storage = _director.StorageProvider ?? throw new InvalidOperationException("native storage unavailable");
+            var storage = _director.Storage() ?? throw new InvalidOperationException("native storage unavailable");
             if (storage.ObjectClass != Il2CppClassPointerStore<Il2Cpp.FileStorageProvider>.NativeClassPtr)
                 throw new InvalidOperationException("native file storage class required");
             _provider = storage.TryCast<Il2Cpp.FileStorageProvider>() ?? throw new InvalidOperationException("native file storage cast failed");
@@ -33,7 +35,7 @@ namespace SlimeBridge.SR2
             if (!Path.IsPathRooted(_provider.savePath) || !_provider.IsInitialized())
                 throw new InvalidOperationException("native file storage root not initialized");
             _gamePtr = game.Pointer; _scenePtr = scene.Pointer; _directorPtr = _director.Pointer;
-            _savedPtr = _director.SavedGame?.Pointer ?? IntPtr.Zero; _providerPtr = _provider.Pointer;
+            _savedName = _director.CurrentGameName(); _savedSlot = _director.CurrentSlot(); _providerPtr = _provider.Pointer;
             _ammoPtr = scene.PlayerState!.Ammo!.Pointer; _lookupPtr = game.LookupDirector!.Pointer; _playerPtr = scene.Player!.Pointer;
             if (!Current()) throw new InvalidOperationException("loaded inventory/storage changed");
             _before = Fingerprints(Names()); // Reject ambiguous/unreadable storage before INTENT/native effects.
@@ -93,9 +95,9 @@ namespace SlimeBridge.SR2
         {
             if (!CounterpartCreator.TryReadWorld(out var world) || world == null || world.Name != _identity ||
                 world.Game.Pointer != _gamePtr || world.Scene.Pointer != _scenePtr || world.Director.Pointer != _directorPtr ||
-                _director.SavedGame?.Pointer != _savedPtr || _scene.Player?.Pointer != _playerPtr ||
+                _director.CurrentGameName() != _savedName || _director.CurrentSlot() != _savedSlot || _scene.Player?.Pointer != _playerPtr ||
                 _scene.PlayerState?.Ammo?.Pointer != _ammoPtr || _game.LookupDirector?.Pointer != _lookupPtr) return false;
-            var storage = _director.StorageProvider;
+            var storage = _director.Storage();
             return storage != null && storage.Pointer == _providerPtr &&
                 storage.ObjectClass == Il2CppClassPointerStore<Il2Cpp.FileStorageProvider>.NativeClassPtr &&
                 _provider.IsInitialized() && Path.IsPathRooted(_provider.savePath) &&
@@ -180,16 +182,16 @@ namespace SlimeBridge.SR2
             }
             finally { native.Dispose(true); }
             if (bytes.Length == 0) throw new InvalidDataException("empty native payload");
-            var payload = new Il2CppSystem.IO.MemoryStream(bytes, false); var game = new GameV06();
+            var payload = new Il2CppSystem.IO.MemoryStream(bytes, false); var game = new GameV11();
             try
             {
                 game.Load(payload, false); // Full detached load, including the native payload terminator.
                 if (payload.Position != payload.Length || game._isLoadSummary || game.Player == null ||
-                    game.World == null || game.Ranch == null || game.Actors == null || game.IdentTypeIndex?.IndexTable == null)
+                    game.World == null || game.Ranch == null || game.Actors == null || game.IdentTypeIndex == null)
                     throw new InvalidDataException("incomplete native game payload");
-                var lookup = _game.LookupDirector!._identifiableTypeByRefId?.Cast<Il2CppSystem.Collections.Generic.IReadOnlyDictionary<string, Il2Cpp.IdentifiableType>>();
-                if (lookup == null) throw new InvalidDataException("native identifiable reverse lookup unavailable");
-                var ids = new IdentifiableTypePersistenceIdReverseLookupTable(game.IdentTypeIndex.IndexTable, lookup);
+                // 1.x: the director's save translation builds the persistence-id -> type table for this exact payload.
+                var ids = _director._saveReferenceTranslation?.CreateLoadReferenceTranslation(game);
+                if (ids == null) throw new InvalidDataException("native identifiable reverse lookup unavailable");
                 var ammo = game.Player.Ammo;
                 if (ammo == null) throw new InvalidDataException("native saved ammo unavailable");
                 var live = _scene.PlayerState!.Ammo!;

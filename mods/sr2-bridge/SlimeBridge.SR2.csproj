@@ -1,4 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Optional, git-ignored: mods/local.props sets SR1LabPath / SR2LabPath to your own game folders. -->
+  <Import Project="../local.props" Condition="Exists('../local.props')" />
   <PropertyGroup>
     <!-- MelonLoader 0.7.3 hosts IL2CPP games on .NET 6 (MelonLoader/net6). -->
     <TargetFramework>net6.0</TargetFramework>
@@ -6,6 +8,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>SlimeBridge.SR2</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DefineConstants>$(DefineConstants);SLIMEBRIDGE_SR2</DefineConstants>
     <!-- Worktrees can reference the read-only lab without copying proprietary binaries. -->
     <SR2LabPath Condition="'$(SR2LabPath)' == ''">../../Lab/Games/SR2</SR2LabPath>
   </PropertyGroup>
@@ -79,6 +82,7 @@
     <Compile Include="../shared/DietSnapshotFormat.cs" Link="Shared/DietSnapshotFormat.cs" />
     <Compile Include="../shared/AppearanceColorsFormat.cs" Link="Shared/AppearanceColorsFormat.cs" />
     <Compile Include="../shared/LabSpecPathGuard.cs" Link="Shared/LabSpecPathGuard.cs" />
+    <Compile Include="../shared/PlayerContent.cs" Link="Shared/PlayerContent.cs" />
     <Compile Include="../shared/MiniJson.cs" Link="Shared/MiniJson.cs" />
     <Compile Include="../shared/PerformanceTuner.cs" Link="Shared/PerformanceTuner.cs" />
     <Compile Include="../shared/NativeMesh*.cs" Link="Shared/%(Filename)%(Extension)" />

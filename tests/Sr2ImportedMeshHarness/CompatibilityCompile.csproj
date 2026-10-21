@@ -10,5 +10,6 @@
     <Compile Include="../../mods/shared/MiniJson.cs" Link="MiniJson.cs" />
     <Compile Include="../../mods/shared/NativeMesh*.cs" Link="Production/%(Filename)%(Extension)" />
     <Compile Include="../../mods/shared/LabSpecPathGuard.cs" Link="Production/LabSpecPathGuard.cs" />
+    <Compile Include="../../mods/shared/PlayerContent.cs" Link="Production/PlayerContent.cs" />
   </ItemGroup>
 </Project>

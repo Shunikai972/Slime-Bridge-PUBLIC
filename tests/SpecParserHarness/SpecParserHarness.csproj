@@ -9,5 +9,6 @@
     <Compile Include="../../mods/shared/MiniJson.cs" Link="MiniJson.cs" />
     <Compile Include="../../mods/shared/ImportedSpeciesSpec.cs" Link="ImportedSpeciesSpec.cs" />
     <Compile Include="../../mods/shared/LabSpecPathGuard.cs" Link="LabSpecPathGuard.cs" />
+    <Compile Include="../../mods/shared/PlayerContent.cs" Link="PlayerContent.cs" />
   </ItemGroup>
 </Project>

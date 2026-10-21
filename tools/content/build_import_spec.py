@@ -197,6 +197,18 @@ def _classification_sha(classification):
     return _doc_sha(classification)
 
 
+SPECIES_IDS = Path(__file__).resolve().parents[2] / 'bridge' / 'content' / 'species_ids.json'
+
+
+def committed_species_ids(realm, path=SPECIES_IDS):
+    """{canonical: (native_id, plort_id)} of the committed, append-only id table for one target realm."""
+    import json as _json
+    if not Path(path).is_file():
+        return {}
+    table = _json.loads(Path(path).read_text(encoding='utf-8')).get(realm, {})
+    return {canonical: (int(ids[0]), int(ids[1])) for canonical, ids in table.items()}
+
+
 def build_spec(realm, classification, sr1_diet, sr2_diet, previous, sr1_app=None, sr2_app=None):
     """Build one realm's spec; returns (spec_doc, summary_doc)."""
     target_realm = realm
@@ -212,9 +224,12 @@ def build_spec(realm, classification, sr1_diet, sr2_diet, previous, sr1_app=None
     source_vocab = item_vocabulary(sr2_diet if source_realm == 'SR2' else sr1_diet)
     target_vocab = item_vocabulary(target_diet_doc)
 
+    # The committed table (bridge/content/species_ids.json) decides first: every install must give a species the same id.
+    previous = {**previous, **committed_species_ids(realm)}
     used_ids = set()
     for native_id, plort_id in previous.values():
         used_ids.update({native_id, plort_id})
+    used_ids.discard(0)
 
     entries, summary_entries = [], []
     free = NATIVE_ID_BASE

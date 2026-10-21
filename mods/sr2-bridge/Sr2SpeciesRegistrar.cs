@@ -44,13 +44,23 @@ namespace SlimeBridge.SR2
             _runId = runId;
         }
 
-        internal static bool Requested => Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_SPEC") != null;
+        internal static bool Requested => Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_SPEC") != null || PlayerContent.TryGet("SR2", out _);
 
         public static Sr2SpeciesRegistrar? TryCreate(bool labExecutable)
         {
             var spec = Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_SPEC");
             var outDir = Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_OUT");
-            if (!labExecutable || string.IsNullOrEmpty(spec) || string.IsNullOrEmpty(outDir)) return null;
+            var runId = Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_RUN") ?? "";
+            if (!labExecutable || string.IsNullOrEmpty(spec) || string.IsNullOrEmpty(outDir))
+            {
+                // Normal install: the launcher's pointer file, validated by PlayerContent (same containment as below).
+                if (!PlayerContent.TryGet("SR2", out var player))
+                {
+                    if (PlayerContent.Problem.Length > 0) UnityEngine.Debug.Log("[SlimeBridge] imported content disabled: " + PlayerContent.Problem);
+                    return null;
+                }
+                spec = player.Spec; runId = PlayerContent.RunId("SR2"); outDir = PlayerContent.RunOutput(player, runId);
+            }
             if (!Path.IsPathRooted(spec) || !File.Exists(spec) || !Path.IsPathRooted(outDir) || !Directory.Exists(outDir)) return null;
             // Runtime containment: the mod enforces the Bridge-owned roots itself (the Python
             // callers are not trusted), with reparse refusal so junctions cannot redirect the spec
@@ -71,7 +81,6 @@ namespace SlimeBridge.SR2
                 UnityEngine.Debug.Log("[SlimeBridge] import output refused: " + outReason);
                 return null;
             }
-            var runId = Environment.GetEnvironmentVariable("SLIMEBRIDGE_IMPORT_RUN") ?? "";
             if (runId.Length < 8 || runId.Length > 64 || runId.Any(c => !char.IsLetterOrDigit(c) && c != '-')) return null;
             Sr2ImportedSpawner.Configure(labExecutable);
             return new Sr2SpeciesRegistrar(spec, outDir, runId);
@@ -108,7 +117,7 @@ namespace SlimeBridge.SR2
                 {
                     try
                     {
-                        var members = group.MemberTypes;
+                        var members = group.ImmediateMemberTypes;
                         if (members != null && !members.Contains(pair.Value)) members.Add(pair.Value);
                         var runtimeMembers = group._runtimeObject?._memberTypes;
                         if (runtimeMembers != null && !runtimeMembers.Contains(pair.Value)) { runtimeMembers.Add(pair.Value); added++; }
@@ -129,7 +138,7 @@ namespace SlimeBridge.SR2
                 {
                     try
                     {
-                        var members = group.MemberTypes;
+                        var members = group.ImmediateMemberTypes;
                         if (members != null && !members.Contains(pair.Value.Type)) members.Add(pair.Value.Type);
                         var runtimeMembers = group._runtimeObject?._memberTypes;
                         if (runtimeMembers != null && !runtimeMembers.Contains(pair.Value.Type)) { runtimeMembers.Add(pair.Value.Type); added++; }
@@ -267,7 +276,23 @@ namespace SlimeBridge.SR2
             if (results.Any(r => r.Status == "REGISTERED"))
             {
                 try { definitions.RefreshDefinitions(); }
-                catch (Exception ex) { errors.Add("RefreshDefinitions failed: " + ex.GetType().Name + ": " + ex.Message); }
+                catch (Exception ex)
+                {
+                    errors.Add("RefreshDefinitions failed: " + ex.GetType().Name + ": " + ex.Message);
+                    // Name the definitions whose eat map cannot be built (the native pass stops at the first one).
+                    try
+                    {
+                        var failing = new List<string>();
+                        foreach (var def in definitions.Slimes)
+                        {
+                            if (def == null) continue;
+                            try { def.Diet?.RefreshEatMap(definitions, def); }
+                            catch (Exception) { failing.Add((def.name ?? "?") + (results.Any(r => r.Def != null && r.Def.Pointer == def.Pointer) ? "(imported)" : "(native)")); }
+                        }
+                        errors.Add("eat map refresh failing for: " + (failing.Count == 0 ? "none on retry" : string.Join(", ", failing)));
+                    }
+                    catch (Exception probe) { errors.Add("eat map probe failed: " + probe.GetType().Name); }
+                }
             }
             foreach (var result in results)
                 if (result.Status == "REGISTERED" && result.Def != null && result.Parents != null)
@@ -340,7 +365,7 @@ namespace SlimeBridge.SR2
                         if (dietGroups != null)
                             for (var g = 0; g < dietGroups.Length; g++)
                             {
-                                var members = dietGroups[g]?.MemberTypes;
+                                var members = dietGroups[g]?.ImmediateMemberTypes;
                                 if (members == null) continue;
                                 for (var m = 0; m < members.Count; m++) AddEntry(members[m]);
                             }
@@ -534,6 +559,17 @@ namespace SlimeBridge.SR2
                 diet.EatMap = new Il2CppSystem.Collections.Generic.List<Il2Cpp.SlimeDiet.EatMapEntry>();
                 diet.FavoriteProductionCount = isLargo ? largoFavoriteCount
                     : entry.diet.favorite_production_count > 0 ? entry.diet.favorite_production_count : 2;
+                // SR2 1.x RefreshEatMap reads the shared native groups (edible plorts, stable/unstable resources) and the
+                // Tarr transformation; a diet built from scratch left them null and every imported refresh threw.
+                var nativeDiet = templateDef.Diet;
+                if (nativeDiet != null)
+                {
+                    diet.EdiblePlortIdentifiableTypeGroup = nativeDiet.EdiblePlortIdentifiableTypeGroup;
+                    diet.StableResourceIdentifiableTypeGroup = nativeDiet.StableResourceIdentifiableTypeGroup;
+                    diet.UnstableResourceIdentifiableTypeGroup = nativeDiet.UnstableResourceIdentifiableTypeGroup;
+                    diet.BecomesOnTarrifyIdentifiableType = nativeDiet.BecomesOnTarrifyIdentifiableType;
+                    diet.UnstablePlort = nativeDiet.UnstablePlort;
+                }
 
                 if (hasPlort)
                 {
@@ -590,12 +626,12 @@ namespace SlimeBridge.SR2
                 var refDict = Il2Cpp.GameContext.Instance?.LookupDirector?._identifiableTypeByRefId;
                 if (refDict != null && !string.IsNullOrEmpty(def.referenceId))
                     refDict[def.referenceId] = def;
-                if (def.groupType != null && !def.groupType.MemberTypes.Contains(def)) def.groupType.MemberTypes.Add(def);
+                if (def.groupType != null && !def.groupType.ImmediateMemberTypes.Contains(def)) def.groupType.ImmediateMemberTypes.Add(def);
                 foreach (var mirrorGroup in defMirrorGroups)
                 {
                     try
                     {
-                        var members = mirrorGroup.MemberTypes;
+                        var members = mirrorGroup.ImmediateMemberTypes;
                         if (members != null && !members.Contains(def)) members.Add(def);
                         // IdentifiableTypeGroup.IsMember consults the group's runtime object cache
                         // (built at game init), not the serialized member list: mirror into both.
@@ -613,7 +649,7 @@ namespace SlimeBridge.SR2
                     {
                         try
                         {
-                            var members = mirrorGroup.MemberTypes;
+                            var members = mirrorGroup.ImmediateMemberTypes;
                             if (members != null && !members.Contains(plortType)) members.Add(plortType);
                             var runtime = mirrorGroup._runtimeObject;
                             var runtimeMembers = runtime?._memberTypes;
@@ -634,7 +670,7 @@ namespace SlimeBridge.SR2
                 var groupHas = true;
                 foreach (var mirrorGroup in defMirrorGroups)
                 {
-                    var members = mirrorGroup.MemberTypes;
+                    var members = mirrorGroup.ImmediateMemberTypes;
                     if (members == null || !members.Contains(def)) { groupHas = false; break; }
                 }
                 var plortGroupHas = true;
@@ -642,7 +678,7 @@ namespace SlimeBridge.SR2
                 {
                     foreach (var mirrorGroup in plortMirrorGroups)
                     {
-                        var members = mirrorGroup.MemberTypes;
+                        var members = mirrorGroup.ImmediateMemberTypes;
                         if (members == null || !members.Contains(plortType)) { plortGroupHas = false; break; }
                     }
                 }
@@ -758,7 +794,7 @@ namespace SlimeBridge.SR2
                 sb.Append(group.name ?? "?");
                 try
                 {
-                    var contains = group.MemberTypes != null && group.MemberTypes.Contains(member);
+                    var contains = group.ImmediateMemberTypes != null && group.ImmediateMemberTypes.Contains(member);
                     var runtimeMembers = group._runtimeObject?._memberTypes;
                     sb.Append(":contains=").Append(contains ? "1" : "0");
                     sb.Append(":runtime=").Append(runtimeMembers == null ? "null" : runtimeMembers.Count.ToString(CultureInfo.InvariantCulture));
@@ -799,12 +835,12 @@ namespace SlimeBridge.SR2
                 if (refDict != null && !string.IsNullOrEmpty(def.referenceId) &&
                     refDict.TryGetValue(def.referenceId, out var existingRef) && existingRef != null && existingRef.Pointer == def.Pointer)
                     refDict.Remove(def.referenceId);
-                if (def.groupType != null && def.groupType.MemberTypes.Contains(def)) def.groupType.MemberTypes.Remove(def);
+                if (def.groupType != null && def.groupType.ImmediateMemberTypes.Contains(def)) def.groupType.ImmediateMemberTypes.Remove(def);
                 foreach (var group in defGroupsAdded)
                 {
                     try
                     {
-                        if (group.MemberTypes != null && group.MemberTypes.Contains(def)) group.MemberTypes.Remove(def);
+                        if (group.ImmediateMemberTypes != null && group.ImmediateMemberTypes.Contains(def)) group.ImmediateMemberTypes.Remove(def);
                         var runtimeMembers = group._runtimeObject?._memberTypes;
                         if (runtimeMembers != null && runtimeMembers.Contains(def)) runtimeMembers.Remove(def);
                     }
@@ -818,8 +854,8 @@ namespace SlimeBridge.SR2
                 {
                     foreach (var mirrorGroup in plortGroupsAdded)
                     {
-                        if (mirrorGroup.MemberTypes != null && mirrorGroup.MemberTypes.Contains(plortType))
-                            mirrorGroup.MemberTypes.Remove(plortType);
+                        if (mirrorGroup.ImmediateMemberTypes != null && mirrorGroup.ImmediateMemberTypes.Contains(plortType))
+                            mirrorGroup.ImmediateMemberTypes.Remove(plortType);
                         var runtimeMembers = mirrorGroup._runtimeObject?._memberTypes;
                         if (runtimeMembers != null && runtimeMembers.Contains(plortType)) runtimeMembers.Remove(plortType);
                     }
@@ -938,7 +974,7 @@ namespace SlimeBridge.SR2
                         if (string.IsNullOrEmpty(name)) name = group.name ?? "";
                         if (!string.IsNullOrEmpty(name) && !_groupsByRef.ContainsKey(name)) _groupsByRef[name] = group;
                         _allGroups.Add(group);
-                        var members = group.MemberTypes;
+                        var members = group.ImmediateMemberTypes;
                         if (members == null) continue;
                         for (var m = 0; m < members.Count; m++)
                         {
@@ -969,7 +1005,7 @@ namespace SlimeBridge.SR2
                 var groups = new List<Il2Cpp.IdentifiableTypeGroup>();
                 foreach (var group in _allGroups)
                 {
-                    var members = group.MemberTypes;
+                    var members = group.ImmediateMemberTypes;
                     if (members == null) continue;
                     for (var m = 0; m < members.Count; m++)
                     {

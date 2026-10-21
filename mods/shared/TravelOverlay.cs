@@ -39,11 +39,26 @@ namespace SlimeBridge.Shared
             _hint = text; _hintUntil = Time.realtimeSinceStartup + seconds;
         }
 
+        // Centered, wrapping label. SR2 1.x (Unity 6 interop) has no GUIStyle copy constructor: build it from scratch there.
+        private static GUIStyle LabelStyle(FontStyle fontStyle)
+        {
+#if SLIMEBRIDGE_SR2
+            var style = new GUIStyle();
+            style.normal.textColor = Color.white;
+#else
+            var style = new GUIStyle(GUI.skin.label);
+#endif
+            style.alignment = TextAnchor.MiddleCenter;
+            style.fontStyle = fontStyle;
+            style.wordWrap = true;
+            return style;
+        }
+
         private void DrawHint()
         {
             if (_hint.Length == 0 || Time.realtimeSinceStartup > _hintUntil) return;
             if (Event.current != null && Event.current.type != EventType.Repaint) return;
-            if (_hintStyle == null) _hintStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold, wordWrap = true };
+            if (_hintStyle == null) _hintStyle = LabelStyle(FontStyle.Bold);
             var w = (float)Screen.width; var h = (float)Screen.height;
             _hintStyle.fontSize = Mathf.Max(15, (int)(h * 0.028f));
             var alpha = Mathf.Clamp01((_hintUntil - Time.realtimeSinceStartup) / 0.6f);
@@ -198,8 +213,8 @@ namespace SlimeBridge.Shared
             var time = Time.realtimeSinceStartup;
             if (_titleStyle == null)
             {
-                _titleStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold, wordWrap = true };
-                _subStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, wordWrap = true };
+                _titleStyle = LabelStyle(FontStyle.Bold);
+                _subStyle = LabelStyle(FontStyle.Normal);
             }
             // Swirl of slime blobs orbiting and bouncing around the centre.
             var size = Mathf.Min(w, h) * 0.07f;

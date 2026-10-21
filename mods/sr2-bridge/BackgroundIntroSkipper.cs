@@ -46,16 +46,16 @@ namespace SlimeBridge.SR2
                 if (!CounterpartCreator.TryReadWorld(out var world) || world == null || _stopped)
                 { Stop("current owned witness unavailable when arming"); return; }
                 _witness = CounterpartCreator.CurrentWorldWitness;
-                var saved = world.Director.SavedGame;
-                var cutscene = world.Scene.CutsceneDirector;
-                var root = cutscene != null && cutscene ? cutscene._uiRoot : null;
-                if (_witness == null || world.Director.Pointer != director || world.Name != name || saved == null || saved.GameState == null)
+                var saved = world.Director.CurrentGame();
+                var cutscene = Sr2Compat.Cutscene();
+                var root = cutscene != null ? cutscene._uiRoot : null;
+                if (_witness == null || world.Director.Pointer != director || world.Name != name || saved == null)
                 { Stop("current owned witness mismatched when arming"); return; }
-                if (cutscene == null || !cutscene || cutscene.Pointer == IntPtr.Zero)
+                if (cutscene == null || cutscene.Pointer == IntPtr.Zero)
                 { Stop("cutscene director absent when arming"); return; }
                 if (root == null || !root || root.Pointer == IntPtr.Zero)
                 { Stop("intro root absent when arming"); return; }
-                _scene = world.Scene.Pointer; _saved = saved.Pointer; _slot = saved.GameState.SaveSlotIndex;
+                _scene = world.Scene.Pointer; _saved = IntPtr.Zero; _slot = saved.SlotIndex;
                 _cutscene = cutscene.Pointer; _root = root.Pointer;
                 var arming = AuthorityFailure();
                 if (arming != null) { Stop("identity changed while arming: " + arming); return; }
@@ -155,16 +155,15 @@ namespace SlimeBridge.SR2
             var director = Il2Cpp.GameContext.Instance?.AutoSaveDirector;
             var scene = Il2Cpp.SceneContext.Instance;
             var loader = Il2Cpp.SystemContext.Instance?.SceneLoader;
-            var saved = director?.SavedGame;
-            var state = saved?.GameState;
-            if (director == null || director.Pointer != _director || director.loadedGame || director.newGameMetadata != null) return "director/flag/metadata";
-            if (saved == null || saved.Pointer != _saved || saved.GetName() != _name || state == null || state.SaveSlotIndex != _slot) return "saved game identity";
+            var saved = director?.CurrentGame();
+            if (director == null || director.Pointer != _director || director.GameLoaded() || director.NewGamePending()) return "director/flag/metadata";
+            if (saved == null || saved.GameName != _name || saved.SlotIndex != _slot) return "saved game identity";
             if (scene == null || !scene || scene.Pointer != _scene) return "scene identity";
             if (loader == null || loader.IsSceneLoadInProgress || !loader.IsCurrentSceneGroupGameplay() ||
                 loader._currentSceneGroup?.name?.StartsWith("MainMenu", StringComparison.OrdinalIgnoreCase) == true) return "loader not gameplay-idle";
             if (scene.PlayerState == null || scene.PlayerState.GetCurrHealth() <= 0 || scene.Player == null || !scene.Player.activeInHierarchy) return "player readiness";
-            var cutscene = scene.CutsceneDirector;
-            if (cutscene == null || !cutscene || cutscene.Pointer != _cutscene) return "cutscene director identity";
+            var cutscene = Sr2Compat.Cutscene();
+            if (cutscene == null || cutscene.Pointer != _cutscene) return "cutscene director identity";
             var root = cutscene._uiRoot;
             if (root == null || !root || root.Pointer != _root) return "intro root cleared/replaced (not control-release evidence)";
             return null;
@@ -173,8 +172,8 @@ namespace SlimeBridge.SR2
         // Current managed wrapper of the bound native root (wrappers may differ; pointers may not).
         private IntroSequenceUIRoot? CurrentRoot()
         {
-            var cutscene = Il2Cpp.SceneContext.Instance?.CutsceneDirector;
-            var root = cutscene != null && cutscene ? cutscene._uiRoot : null;
+            var cutscene = Sr2Compat.Cutscene();
+            var root = cutscene != null ? cutscene._uiRoot : null;
             return root != null && root && root.Pointer == _root ? root : null;
         }
 

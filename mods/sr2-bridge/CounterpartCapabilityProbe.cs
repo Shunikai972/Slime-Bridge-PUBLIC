@@ -75,9 +75,9 @@ namespace SlimeBridge.SR2
                 var group = loader == null ? null : loader._currentSceneGroup;
                 report.menu_ready = loader != null && !loader.IsSceneLoadInProgress && group != null &&
                     group.name.StartsWith("MainMenu", StringComparison.Ordinal) && director != null &&
-                    !director.loadedGame;
-                var storage = director == null ? null : director.StorageProvider;
-                report.storage_ready = storage != null && storage.IsInitialized() && director!.ProfileManager != null;
+                    !director.GameLoaded();
+                var storage = director == null ? null : director.Storage();
+                report.storage_ready = storage != null && storage.IsInitialized() && director!.ProfileLoaded();
                 var definitions = game?.OptionsDirector?._optionsItemDefinitions;
                 var settingsDirector = game?.GameSettingsDirector;
                 if (!report.menu_ready || !report.storage_ready || definitions == null || settingsDirector == null)
@@ -89,8 +89,10 @@ namespace SlimeBridge.SR2
                 {
                     // Constructor reads actual platform definition-driven defaults into a DETACHED model.
                     // Never apply/reset/push these selections onto global directors or account settings.
-                    var items = definitions.GameBasedDefinitions;
-                    if (items == null) throw new InvalidOperationException("stock definitions unavailable");
+                    // SR2 1.x split the options list (_fromConfigurations/_additionalOptions); the stock new-game
+                    // definitions are not mapped yet, so this LAB probe reports it instead of guessing.
+                    Il2CppSystem.Collections.Generic.IEnumerable<Il2CppMonomiPark.SlimeRancher.Options.OptionsItemDefinition>? items = null;
+                    if (items == null) throw new InvalidOperationException("stock definitions unavailable on SR2 1.x (not mapped)");
                     foreach (var item in NativeStockDefinitions.Capture(items))
                     {
                         if (report.stock_definition_ids.Count >= 4096)
@@ -123,7 +125,7 @@ namespace SlimeBridge.SR2
                     report.model_definition_ids.Sort(StringComparer.Ordinal);
                     if (!string.Equals(string.Join("\n", report.stock_definition_ids), string.Join("\n", report.model_definition_ids), StringComparison.Ordinal))
                         throw new InvalidOperationException("stock model definition coverage mismatch");
-                    report.slot_count = director!.SaveSlotCount;
+                    report.slot_count = director!.SlotCount();
                     var raw = storage!.GetAvailableGames();
                     if (raw == null || raw.Count > 4096) throw new InvalidOperationException("native traversal unavailable or too large");
                     report.raw_save_count = raw.Count;
@@ -159,18 +161,18 @@ namespace SlimeBridge.SR2
                                     throw new InvalidOperationException("invalid native save size");
                                 var bytes = (byte[])stream.ToArray();
                                 stream.Position = 0;
-                                var detached = new GameV06 { _isLoadSummary = false };
+                                var detached = new GameV11 { _isLoadSummary = false };
                                 detached.Load(stream, false); // full native payload, never AutoSaveDirector world loading
                                 if (detached._isLoadSummary || detached.GameName != summary.Name ||
                                     detached.SaveSlotIndex != summary.SaveSlotIndex || detached.World == null ||
                                     detached.Player == null || detached.Ranch == null || detached.Actors == null ||
                                     detached.GameSettings == null || detached.GameSettings.OptionItems == null ||
-                                    detached.GameIconIndex == null || detached.GameIconIndex.IndexTable == null)
+                                    detached.GameIconIndex == null || detached.GameIconIndex.Length == 0)
                                     throw new InvalidOperationException("incomplete detached save or mismatched identity");
                                 var settings = detached.GameSettings;
-                                if (settings.GameIconId < 0 || settings.GameIconId >= detached.GameIconIndex.IndexTable.Length)
+                                if (settings.GameIconId < 0 || settings.GameIconId >= detached.GameIconIndex.Length)
                                     throw new InvalidOperationException("invalid persisted icon index");
-                                var iconId = detached.GameIconIndex.IndexTable[settings.GameIconId];
+                                var iconId = detached.GameIconIndex[settings.GameIconId];
                                 if (!Reference.IsMatch(iconId ?? "") || iconId != summary.IconId.ReferenceId)
                                     throw new InvalidOperationException("persisted icon identity mismatch");
                                 var keys = new HashSet<string>(StringComparer.Ordinal);

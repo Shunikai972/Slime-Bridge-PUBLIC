@@ -57,7 +57,7 @@ def prepare(work):
     (work / 'InventoryDoubles.cs').write_text(fixture.replace(old, new), encoding='utf-8')
     sources = ['mods/shared/BridgeCommands.cs', 'mods/shared/SaveSlotSelection.cs',
         'mods/sr2-bridge/CounterpartCreator.cs', 'mods/sr2-bridge/InventoryAgent.cs',
-        'mods/sr2-bridge/NativeStorageBinding.cs', 'mods/sr2-bridge/NativeStockDefinitions.cs',
+        'mods/sr2-bridge/NativeStorageBinding.cs', 'mods/sr2-bridge/NativeStockDefinitions.cs', 'tests/CounterpartCreatorHarness/Sr2CompatFixture.cs',
         'tests/CounterpartCreatorHarness/NativeApiFixtures.cs', 'tests/CounterpartCreatorHarness/ReadinessChecks.cs',
         'tests/CounterpartCreatorHarness/IntroSkipFixture.cs']
     linked = ''.join('<Compile Include="' + (ROOT / rel).as_posix() + '" />' for rel in sources)

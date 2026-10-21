@@ -29,7 +29,7 @@ EXCLUDED_FILES = {'requirements-dev.txt'}
 # Never in a release: game data, Unity serialized files, extracted/converted assets, models, textures, audio, saves.
 FORBIDDEN = re.compile(r'\.(assets|bundle|resS|resource|unity3d|assetbundle|sav|save|glb|gltf|fbx|obj|blend|dds|png|jpe?g|tga|'
                        r'psd|exr|wav|ogg|mp3|bank|sbmesh|exe|zip|7z|rar)$', re.IGNORECASE)
-ALLOWED_BINARIES = {'plugins/SR1/SlimeBridge.SR1.dll', 'plugins/SR2/SlimeBridge.SR2.dll',
+ALLOWED_BINARIES = {'plugins/SR1/SlimeBridge.SR1.dll', 'plugins/SR2/SlimeBridge.SR2.dll', 'plugins/SRMP/SRMP.dll',
                     'plugins/SR1/SlimeBridge.SR1.pdb', 'plugins/SR2/SlimeBridge.SR2.pdb'}
 PLUGINS = {
     'SR1': ('mods/sr1-bridge/SlimeBridge.SR1.csproj', 'SR1LabPath', 'net472', ('SlimeBridge.SR1.dll', 'SlimeBridge.SR1.pdb', 'modinfo.json')),
@@ -104,6 +104,44 @@ def build_plugins(refs, stage):
             shutil.copy2(out / name, target / name)
 
 
+SRMP_SOURCE_URL = 'https://github.com/Shunikai972/Slime-rancher-multiplayer-public-mode'
+
+
+def strip_pdb_path(data: bytes) -> bytes:
+    """Replace the build machine's PDB path in a PE CodeView (RSDS) record with the bare file name, same length."""
+    out = bytearray(data)
+    start = 0
+    while True:
+        at = out.find(b'RSDS', start)
+        if at < 0:
+            return bytes(out)
+        path_at = at + 4 + 16 + 4                      # signature, GUID, age
+        end = out.find(b'\x00', path_at)
+        if end < 0 or end - path_at > 1024 or end == path_at:
+            start = at + 4
+            continue
+        name = bytes(out[path_at:end]).replace(b'/', b'\\').rsplit(b'\\', 1)[-1]
+        out[path_at:end] = name + b'\x00' * (end - path_at - len(name))
+        start = end
+
+
+def add_srmp(dll, stage):
+    """Bundle SRMP Revival (GPL-3.0) for the launcher's Multi page: binary, its license and where its source is."""
+    dll = Path(dll)
+    license_file = next((p / 'LICENSE' for p in dll.parents if (p / 'LICENSE').is_file()), None)
+    if license_file is None:
+        die(f'SRMP license (GPL-3.0) not found above {dll}: SRMP cannot be shipped without it')
+    target = stage / 'plugins' / 'SRMP'
+    target.mkdir(parents=True, exist_ok=True)
+    (target / 'SRMP.dll').write_bytes(strip_pdb_path(dll.read_bytes()))
+    shutil.copy2(license_file, target / 'LICENSE-GPL-3.0.txt')
+    (target / 'README.md').write_text(
+        '# SRMP Revival\n\nSlime Rancher multiplayer mod (a maintained fork of SRMP), installed by the SlimeBridge launcher from its '
+        'Multi page. It is a separate program under the GNU GPL v3 (LICENSE-GPL-3.0.txt), not covered by the SlimeBridge license.\n\n'
+        f'Complete corresponding source: {SRMP_SOURCE_URL}\n', encoding='utf-8')
+    print(f'== SRMP Revival bundled from {dll}')
+
+
 def scan(stage):
     problems = []
     home = Path.home().name.encode('utf-8').lower()
@@ -138,10 +176,21 @@ def notes(ver):
             'Portions of the materials used are property of Monomi Park, LLC. ©Monomi Park LLC.\n')
 
 
+def local_ref(prop):
+    """SR1LabPath / SR2LabPath from the git-ignored mods/local.props (the same file the plugin projects import)."""
+    props = ROOT / 'mods' / 'local.props'
+    if not props.is_file():
+        return None
+    match = re.search(rf'<{prop}>([^<]+)</{prop}>', props.read_text(encoding='utf-8'))
+    return match.group(1).strip() if match else None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--sr1-ref', default=os.environ.get('SLIMEBRIDGE_SR1_REF', str(ROOT / 'Lab' / 'Games' / 'SR1')))
-    parser.add_argument('--sr2-ref', default=os.environ.get('SLIMEBRIDGE_SR2_REF', str(ROOT / 'Lab' / 'Games' / 'SR2')))
+    parser.add_argument('--sr1-ref', default=os.environ.get('SLIMEBRIDGE_SR1_REF') or local_ref('SR1LabPath') or str(ROOT / 'Lab' / 'Games' / 'SR1'))
+    parser.add_argument('--sr2-ref', default=os.environ.get('SLIMEBRIDGE_SR2_REF') or local_ref('SR2LabPath') or str(ROOT / 'Lab' / 'Games' / 'SR2'))
+    parser.add_argument('--srmp-dll', default=os.environ.get('SLIMEBRIDGE_SRMP_DLL', str(ROOT.parent / 'srmp-public' / 'Builds' / 'SRMP' / 'SRMP.dll')),
+                        help='SRMP Revival build to bundle for online play (skipped with a warning when missing)')
     parser.add_argument('--allow-dirty', action='store_true', help='release even with uncommitted changes')
     parser.add_argument('--publish', action='store_true', help='create the GitHub release v<VERSION> with gh')
     parser.add_argument('--draft', action='store_true', help='with --publish: create it as a draft')
@@ -162,6 +211,10 @@ def main():
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / rel, target)
     build_plugins({'SR1': args.sr1_ref, 'SR2': args.sr2_ref}, stage)
+    if Path(args.srmp_dll).is_file():
+        add_srmp(args.srmp_dll, stage)
+    else:
+        print(f'WARNING: no SRMP build at {args.srmp_dll}: this release has no Slime Rancher online')
     scan(stage)
 
     archive = DIST / f'{name}-win64.zip'

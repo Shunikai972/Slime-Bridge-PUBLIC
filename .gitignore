@@ -75,3 +75,5 @@
 AGENTS.md
 CLAUDE.md
 *prompt*.txt
+# Machine-specific build paths
+/mods/local.props

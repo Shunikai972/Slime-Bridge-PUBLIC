@@ -78,6 +78,17 @@ def source_ref(pointer: dict) -> int:
     return pointer['m_PathID']
 
 
+
+def default_appearances(definition, ref):
+    """The species' own default appearances: SR2 1.x also lists the Radiant variant (RadiantBase/RadiantLargo0/1) there."""
+    defaults = definition['AppearancesDefault']
+    if not isinstance(defaults, list):
+        return defaults
+    radiant = {ref(definition[key]) for key in ('RadiantBase', 'RadiantLargo0', 'RadiantLargo1') if isinstance(definition.get(key), dict)}
+    radiant.discard(0)
+    return [d for d in defaults if ref(d) not in radiant]
+
+
 def _definition_nodes(generator):
     """Correct only duplicate top-level registries in generated inheritance.
 
@@ -129,7 +140,7 @@ def _static_face_bindings(objects, headers, tree, applicator, root, parts):
     definition = tree(typed(applicator['SlimeDefinition'], class_name='SlimeDefinition'))
     if source_ref(definition['prefab']) != root:
         raise ValueError('source definition does not reference the species prefab')
-    defaults = definition['AppearancesDefault']
+    defaults = default_appearances(definition, source_ref)
     if not isinstance(defaults, list) or len(defaults) != 1:
         raise ValueError('source species has no unique default appearance')
     appearance_id = typed(defaults[0], class_name='SlimeAppearance')

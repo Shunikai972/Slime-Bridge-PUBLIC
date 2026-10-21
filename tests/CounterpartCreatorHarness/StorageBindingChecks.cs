@@ -1,4 +1,5 @@
 // Production-linked storage binding and creation gates; synthetic IL2CPP API only.
+using Il2CppMonomiPark.SlimeRancher;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;

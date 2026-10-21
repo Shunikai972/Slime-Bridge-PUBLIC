@@ -87,14 +87,14 @@ namespace SlimeBridge.SR2
             try
             {
                 var game = Il2Cpp.GameContext.Instance; var scene = Il2Cpp.SceneContext.Instance;
-                return game != null && scene != null && scene.Player != null && scene.PlayerState != null && game.AutoSaveDirector != null && game.AutoSaveDirector.loadedGame;
+                return game != null && scene != null && scene.Player != null && scene.PlayerState != null && game.AutoSaveDirector != null && game.AutoSaveDirector.CurrentGame() != null;
             }
             catch (Exception) { return false; }
         }
 
         private static string CurrentSave()
         {
-            try { return Il2Cpp.GameContext.Instance.AutoSaveDirector.SavedGame.GetName() ?? ""; } catch (Exception) { return ""; }
+            try { return Il2Cpp.GameContext.Instance.AutoSaveDirector.CurrentGameName() ?? ""; } catch (Exception) { return ""; }
         }
 
         private static Transform PlayerTransform() => Il2Cpp.SceneContext.Instance.Player.transform;
@@ -328,7 +328,7 @@ namespace SlimeBridge.SR2
             if (near && !onPad && Time.realtimeSinceStartup >= _nextHint)
             {
                 _nextHint = Time.realtimeSinceStartup + 3f;
-                var money = Il2Cpp.SceneContext.Instance.PlayerState.GetCurrency();
+                var money = Il2Cpp.SceneContext.Instance.PlayerState.Newbucks();
                 var gate = _cost > 0 && !_paid;
                 _travel.Overlay.ShowHint(gate
                     ? (french ? $"Portail vers Slime Rancher : {_cost:N0} newbucks pour l’ouvrir (tu as {money:N0})" : $"Portal to Slime Rancher: {_cost:N0} newbucks to open it (you have {money:N0})")
@@ -340,14 +340,13 @@ namespace SlimeBridge.SR2
             if (_cost > 0 && !_paid)
             {
                 var state = Il2Cpp.SceneContext.Instance.PlayerState;
-                var before = state.GetCurrency();
+                var before = state.Newbucks();
                 if (before < _cost)
                 {
                     _travel.Overlay.ShowHint(french ? $"Il te manque {_cost - before:N0} newbucks pour ouvrir le portail" : $"You need {_cost - before:N0} more newbucks to open the portal", 4f);
                     return;
                 }
-                state.SpendCurrency(_cost, false);
-                if (state.GetCurrency() >= before) { Note("payment refused by the game"); return; }
+                if (!state.SpendNewbucks(_cost) || state.Newbucks() >= before) { Note("payment refused by the game"); return; }
                 _paid = true; SaveState();
                 Note("portal paid: " + _cost);
             }
@@ -411,7 +410,7 @@ namespace SlimeBridge.SR2
         private void WriteReceipt()
         {
             var money = 0;
-            try { money = Il2Cpp.SceneContext.Instance.PlayerState.GetCurrency(); } catch (Exception) { }
+            try { money = Il2Cpp.SceneContext.Instance.PlayerState.Newbucks(); } catch (Exception) { }
             var sb = new StringBuilder("{\"schema\":\"bridge-sr2-portal-receipt\",\"schema_version\":1");
             sb.Append(",\"save\":\"").Append(BridgeJson.Escape(_saveId)).Append("\",\"cost\":").Append(_cost).Append(",\"paid\":").Append(_paid ? "true" : "false").Append(",\"currency\":").Append(money);
             sb.Append(",\"anchor\":[").Append(_anchor.x.ToString("0.###", CultureInfo.InvariantCulture)).Append(',').Append(_anchor.y.ToString("0.###", CultureInfo.InvariantCulture)).Append(',').Append(_anchor.z.ToString("0.###", CultureInfo.InvariantCulture)).Append(']');

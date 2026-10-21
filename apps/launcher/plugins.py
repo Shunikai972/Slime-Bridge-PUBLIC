@@ -121,6 +121,9 @@ def remove(realm, game_root):
                 removed.append(name)
             except PermissionError as exc:
                 raise PluginError('FILE_IN_USE', name) from exc
+    from apps.launcher.pack import remove_player_pointer
+    if remove_player_pointer(game_root):
+        removed.append('SlimeBridge/content.json')
     if realm == 'SR1' and dest.is_dir() and not any(dest.iterdir()):
         dest.rmdir()
     return {'ok': True, 'removed': removed}

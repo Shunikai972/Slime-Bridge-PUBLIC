@@ -4,6 +4,7 @@
     <Compile Include="../../mods/sr1-bridge/ImportedIconLoader.cs" Link="Production/ImportedIconLoader.cs" Condition="Exists('../../mods/sr1-bridge/ImportedIconLoader.cs')" />
     <Compile Include="../../mods/shared/MiniJson.cs" Link="Production/MiniJson.cs" />
     <Compile Include="../../mods/shared/LabSpecPathGuard.cs" Link="Production/LabSpecPathGuard.cs" />
+    <Compile Include="../../mods/shared/PlayerContent.cs" Link="Production/PlayerContent.cs" />
     <Compile Include="../../mods/sr1-bridge/SpeciesRegistrar.cs" Link="Production/SpeciesRegistrar.cs" />
     <Compile Include="../../mods/shared/ImportedSpeciesSpec.cs" Link="Production/ImportedSpeciesSpec.cs" />
     <Compile Include="../../mods/shared/RegistrySnapshotFormat.cs" Link="Production/RegistrySnapshotFormat.cs" />

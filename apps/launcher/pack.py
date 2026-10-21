@@ -113,29 +113,29 @@ def prepare(realm, game_root, repo_root=REPO_ROOT):
         except (ValueError, OSError) as exc:
             warnings.append(f'island: {exc}')
             step('island', 'FAILED', str(exc))
-        if is_lab_copy(realm, game_root, repo_root):
-            missing, total = species_ready(repo_root)
-            if total == 0:
-                step('species', 'NO_SPEC')
-            elif missing:
-                warnings.append(f'{len(missing)} imported species have no model cache yet (launcher Extract, or '
-                                '`py -3.12 -m bridge.content.species_pipeline`): ' + ', '.join(missing))
-                step('species', 'CACHES_MISSING', ', '.join(missing))
+        # LAB copies and normal installs alike (a normal install reads the pointer file written at the end)
+        missing, total = species_ready(repo_root)
+        if total == 0:
+            step('species', 'NO_SPEC')
+        elif missing:
+            warnings.append(f'{len(missing)} imported species have no model cache yet (launcher Extract, or '
+                            '`py -3.12 -m bridge.content.species_pipeline`): ' + ', '.join(missing))
+            step('species', 'CACHES_MISSING', ', '.join(missing))
+        else:
+            step('species', 'READY', f'{total} imported species armed')
+        try:
+            from bridge.content import largos
+            refreshed = largos.refresh_spec(repo_root)
+            if refreshed.get('changed'):
+                step('largos', 'SPEC_PUBLISHED', f"{refreshed['largos']} Largos armed")
+            elif refreshed.get('largos'):
+                step('largos', 'READY', f"{refreshed['largos']} Largos armed")
             else:
-                step('species', 'READY', f'{total} imported species armed')
-            try:
-                from bridge.content import largos
-                refreshed = largos.refresh_spec(repo_root)
-                if refreshed.get('changed'):
-                    step('largos', 'SPEC_PUBLISHED', f"{refreshed['largos']} Largos armed")
-                elif refreshed.get('largos'):
-                    step('largos', 'READY', f"{refreshed['largos']} Largos armed")
-                else:
-                    step('largos', 'NO_CACHES', 'launcher Extract (Largos) builds them from your Slime Rancher 2')
-            except Exception as exc:  # noqa: BLE001 - Largos are an addition, never a reason to refuse to start
-                warnings.append(f'largos: {type(exc).__name__}: {exc}')
-                step('largos', 'FAILED', str(exc))
-    if realm == 'SR2' and is_lab_copy(realm, game_root, repo_root):
+                step('largos', 'NO_CACHES', 'launcher Extract (Largos) builds them from your Slime Rancher 2')
+        except Exception as exc:  # noqa: BLE001 - Largos are an addition, never a reason to refuse to start
+            warnings.append(f'largos: {type(exc).__name__}: {exc}')
+            step('largos', 'FAILED', str(exc))
+    if realm == 'SR2':
         try:
             from bridge.content import sr1_pipeline
             refreshed = sr1_pipeline.refresh_spec(repo_root)
@@ -148,4 +148,70 @@ def prepare(realm, game_root, repo_root=REPO_ROOT):
         except Exception as exc:  # noqa: BLE001 - an addition, never a reason to refuse to start
             warnings.append(f'sr1 content: {type(exc).__name__}: {exc}')
             step('sr1-content', 'FAILED', str(exc))
+    if realm in EXE and not is_lab_copy(realm, game_root, repo_root):
+        try:
+            pointer = write_player_pointer(realm, game_root, repo_root)
+            step('player-content', 'READY' if pointer else 'NO_SPEC',
+                 str(pointer) if pointer else 'extract first (launcher Extract): nothing to arm yet')
+        except (OSError, ValueError) as exc:
+            warnings.append(f'player content: {exc}')
+            step('player-content', 'FAILED', str(exc))
     return {'ok': not any(s['status'] == 'FAILED' for s in steps), 'steps': steps, 'warnings': warnings}
+
+
+POINTER_PARTS = ('SlimeBridge', 'content.json')
+
+
+def _reparse(path):
+    path = Path(path)
+    return path.is_symlink() or (hasattr(path, 'is_junction') and path.is_junction())
+
+
+def write_player_pointer(realm, game_root, repo_root=REPO_ROOT):
+    """Write ``<game>/SlimeBridge/content.json``: where the plugin of a normal install finds the extracted content.
+
+    The plugin validates every path again (inside this SlimeBridge folder's Lab tree, no links), so the file only points;
+    it never grants more than the LAB guard would. Returns the pointer path, or None (and removes a stale pointer) when
+    there is no published spec yet."""
+    import json
+    import os
+    repo_root = Path(repo_root).resolve()
+    spec_root = repo_root / 'Lab' / 'GeneratedContent' / 'species-import'
+    if realm == 'SR1':
+        from bridge.content.species_pipeline import newest_spec
+    else:
+        from bridge.content.sr1_pipeline import newest_spec
+    spec = newest_spec(spec_root) if spec_root.is_dir() else None
+    target = Path(game_root).joinpath(*POINTER_PARTS)
+    for part in (Path(game_root), target.parent):
+        if part.exists() and _reparse(part):
+            raise ValueError(f'link refused: {part}')
+    if spec is None or not Path(spec).is_file():
+        if target.is_file():
+            target.unlink()
+        return None
+    out = repo_root / 'Lab' / 'RuntimeArtifacts' / f'player-{realm}'
+    out.mkdir(parents=True, exist_ok=True)
+    for stale in sorted((d for d in out.iterdir() if d.is_dir() and not _reparse(d)), key=lambda d: d.name)[:-5]:
+        import shutil
+        shutil.rmtree(stale, ignore_errors=True)          # keep the receipts of the last five sessions
+    for loose in out.glob('*.json'):
+        loose.unlink()                                    # pre-folder receipts of older plugins
+    doc = {'schema': 'slimebridge-player-content', 'schema_version': 1, 'realm': realm, 'home': str(repo_root),
+           'spec': str(Path(spec).resolve()), 'out': str(out)}
+    caches = repo_root / 'Lab' / 'AssetCache' / 'sr1-to-sr2'
+    if realm == 'SR2' and caches.is_dir():
+        doc['cache_root'] = str(caches)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temp = target.with_suffix('.json.tmp')
+    temp.write_text(json.dumps(doc, indent=1), encoding='utf-8')
+    os.replace(temp, target)
+    return target
+
+
+def remove_player_pointer(game_root):
+    target = Path(game_root).joinpath(*POINTER_PARTS)
+    if target.is_file() and not _reparse(target):
+        target.unlink()
+        return True
+    return False

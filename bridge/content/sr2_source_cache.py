@@ -66,7 +66,8 @@ def resolve_species_source(assets, species):
         definition = tree(definition_id)
         if typed(definition['prefab'], kind='GameObject') != root:
             raise ValueError('source definition references another prefab')
-        defaults = definition['AppearancesDefault']
+        from bridge.content.sr2_appearance import default_appearances
+        defaults = default_appearances(definition, source_ref)
         if not isinstance(defaults, list) or len(defaults) != 1:
             raise ValueError('source species has no unique default appearance')
         appearance_id = typed(defaults[0], class_name='SlimeAppearance')

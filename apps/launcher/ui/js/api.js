@@ -21,7 +21,7 @@
     host: { state: 'STOPPED', url: null, pid: null, heartbeats: {} },
     sanct: { kit: new URLSearchParams(location.search).get('sanct') === '1', layout: new URLSearchParams(location.search).get('sanct') === '1', installed: false, job: null, plugin: false, nodeps: false },
     job: null, dl: null, installed: {}, models: null, tool: true,
-    mp: { servers: { default_mode: 'HYBRID', favourites: ['ranch.example:7777'], recent: ['127.0.0.1:7777'], directory_enabled: true }, host: { name: 'My Ranch', port: 7777, mode: 'HYBRID' } },
+    mp: { servers: { default_mode: 'HYBRID', favourites: ['ranch.example:7777'], recent: ['127.0.0.1:7777'], directory_enabled: true }, host: { name: 'My Ranch', port: 7777, mode: 'HYBRID' }, srmp: { state: 'missing', loader: true } },
     settings: {
       transitions: { mode: 'WARM', overlay: true, overlay_style: 'aurora', background_audio: 'DUCK' },
       servers: { default_mode: 'HYBRID', directory_enabled: true },
@@ -141,7 +141,8 @@
     async models_cancel() { if (S.dl) S.dl.status = 'CANCELLED'; return { ok: true }; },
     async models_remove(id) { delete S.installed[id]; return { ok: true, ...modelsState() }; },
     async models_import_folder() { await wait(300); ['rad_cotton', 'quantum_batty', 'mosaic_twin'].forEach(id => S.installed[id] = true); return { ok: true, imported: ['rad_cotton', 'quantum_batty', 'mosaic_twin'], ...modelsState() }; },
-    async mp_state() { return { ok: true, servers: S.mp.servers, host: S.mp.host, network_adapter: false, note: 'In-game networking is not connected yet: addresses are saved and checked, nothing is dialled.' }; },
+    async mp_state() { return { ok: true, servers: S.mp.servers, host: S.mp.host, network_adapter: S.mp.srmp.state === 'current', srmp: S.mp.srmp, content: { SR1: '2babb6dac1c59104d203496de9773ac280f40901473d94633bea5dc6fd140251' } }; },
+    async mp_srmp(action) { S.mp.srmp = action === 'install' ? { state: 'current', loader: true, installed_by: 'SlimeBridge' } : { state: 'missing', loader: true }; return { ok: true, srmp: S.mp.srmp }; },
     async mp_remember(address, fav) { if (/[ \/@]/.test(address) || !address) return { ok: false, error: 'address must be host[:port] without scheme, path or credentials' }; const a = address.includes(':') ? address : address + ':7777'; S.mp.servers.recent = [a, ...S.mp.servers.recent.filter(x => x !== a)].slice(0, 20); if (fav === true) S.mp.servers.favourites = [a, ...S.mp.servers.favourites.filter(x => x !== a)]; if (fav === false) S.mp.servers.favourites = S.mp.servers.favourites.filter(x => x !== a); return { ok: true, address: a }; },
     async mp_host_save(o) { S.mp.host = { name: o.name || 'My Ranch', port: +o.port || 7777, mode: o.mode || 'HYBRID' }; return { ok: true, host: S.mp.host }; },
     async get_settings() { return { ok: true, sections: Object.entries(S.settings).map(([section, v]) => ({ section, fields: Object.entries(v).map(([key, value]) => ({ key, value, kind: typeof value === 'boolean' ? 'bool' : 'text', choices: (CHOICES[section] || {})[key] || null })) })) }; },

@@ -75,7 +75,7 @@ namespace SlimeBridge.SR2
         }
 
         /// <summary>Fresh native re-read, NOT authorization by the last signed sample.</summary>
-        public bool IsCurrent(Il2Cpp.AutoSaveDirector director)
+        public bool IsCurrent(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director)
         {
             if (Environment.CurrentManagedThreadId != _thread || !_established || _revoked) return false;
             if (!TryObserve(out var current) || !Matches(current)) { Revoke(); return false; }
@@ -94,7 +94,7 @@ namespace SlimeBridge.SR2
                 var director = Il2Cpp.GameContext.Instance?.AutoSaveDirector;
                 if (director == null || director.Pointer == IntPtr.Zero) return false;
                 // The backing-field getter reads the existing provider; no lazy platform getter/constructor.
-                var provider = director._StorageProvider_k__BackingField;
+                var provider = director._storageProvider;
                 if (provider == null || provider.Pointer == IntPtr.Zero) return false;
                 var expected = Il2CppClassPointerStore<Il2Cpp.FileStorageProvider>.NativeClassPtr;
                 if (expected == IntPtr.Zero || provider.ObjectClass != expected) return false;

@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Include="../../mods/sr1-bridge/ImportedStoneForm.cs" Link="Production/ImportedStoneForm.cs" />
     <Compile Include="../../mods/shared/LabSpecPathGuard.cs" Link="Shared/LabSpecPathGuard.cs" />
+    <Compile Include="../../mods/shared/PlayerContent.cs" Link="Shared/PlayerContent.cs" />
     <Compile Include="../../mods/shared/MiniJson.cs" Link="Shared/MiniJson.cs" />
   </ItemGroup>
 </Project>

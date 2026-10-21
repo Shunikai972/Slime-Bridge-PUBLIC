@@ -7,10 +7,10 @@ namespace SlimeBridge.SR2
     /// <summary>Read-only occupancy evidence. A gap is not authorization to create a game.</summary>
     internal static class SaveSlotProbe
     {
-        public static string Capture(Il2Cpp.AutoSaveDirector director)
+        public static string Capture(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director)
         {
-            var storage = director.StorageProvider;
-            if (director.loadedGame || director.ProfileManager == null || storage == null || !storage.IsInitialized())
+            var storage = director.Storage();
+            if (director.GameLoaded() || !director.ProfileLoaded() || storage == null || !storage.IsInitialized())
                 throw new InvalidOperationException("native menu save services not ready");
             var raw = storage.GetAvailableGames();
             if (raw == null) throw new InvalidOperationException("native raw save enumeration unavailable");
@@ -42,7 +42,7 @@ namespace SlimeBridge.SR2
             else foreach (var group in groups) groupNames.Add(group.Key);
             return JsonSerializer.Serialize(new { schema_version = 1, read_only = true,
                 pid = System.Diagnostics.Process.GetCurrentProcess().Id,
-                save_slot_count_observed = director.SaveSlotCount, raw_save_count = raw.Count,
+                save_slot_count_observed = director.SlotCount(), raw_save_count = raw.Count,
                 summaries = rows, occupied_slot_indices = occupied, group_names = groupNames,
                 errors, occupancy_complete = errors.Count == 0, permitted_slot_range_verified = false,
                 creation_authorized = false });

@@ -82,7 +82,7 @@ namespace SlimeBridge.SR2
             var sb = new StringBuilder("{\"schema\":\"bridge-sr2-world-probe\",\"schema_version\":1");
             sb.Append(",\"player\":{\"position\":[").Append(F(p.x)).Append(',').Append(F(p.y)).Append(',').Append(F(p.z)).Append("],\"yaw\":").Append(F(player.eulerAngles.y)).Append('}');
             var groupName = "";
-            try { groupName = Il2Cpp.GameContext.Instance.AutoSaveDirector.SavedGame.GetName() ?? ""; } catch (Exception) { }
+            try { groupName = Il2Cpp.GameContext.Instance.AutoSaveDirector.CurrentGameName() ?? ""; } catch (Exception) { }
             sb.Append(",\"save\":\"").Append(Esc(groupName)).Append('"');
             sb.Append(",\"active_scene\":\"").Append(Esc(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)).Append('"');
             var renderers = UnityEngine.Object.FindObjectsOfType<MeshRenderer>();

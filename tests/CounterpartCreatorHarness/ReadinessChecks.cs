@@ -1,5 +1,6 @@
 #if READINESS_SNAPSHOT
 // Authored synthetic execution of production sources, never native/world proof.
+using Il2CppMonomiPark.SlimeRancher;
 using System.Reflection;
 using Il2Cpp;
 using Il2CppMonomiPark.SlimeRancher.DataModel;

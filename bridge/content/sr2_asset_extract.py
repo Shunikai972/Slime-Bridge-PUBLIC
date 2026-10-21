@@ -45,7 +45,9 @@ CACHE_SCHEMA = 'bridge-asset-cache-manifest'
 CACHE_SCHEMA_VERSION = 1
 CONVERTER_VERSION = 5
 
-SKIP_TEXTURES = {'quantumStatic', 'noise_pixel', 'dptNoiseClouds'}
+SKIP_TEXTURES = {'quantumStatic', 'noise_pixel', 'dptNoiseClouds', 'WorleyNoise32RGB'}
+# SR2 1.x shader inputs that are 3D noise volumes (snow/weather breakup): not displayable by the SR1 Standard shader.
+SKIP_TEXTURE_PROPERTIES = {'_SnowNoiseBreakup3d'}
 
 
 def _sha256(path: Path) -> str:
@@ -1404,8 +1406,8 @@ def extract_species(species: str, canonical: str | None, sr2_dir: Path, out_dir:
                 body_colors = colors
             textures_out = []
             for prop, texture_name in texture_map.items():
-                if texture_name in SKIP_TEXTURES:
-                    continue  # intentionally non-display textures (noise/static helpers)
+                if texture_name in SKIP_TEXTURES or prop in SKIP_TEXTURE_PROPERTIES or prop.lower().endswith('3d'):
+                    continue  # intentionally non-display textures (noise/static helpers, 3D noise volumes)
                 file_name = texture_exporter.export(texture_name)
                 if not file_name:
                     if canonical.startswith('largo.'):

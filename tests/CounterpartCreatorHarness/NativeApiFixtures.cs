@@ -196,7 +196,7 @@ namespace Il2CppMonomiPark.SlimeRancher.Persist
 }
 namespace Il2Cpp
 {
-    public sealed class PlayerState { public Ammo? Ammo; public int Health = 100; public int GetCurrHealth() => Health; }
+    public sealed class PlayerState { public Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager? Ammo; public int Health = 100; public int GetCurrHealth() => Health; }
     // LAB wrapper SceneContext : SRSingleton -> SRBehaviour -> MonoBehaviour, native Pointer.
     public sealed class SceneContext : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
     {
@@ -215,7 +215,7 @@ namespace Il2Cpp
     public sealed class GameContext
     {
         public static GameContext? Instance;
-        public AutoSaveDirector? AutoSaveDirector;
+        public Il2CppMonomiPark.SlimeRancher.AutoSaveDirector? AutoSaveDirector;
         public LookupDirector? LookupDirector;
         public OptionsDirector? OptionsDirector = new();
         public GameSettingsDirector? GameSettingsDirector = new();
@@ -260,6 +260,82 @@ namespace Il2Cpp
     }
     public sealed class DerivedFileStorageProvider : FileStorageProvider
     { public DerivedFileStorageProvider() { NativeClass = new(0x5678); } }
+}
+internal static class Fixture
+{
+    public static readonly JsonSerializerOptions Json = new() { IncludeFields = true };
+    public static int Loads, Disposals;
+    public static bool? SkipPayloadEnd;
+    public static System.Action? WithinMove;
+    public static Il2CppMonomiPark.SlimeRancher.AutoSaveDirector Reset()
+    {
+        var type = Assembly.GetExecutingAssembly().GetType("SlimeBridge.SR2.CounterpartCreator")!;
+        foreach (var name in new[] { "_association", "_scope", "_harmony", "_completedWorld" }) type.GetField(name, BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, null);
+        HarmonyLib.Harmony.Hooks.Clear(); HarmonyLib.Harmony.FailPatch = false;
+        GameSettingsModel.AfterConstruction = null; Loads = Disposals = 0; SkipPayloadEnd = null; WithinMove = null;
+        UnityEngine.Time.realtimeSinceStartup = 0;
+        Il2CppInterop.Runtime.Il2CppClassPointerStore<Il2Cpp.FileStorageProvider>.NativeClassPtr = new(0x1234);
+        var director = new Il2CppMonomiPark.SlimeRancher.AutoSaveDirector();
+        Il2Cpp.GameContext.Instance = new() { AutoSaveDirector = director };
+        Il2Cpp.GameContext.Instance.OptionsDirector!._optionsItemDefinitions!.GameBasedDefinitions!.Items.Add(new());
+        Il2Cpp.GameContext.Instance.OptionsDirector._optionsItemDefinitions.GameBasedDefinitions.Items.Add(new() { ReferenceId = "Fixture.Second", PersistenceKey = "Fixture.PersistedSecond" });
+        Il2Cpp.SystemContext.Instance = new(); Il2Cpp.SceneContext.Instance = null;
+        return director;
+    }
+    public static bool Move(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector._LoadNewGame_Coroutine_d__53 iterator)
+    {
+        var hook = HarmonyLib.Harmony.Hooks[nameof(iterator.MoveNext)];
+        var args = new object?[] { iterator, null, false };
+        var run = (bool)hook.Prefix!.Method.Invoke(null, args)!;
+        if (!run) { hook.Finalizer!.Method.Invoke(null, new[] { args[1], null }); return (bool)args[2]!; }
+        Exception? error = null;
+        try
+        {
+            WithinMove?.Invoke();
+            var director = iterator.__4__this!; var metadata = iterator.metadata!;
+            director.loadedGame = false; director.newGameMetadata = metadata;
+            var display = director.GetGameSaveDisplayName(metadata.saveSlotIndex);
+            var name = director.GetGameSaveFileName(display);
+            if (director.StorageProvider!.HasGameData(name)) name += "_1";
+            var table = new Il2CppSystem.Collections.Generic.List<GameIconDefinition> { metadata.gameSettingsModel!.gameIconDefinition! };
+            var settings = new GameSettingsV01(); metadata.gameSettingsModel.Pull(ref settings, new(table));
+            director.SavedGame = new() { GameState = new() { GameName = name, DisplayName = display,
+                SaveSlotIndex = metadata.saveSlotIndex, GameSettings = settings,
+                GameIconIndex = new() { IndexTable = new[] { table[0].ReferenceId } } } };
+            iterator.__1__state = 1;
+            Il2Cpp.SystemContext.Instance!.SceneLoader!.IsSceneLoadInProgress = true;
+            return true;
+        }
+        catch (Exception ex) { error = ex; throw; }
+        finally { hook.Finalizer!.Method.Invoke(null, new[] { args[1], error }); }
+    }
+    // Separate native load phases: settings are applied and metadata consumed only at completion.
+    public static void ActivateScene()
+    {
+        Il2Cpp.SceneContext.Instance = new() { Player = new(), PlayerState = new(), GameModel = new() };
+        Il2Cpp.SystemContext.Instance!.SceneLoader!._currentSceneGroup!.name = "FixtureWorld";
+    }
+    public static void ApplySettings(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director)
+    { Il2Cpp.SceneContext.Instance!.GameModel!.gameSettings = director.newGameMetadata!.gameSettingsModel; }
+    public static void CompleteNewGame(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director)
+    {
+        ActivateScene(); ApplySettings(director);
+        director.newGameMetadata = null;
+        Il2Cpp.SystemContext.Instance!.SceneLoader!.IsSceneLoadInProgress = false;
+    }
+    public static void Add(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director, GameV06 game, string file)
+    {
+        director.StorageProvider!.Names.Add(file);
+        director.StorageProvider.Payloads[file] = JsonSerializer.SerializeToUtf8Bytes(game, Json);
+        director.Summaries[file] = new() { Name = game.GameName, SaveName = file, DisplayName = game.DisplayName,
+            SaveSlotIndex = game.SaveSlotIndex, IconId = new() { ReferenceId = game.GameIconIndex!.IndexTable![game.GameSettings!.GameIconId] } };
+    }
+}
+namespace Il2CppMonomiPark.SlimeRancher
+{
+    using Il2Cpp;
+    using Il2CppMonomiPark.SlimeRancher.DataModel;
+    using Il2CppMonomiPark.SlimeRancher.Persist;
     public sealed class AutoSaveDirector : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
     {
         public sealed class LoadNewGameMetadata : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
@@ -280,6 +356,7 @@ namespace Il2Cpp
         public StorageProvider? StorageProvider
         { get { OnPublicProviderRead?.Invoke(); return _storage; } set { _storage = value; } }
         public StorageProvider? _StorageProvider_k__BackingField { get { OnProviderRead?.Invoke(); return _storage; } }
+        public StorageProvider? _storageProvider => _StorageProvider_k__BackingField;      // SR2 1.x field name
         public SavedGame? SavedGame;
         public SavedGame? _savedGame => SavedGame;
         // Independent native +0xC8 field: only existing-save Load populates it.
@@ -320,75 +397,5 @@ namespace Il2Cpp
             OnSave?.Invoke();
             if (SavedGame?.GameState != null) Fixture.Add(this, SavedGame.GameState, SavedGame.GetName() + "_0");
         }
-    }
-}
-internal static class Fixture
-{
-    public static readonly JsonSerializerOptions Json = new() { IncludeFields = true };
-    public static int Loads, Disposals;
-    public static bool? SkipPayloadEnd;
-    public static System.Action? WithinMove;
-    public static Il2Cpp.AutoSaveDirector Reset()
-    {
-        var type = Assembly.GetExecutingAssembly().GetType("SlimeBridge.SR2.CounterpartCreator")!;
-        foreach (var name in new[] { "_association", "_scope", "_harmony", "_completedWorld" }) type.GetField(name, BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, null);
-        HarmonyLib.Harmony.Hooks.Clear(); HarmonyLib.Harmony.FailPatch = false;
-        GameSettingsModel.AfterConstruction = null; Loads = Disposals = 0; SkipPayloadEnd = null; WithinMove = null;
-        UnityEngine.Time.realtimeSinceStartup = 0;
-        Il2CppInterop.Runtime.Il2CppClassPointerStore<Il2Cpp.FileStorageProvider>.NativeClassPtr = new(0x1234);
-        var director = new Il2Cpp.AutoSaveDirector();
-        Il2Cpp.GameContext.Instance = new() { AutoSaveDirector = director };
-        Il2Cpp.GameContext.Instance.OptionsDirector!._optionsItemDefinitions!.GameBasedDefinitions!.Items.Add(new());
-        Il2Cpp.GameContext.Instance.OptionsDirector._optionsItemDefinitions.GameBasedDefinitions.Items.Add(new() { ReferenceId = "Fixture.Second", PersistenceKey = "Fixture.PersistedSecond" });
-        Il2Cpp.SystemContext.Instance = new(); Il2Cpp.SceneContext.Instance = null;
-        return director;
-    }
-    public static bool Move(Il2Cpp.AutoSaveDirector._LoadNewGame_Coroutine_d__53 iterator)
-    {
-        var hook = HarmonyLib.Harmony.Hooks[nameof(iterator.MoveNext)];
-        var args = new object?[] { iterator, null, false };
-        var run = (bool)hook.Prefix!.Method.Invoke(null, args)!;
-        if (!run) { hook.Finalizer!.Method.Invoke(null, new[] { args[1], null }); return (bool)args[2]!; }
-        Exception? error = null;
-        try
-        {
-            WithinMove?.Invoke();
-            var director = iterator.__4__this!; var metadata = iterator.metadata!;
-            director.loadedGame = false; director.newGameMetadata = metadata;
-            var display = director.GetGameSaveDisplayName(metadata.saveSlotIndex);
-            var name = director.GetGameSaveFileName(display);
-            if (director.StorageProvider!.HasGameData(name)) name += "_1";
-            var table = new Il2CppSystem.Collections.Generic.List<GameIconDefinition> { metadata.gameSettingsModel!.gameIconDefinition! };
-            var settings = new GameSettingsV01(); metadata.gameSettingsModel.Pull(ref settings, new(table));
-            director.SavedGame = new() { GameState = new() { GameName = name, DisplayName = display,
-                SaveSlotIndex = metadata.saveSlotIndex, GameSettings = settings,
-                GameIconIndex = new() { IndexTable = new[] { table[0].ReferenceId } } } };
-            iterator.__1__state = 1;
-            Il2Cpp.SystemContext.Instance!.SceneLoader!.IsSceneLoadInProgress = true;
-            return true;
-        }
-        catch (Exception ex) { error = ex; throw; }
-        finally { hook.Finalizer!.Method.Invoke(null, new[] { args[1], error }); }
-    }
-    // Separate native load phases: settings are applied and metadata consumed only at completion.
-    public static void ActivateScene()
-    {
-        Il2Cpp.SceneContext.Instance = new() { Player = new(), PlayerState = new(), GameModel = new() };
-        Il2Cpp.SystemContext.Instance!.SceneLoader!._currentSceneGroup!.name = "FixtureWorld";
-    }
-    public static void ApplySettings(Il2Cpp.AutoSaveDirector director)
-    { Il2Cpp.SceneContext.Instance!.GameModel!.gameSettings = director.newGameMetadata!.gameSettingsModel; }
-    public static void CompleteNewGame(Il2Cpp.AutoSaveDirector director)
-    {
-        ActivateScene(); ApplySettings(director);
-        director.newGameMetadata = null;
-        Il2Cpp.SystemContext.Instance!.SceneLoader!.IsSceneLoadInProgress = false;
-    }
-    public static void Add(Il2Cpp.AutoSaveDirector director, GameV06 game, string file)
-    {
-        director.StorageProvider!.Names.Add(file);
-        director.StorageProvider.Payloads[file] = JsonSerializer.SerializeToUtf8Bytes(game, Json);
-        director.Summaries[file] = new() { Name = game.GameName, SaveName = file, DisplayName = game.DisplayName,
-            SaveSlotIndex = game.SaveSlotIndex, IconId = new() { ReferenceId = game.GameIconIndex!.IndexTable![game.GameSettings!.GameIconId] } };
     }
 }

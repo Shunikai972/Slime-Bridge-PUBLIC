@@ -617,9 +617,34 @@ class LauncherAPI:
             content = content_manifest.hello_content()          # what this install would present when joining (imported species + Largos)
         except (OSError, ValueError, KeyError):
             content = {}
+        primary = self._primary('SR1')
+        srmp_state = {'state': 'no_game', 'loader': False}
+        if primary is not None:
+            from apps.launcher import srmp
+            try:
+                srmp_state = srmp.status(primary['root'])
+            except OSError as exc:
+                srmp_state = {'state': 'error', 'loader': False, 'error': str(exc)}
         return {'ok': True, 'servers': settings['servers'], 'host': self._load()['mp_host'], 'content': content,
-                'network_adapter': False,
-                'note': 'In-game networking is not connected yet: addresses are saved and checked, nothing is dialled.'}
+                'srmp': srmp_state, 'network_adapter': srmp_state.get('state') in ('current', 'outdated', 'other'),
+                'note': 'Slime Rancher online is SRMP Revival: host or join from its in-game menu. '
+                        'Slime Rancher 2 online is not available yet.'}
+
+    def mp_srmp(self, action: str) -> dict:
+        """Install/update (``install``) or remove (``remove``) SRMP Revival in the Slime Rancher installation."""
+        from apps.launcher import srmp
+        if action not in ('install', 'remove'):
+            raise ValueError('action must be install or remove')
+        primary = self._primary('SR1')
+        if primary is None:
+            return {'ok': False, 'error': 'GAME_NOT_FOUND'}
+        if self._launcher.running('SR1'):
+            return {'ok': False, 'error': 'GAME_RUNNING'}
+        try:
+            result = srmp.install(primary['root']) if action == 'install' else srmp.remove(primary['root'])
+        except srmp.SrmpError as exc:
+            return {'ok': False, 'error': exc.code, 'detail': exc.detail}
+        return {**result, 'srmp': srmp.status(primary['root'])}
 
     def mp_remember(self, address: str, favourite: bool | None = None) -> dict:
         from bridge.app import settings as ST

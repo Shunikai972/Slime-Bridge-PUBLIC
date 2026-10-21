@@ -73,7 +73,7 @@ class PackTests(unittest.TestCase):
             self.assertTrue(result['ok'])
             self.assertTrue(any('slime.cotton' in w for w in result['warnings']))
 
-    def test_prepare_leaves_a_current_install_alone_and_a_real_install_gets_no_species_step(self):
+    def test_prepare_leaves_a_current_install_alone_and_points_a_real_install_at_the_content(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = make_repo(Path(tmp), cache_for=('slime.ringtail', 'slime.cotton'))
             lab = repo / 'Lab' / 'Games' / 'SR1'
@@ -89,7 +89,20 @@ class PackTests(unittest.TestCase):
             island.assert_not_called()
             self.assertEqual({s['step']: s['status'] for s in result['steps']},
                              {'plugin': 'CURRENT', 'island': 'CURRENT', 'species': 'READY', 'largos': 'NO_CACHES'})
-            self.assertNotIn('species', {s['step'] for s in real['steps']})
+            real_steps = {s['step']: s['status'] for s in real['steps']}
+            self.assertEqual(real_steps['species'], 'READY')
+            # A normal install gets the pointer file only when a spec exists; the plugin validates every path again.
+            pointer = repo / 'real' / 'SlimeBridge' / 'content.json'
+            if real_steps['player-content'] == 'READY':
+                doc = json.loads(pointer.read_text(encoding='utf-8'))
+                self.assertEqual((doc['schema'], doc['realm'], Path(doc['home'])), ('slimebridge-player-content', 'SR1', repo.resolve()))
+                self.assertTrue(Path(doc['out']).is_dir())
+                self.assertTrue(pack.remove_player_pointer(repo / 'real'))
+                self.assertFalse(pointer.exists())
+            else:
+                self.assertEqual(real_steps['player-content'], 'NO_SPEC')
+                self.assertFalse(pointer.exists())
+            self.assertNotIn('player-content', {s['step'] for s in result['steps']})
 
 
 if __name__ == '__main__':

@@ -23,11 +23,11 @@ Players never need a .NET SDK or the game assemblies.
 7. Publish (push + GitHub release through the API with the credential git already stores):
 
    ```
-   py -3.12 -m tools.release.make_release --sr1-ref ... --sr2-ref ... --publish        # add --draft to review first
+   publish\update-public.cmd --publish        (private repo: sync, source zip, standalone exe zip, push, release)
+   py -3.12 -m tools.release.publish_github     (public repo, after make_release + build_exe; --draft to review first)
    ```
 
-   or by hand: `git tag vX.Y.Z && git push origin vX.Y.Z`, then create the release on GitHub and attach the zip and
-   `SHA256SUMS.txt`.
+   The standalone zip comes from `py -3.12 -m tools.release.build_exe` (PyInstaller, everything inside SlimeBridge.exe).
 
 ## Continuous integration
 

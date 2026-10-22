@@ -579,6 +579,22 @@ namespace SlimeBridge.SR1
                     // These materials already use their distinct native shader/atlas roles.
                     // Instances borrow the immutable, template-owned passes.
                     if (partData != null && partData.SourceFace) continue;
+                    // The Hyper slime's energy aura shell: SR2's aura shader does not exist here; the game's own additive glow,
+                    // tinted with the source colour, draws it as a glowing flame halo.
+                    if (partData != null && partData.SourceShader == "HyperSlimeAura")
+                    {
+                        // Its 24 source quads are flame cards the SR2 shader expands on screen; without that shader they would
+                        // stay hidden inside the body. The aura is rebuilt as rising flames with the game's own fire material.
+                        renderer.enabled = false;
+                        if (renderer.GetComponentInChildren<ImportedFlameAura>() == null)
+                        {
+                            var flames = new GameObject("SlimeBridgeEffect_flames");
+                            flames.transform.SetParent(renderer.transform, false);
+                            flames.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+                            flames.AddComponent<ImportedFlameAura>().Tint = shared.Length > 0 && shared[0] != null ? shared[0].color : Color.yellow;
+                        }
+                        continue;
+                    }
                     // Parts whose source shader is outside the native slime families (e.g. the
                     // source FX smoke attachment) keep their converter materials: a body-material
                     // clone would paint them as opaque palette blobs. Unknown shaders (legacy

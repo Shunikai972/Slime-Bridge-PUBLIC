@@ -18,7 +18,7 @@ Largos one game lacks **from your own installed games**.
 | SR1 plugin | `mods/sr1-bridge` | SRML mod: sanctuary island + plort statues + portal, travel, imported species |
 | SR2 plugin | `mods/sr2-bridge` | MelonLoader mod: return portal, travel, imported species |
 | Extractor | `tools/SlimeBridge-AssetConverter` + `bridge/content` | Reads your SR1/SR2 installs and builds the caches the plugins load |
-| Online | launcher *Multi* page + SRMP Revival (`plugins/SRMP`) | Slime Rancher online through SRMP Revival (installed by the launcher), content fingerprint to compare with friends |
+| Online | launcher *Multi* page | Online play for both games, installed with the plugin: SRMP Revival for Slime Rancher, Ranching Together + Starlight for Slime Rancher 2 (downloaded from their official releases), content fingerprint to compare with friends |
 
 ## Requirements
 
@@ -69,17 +69,28 @@ extrait dans `Lab/` sont conservés).
 * Plugin button greyed out: the mod loader is missing in that game folder (SRML for SR1, MelonLoader for SR2).
 * The launcher's **Recovery** page collects a redacted diagnostics bundle you can attach to a bug report.
 
+## Online
+
+Installing the SlimeBridge plugin in a game also installs its online mod: nothing else to download.
+
+* **Slime Rancher**: open the multiplayer menu in game, host your ranch or join a friend with their code.
+* **Slime Rancher 2**: on the main menu press **F4**, pick a name once, then host the save you are playing or join a
+  friend (UDP port 1919; joining uses an empty save slot).
+
+Everyone needs SlimeBridge with the same *content fingerprint* (launcher → Multi) to see the same imported slimes and
+Largos.
+
 ## Current state (honest)
 
 Working on normal game installs (Steam, Epic or a copied folder): launcher, plugin install, extraction from your own
 games, imported species and Largos in both games (registered in the real games: 122 in Slime Rancher, 40 in Slime
-Rancher 2 1.3.0), SR1 sanctuary island with plort statues and portal, travel SR1 ⇄ SR2 with your vacpack, BridgeHost,
-Slime Rancher online through SRMP Revival.
+Rancher 2 1.3.0), the new SR2 1.x Hyper slime and its Largos in Slime Rancher, SR1 sanctuary island with plort statues
+and portal, travel SR1 ⇄ SR2 with your vacpack, online for both games.
 
-Not finished yet: Slime Rancher 2 online; creating a brand-new SR2 save from the portal (link an existing save); the new
-SR2 1.x Hyper slime and its Largos are not extracted yet; a few Largo families still need diet decisions. Two-player
-SRMP sessions with imported content are supported by design (shared ids and content fingerprint) but still need a real
-two-PC test. See [CHANGELOG.md](CHANGELOG.md).
+Not finished yet: creating a brand-new SR2 save from the portal (link an existing save); a few Largo families still
+need diet decisions. Online sessions with imported content are
+supported by design (shared ids and content fingerprint) but still need a real two-PC test. See
+[CHANGELOG.md](CHANGELOG.md).
 
 ## For developers
 

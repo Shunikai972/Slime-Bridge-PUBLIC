@@ -183,10 +183,12 @@ class _Graph:
                 raise ValueError('duplicate or cyclic mesh-scope subtree node')
             self.used_nodes.add(go.path_id)
             components = self.components(go)
+            # Light: the SR2 1.x Hyper slime's glow. Not ported (no geometry); the node is walked like any other.
             allowed = {'Transform', 'MonoBehaviour', 'MeshFilter', 'SkinnedMeshRenderer',
-                       'MeshRenderer', 'ParticleSystemRenderer', 'ParticleSystem'}
-            if any(c.type.name not in allowed for c in components):
-                raise ValueError('unsupported appearance component or renderer')
+                       'MeshRenderer', 'ParticleSystemRenderer', 'ParticleSystem', 'Light'}
+            unsupported = sorted({c.type.name for c in components if c.type.name not in allowed})
+            if unsupported:
+                raise ValueError('unsupported appearance component or renderer: ' + ', '.join(unsupported))
             transform = self.transform(go)
             tt = self.tree(transform)
             if source_ref(tt['m_Father']) != expected_parent:
@@ -368,6 +370,47 @@ def _derive_candidates(graph, appearance):
     return out
 
 
+def _rgba(value):
+    if not isinstance(value, dict):
+        return None
+    out = [float(value.get(k, 0.0)) for k in ('r', 'g', 'b', 'a')]
+    return out if all(math.isfinite(v) and abs(v) < 1000 for v in out) else None
+
+
+def _effect_rows(graph, nodes, shell_path):
+    """Lights, glow meshes and particle systems of a lit effect element, relative to its shell (bounded, read-only)."""
+    rows = []
+    for node, transform, components, path in nodes[:MAX_STRUCTURES]:
+        trs = _trs(graph.tree(transform))
+        base = {'source_path': path, 'parent': shell_path, 'active': _flag(graph.tree(node)['m_IsActive']), **trs}
+        kinds = {c.type.name: c for c in components}
+        if 'Light' in kinds:
+            light = graph.tree(kinds['Light'])
+            rows.append(dict(base, kind='light', light_type=int(light.get('m_Type', 2)), color=_rgba(light.get('m_Color')),
+                             range=float(light.get('m_Range', 1.0)), source_intensity=float(light.get('m_Intensity', 1.0))))
+        elif 'ParticleSystem' in kinds:
+            system = graph.tree(kinds['ParticleSystem'])
+            main = system.get('InitialModule', {})
+            colors = {}
+            renderer = kinds.get('ParticleSystemRenderer')
+            if renderer is not None:
+                for material in graph.materials(graph.tree(renderer)['m_Materials'])[0][:1]:
+                    saved = material.read_typetree().get('m_SavedProperties', {})
+                    colors = {k: _rgba(v) for k, v in saved.get('m_Colors', []) if k in ('_Color', '_ColorCore', '_ColorEdge')}
+            rows.append(dict(base, kind='particles', lifetime=float(main.get('startLifetime', {}).get('scalar', 1.0)),
+                             size=float(main.get('startSize', {}).get('scalar', 1.0)),
+                             speed=float(main.get('startSpeed', {}).get('scalar', 0.0)),
+                             rate=float(system.get('EmissionModule', {}).get('rateOverTime', {}).get('scalar', 0.0)),
+                             max_particles=int(main.get('maxNumParticles', 100)), colors=colors))
+        elif 'MeshRenderer' in kinds:
+            colors = {}
+            for material in graph.materials(graph.tree(kinds['MeshRenderer'])['m_Materials'])[0][:1]:
+                saved = material.read_typetree().get('m_SavedProperties', {})
+                colors = {k: _rgba(v) for k, v in saved.get('m_Colors', []) if k in ('_Color', '_ColorTop', '_ColorBottom')}
+            rows.append(dict(base, kind='glow_sphere', colors=colors))
+    return rows
+
+
 def collect_appearance_mesh_scope(assets, resolved, candidates, skeleton) -> dict:
     """Opt-in graph reader; malformed/unsupported graphs always raise ValueError.
     `candidates` None derives the skinned part meshes from the appearance itself (Largos)."""
@@ -407,7 +450,19 @@ def _collect(assets, resolved, candidates, skeleton):
             raise ValueError('ambiguous or inconsistent mesh candidates')
         _name(candidate['role'])
         by_mesh[pid] = candidate
-    parts, inventory, exclusions, structures_inventory = [], [], [], []
+    if candidates is not None:
+        # Species whose meshes do not follow the slime<Name> naming (SR2 1.x Hyper): the appearance graph names the parts the
+        # name lookup missed. Known meshes keep their looked-up role; an added part never takes a role already used.
+        taken = {c['role'] for c in by_mesh.values()}
+        for extra in _derive_candidates(graph, appearance):
+            if extra['mesh_obj'].path_id in by_mesh:
+                continue
+            role = extra['role']
+            while role in taken:
+                role = role + '_extra'
+            taken.add(role)
+            by_mesh[extra['mesh_obj'].path_id] = dict(extra, role=role)
+    parts, inventory, exclusions, structures_inventory, effects = [], [], [], [], []
     used_meshes, used_saos = set(), set()
     entries = []
     for index, structure in enumerate(_bounded(appearance['_structures'], MAX_STRUCTURES, 'appearance structures')):
@@ -440,6 +495,20 @@ def _collect(assets, resolved, candidates, skeleton):
             continue
         graph.materials(material_refs)
         nodes = list(graph.subtree(go))
+        if any(c.type.name == 'Light' for n in nodes for c in n[2]):
+            # a lit effect element (the SR2 1.x Hyper slime's energy aura): the root mesh (the aura shell) is exported like any
+            # rigid attachment; the lights, glow spheres and particle systems below it are described for the destination to
+            # rebuild with its own effects (the source shaders do not exist there)
+            root_kinds = {c.type.name for c in nodes[0][2]}
+            described = _effect_rows(graph, nodes[1:], nodes[0][3])
+            effects.extend(dict(e, source_structure_index=index) for e in described)
+            if not {'MeshRenderer', 'MeshFilter'} <= root_kinds:
+                exclusions.append({'source_structure_index': index, 'source_element_id': element.path_id, 'source_part_id': sao.path_id,
+                                   'status': 'excluded', 'reason': 'lit-effect-element-without-shell'})
+                structures_inventory.append({'source_structure_index': index, 'source_element_id': element.path_id,
+                                             'source_part_id': sao.path_id, 'renderer_ids': [], 'status': 'excluded', 'ignored_fx_children': []})
+                continue
+            nodes = nodes[:1]
         root_types = [c.type.name for c in nodes[0][2]]
         particle_only = 'ParticleSystemRenderer' in root_types
         fx_children = []
@@ -576,4 +645,5 @@ def _collect(assets, resolved, candidates, skeleton):
             'source_file': 'resources.assets', 'source_appearance_id': appearance_obj.path_id,
             'source_prefab_id': prefab.path_id, 'source_applicator_id': applicator_obj.path_id,
             'visual_transform': _trs(graph.tree(visual_transform)),
-            'parts': parts, 'inventory': inventory, 'exclusions': exclusions, 'structures': structures_inventory}
+            'parts': parts, 'inventory': inventory, 'exclusions': exclusions, 'structures': structures_inventory,
+            'effects': effects}

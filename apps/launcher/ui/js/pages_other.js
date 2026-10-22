@@ -15,28 +15,30 @@
   function multiplayer(S) {
     const M = L.mp || { servers: { favourites: [], recent: [], directory_enabled: true }, host: { name: 'My Ranch', port: 7777, mode: 'HYBRID' } };
     const host = S.host, running = host.state === 'RUNNING';
-    const srmp = M.srmp || { state: 'no_game', loader: false }, srmpState = srmp.state || 'no_game', content = M.content || {};
-    const srmpPill = srmpState === 'current' ? 'good' : (srmpState === 'outdated' || srmpState === 'other') ? 'warn' : 'muted';
+    const online = M.online || {}, content = M.content || {};
+    const card = (realm, mascot, flip) => {
+      const o = online[realm] || { state: 'no_game', loader: false }, s = o.state || 'no_game';
+      const pill = s === 'current' ? 'good' : (s === 'outdated' || s === 'other') ? 'warn' : 'muted';
+      return `<section class="panel stack">
+      <div class="row between"><h2>${slime(mascot, { size: 40, cls: 'idle', flip: !!flip })} ${t('mp.online_' + realm)}</h2><span class="pill ${pill}">${t('mp.on_s_' + s)}</span></div>
+      <p class="muted">${t('mp.how_' + realm)}</p>
+      ${o.loader === false && s !== 'no_game' ? `<p class="err">${t('mp.noloader_' + realm)}</p>` : ''}
+      <div class="row">
+        ${s !== 'current' && s !== 'no_game' && o.loader ? `<button class="btn btn--sky" data-act="mp-online" data-arg="${realm}">${icon('download')} ${t(s === 'missing' ? 'mp.on_install' : 'mp.on_update')}</button>` : ''}
+      </div>
+    </section>`;
+    };
     return `<div class="page">
   <div class="page-title"><h1>${t('nav.multiplayer')}</h1><p>${t('mp.sub')}</p></div>
   <div class="grid cols-2">
-    <section class="panel stack">
-      <div class="row between"><h2>${slime('tabby', { size: 40, cls: 'idle' })} ${t('mp.srmp')}</h2><span class="pill ${srmpPill}">${t('mp.srmp_s_' + srmpState)}</span></div>
-      <p class="muted">${t('mp.srmp_body')}</p>
-      ${srmp.loader === false && srmpState !== 'no_game' ? `<p class="err">${t('mp.srmp_noloader')}</p>` : ''}
-      <div class="row">
-        ${['missing', 'outdated'].includes(srmpState) && srmp.loader ? `<button class="btn btn--sky" data-act="mp-srmp" data-arg="install">${icon('download')} ${t(srmpState === 'missing' ? 'mp.srmp_install' : 'mp.srmp_update')}</button>` : ''}
-        ${['current', 'outdated', 'other'].includes(srmpState) ? `<button class="btn btn--ghost" data-act="mp-srmp" data-arg="remove">${t('mp.srmp_remove')}</button>` : ''}
-      </div>
-      <p class="faint small">${t('mp.srmp_how')}</p>
-    </section>
-    <section class="panel stack">
-      <h2>${slime('hunter', { size: 40, cls: 'idle', flip: true })} ${t('mp.content')}</h2>
-      <p class="muted">${t('mp.content_body')}</p>
-      ${Object.keys(content).length ? Object.entries(content).map(([realm, hash]) => `<div class="field"><label>${esc(realm)}</label><div class="mono">${esc(String(hash).slice(0, 12))}</div></div>`).join('') : `<p class="faint small">${t('mp.content_none')}</p>`}
-      <span class="pill muted">${t('mp.sr2_online')}</span>
-    </section>
+    ${card('SR1', 'tabby')}
+    ${card('SR2', 'hunter', true)}
   </div>
+  <section class="panel stack">
+    <h2>${slime('cotton', { size: 40, cls: 'idle' })} ${t('mp.content')}</h2>
+    <p class="muted">${t('mp.content_body')}</p>
+    ${Object.keys(content).length ? `<div class="row">${Object.entries(content).map(([realm, hash]) => `<div class="field"><label>${esc(realm)}</label><div class="mono">${esc(String(hash).slice(0, 12))}</div></div>`).join('')}</div>` : `<p class="faint small">${t('mp.content_none')}</p>`}
+  </section>
   <section class="panel stack">
     <div class="row between"><h2>${t('mp.bridgehost')}</h2><span class="pill ${running ? 'good live' : 'muted'}">${running ? t('mp.hostrun') : t('mp.hoststop')}</span></div>
     <p class="muted">${t('mp.bridgehost_body')}</p>

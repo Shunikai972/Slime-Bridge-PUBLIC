@@ -196,6 +196,7 @@ def publish_spec(cache_root: Path = REPO_ROOT / 'Lab' / 'AssetCache', sr2_dir: P
     ids = allocate_ids([r['canonical'] for r in rows], ledger_path)
     entries = [e for e in spec['entries'] if not str(e.get('canonical_id', '')).startswith('largo.')]
     entries += [largo_entry(r, ids[r['canonical']], cache_palette(r['canonical'], cache_root)) for r in rows]
+    entries += kept_largos({r['canonical'] for r in rows}, cache_root, spec_root)
     spec['entries'] = entries
     stamp = time.strftime('%Y%m%d-%H%M%S')
     out_dir = Path(spec_root) / f'{stamp}-largos'
@@ -207,23 +208,46 @@ def publish_spec(cache_root: Path = REPO_ROOT / 'Lab' / 'AssetCache', sr2_dir: P
     return {'ok': True, 'directory': str(out_dir), 'largos': len(rows), 'source_spec': str(source)}
 
 
-def refresh_spec(repo_root: Path = REPO_ROOT) -> dict:
+def kept_largos(current: set, cache_root: Path, spec_root: Path = SPEC_ROOT) -> list[dict]:
+    """Largo entries of the newest published spec that the current SR2 catalog no longer lists but whose cache is still on
+    disk (SR2 1.x dropped some Largo definitions the player already extracted): they keep their id and stay playable."""
+    kept, seen = [], set(current)
+    for spec in sorted(Path(spec_root).glob('*/' + SPEC_FILE), reverse=True):        # newest description wins
+        try:
+            entries = json.loads(spec.read_text(encoding='utf-8')).get('entries', [])
+        except (OSError, ValueError):
+            continue
+        for entry in entries:
+            canonical = str(entry.get('canonical_id', ''))
+            if canonical.startswith('largo.') and canonical not in seen and cache_ready(canonical, cache_root):
+                seen.add(canonical)
+                kept.append(entry)
+    return kept
+
+
+def refresh_spec(repo_root: Path = REPO_ROOT, sr2_dir: Path | None = None, sr1_dir: Path | None = None) -> dict:
     """Publish a new spec when the Largo caches that exist differ from the Largos the newest spec lists.
 
     Cheap and deterministic (SR2 catalog + SR1 enum + the cache folders); the pack flow runs it before every start so a finished
     Extract is picked up without any manual step. {'changed', 'largos', 'directory'?}."""
     repo_root = Path(repo_root)
-    sr2_dir = repo_root / 'Lab' / 'Games' / 'SR2' / 'SlimeRancher2_Data'
-    sr1_dir = repo_root / 'Lab' / 'Games' / 'SR1' / 'SlimeRancher_Data'
+    # the player's own installs when the launcher knows them, the developer LAB copies otherwise
+    sr2_dir = Path(sr2_dir) if sr2_dir else repo_root / 'Lab' / 'Games' / 'SR2' / 'SlimeRancher2_Data'
+    sr1_dir = Path(sr1_dir) if sr1_dir else repo_root / 'Lab' / 'Games' / 'SR1' / 'SlimeRancher_Data'
     cache_root = repo_root / 'Lab' / 'AssetCache'
     spec_root = repo_root / 'Lab' / 'GeneratedContent' / 'species-import'
     specs = sorted(spec_root.glob('*/' + SPEC_FILE))
-    if not specs or not (sr2_dir / CATALOG).is_file() or not (sr1_dir / 'Managed' / 'Assembly-CSharp.dll').is_file():
+    catalog = (sr2_dir / CATALOG).is_file() or (sr2_dir / CATALOG).with_suffix('.bin').is_file()
+    if not specs or not catalog or not (sr1_dir / 'Managed' / 'Assembly-CSharp.dll').is_file():
         return {'changed': False, 'largos': 0, 'reason': 'game data or species spec not available'}
-    listed = {e['canonical_id'] for e in json.loads(specs[-1].read_text(encoding='utf-8')).get('entries', [])
-              if str(e.get('canonical_id', '')).startswith('largo.')}
+    newest = json.loads(specs[-1].read_text(encoding='utf-8')).get('entries', [])
+    listed = {e['canonical_id'] for e in newest if str(e.get('canonical_id', '')).startswith('largo.')}
+    base = _newest_species_spec()
+    base_ids = {e['canonical_id'] for e in json.loads(base.read_text(encoding='utf-8')).get('entries', [])} if base else set()
+    newest_base = {e['canonical_id'] for e in newest if not str(e.get('canonical_id', '')).startswith('largo.')}
     wanted = {r['canonical'] for r in largo_roster(sr2_dir, sr1_dir) if r['status'] == 'READY' and cache_ready(r['canonical'], cache_root)}
-    if wanted == listed:
+    wanted |= {e['canonical_id'] for e in kept_largos(wanted, cache_root, spec_root)}
+    if wanted == listed and newest_base == base_ids:
         return {'changed': False, 'largos': len(wanted)}
     published = publish_spec(cache_root, sr2_dir, sr1_dir, spec_root, repo_root / 'Lab' / 'GeneratedContent' / 'largo-ids.json')
     return {'changed': True, 'largos': published['largos'], 'directory': published['directory']}

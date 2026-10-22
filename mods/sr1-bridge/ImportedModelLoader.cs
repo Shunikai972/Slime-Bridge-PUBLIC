@@ -47,6 +47,7 @@ namespace SlimeBridge.SR1
                 problem = ex.GetType().Name + ": " + ex.Message;
             }
             Failed.Add(canonicalId);
+            UnityEngine.Debug.Log("[SlimeBridge] imported model refused: " + canonicalId + ": " + problem);
             return false;
         }
 
@@ -202,6 +203,9 @@ namespace SlimeBridge.SR1
                 UnityEngine.Object.Destroy(root);
                 return false;
             }
+            // Source effects the SR2 shaders cannot carry (Hyper energy aura): inert parameter nodes, built per spawned actor.
+            var effectCount = ImportedEffect.Attach(root.transform, document);
+            if (effectCount > 0) Debug.Log("[SlimeBridge] imported effects attached: " + effectCount + " (" + root.name + ")");
             if (!ImportedAnimationProbe.TrySample(root, document, out problem))
             {
                 UnityEngine.Object.Destroy(root);

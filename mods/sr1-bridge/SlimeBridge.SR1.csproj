@@ -63,6 +63,10 @@
       <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.ParticleSystemModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.AudioModule">
       <HintPath>$(SR1LabPath)/SlimeRancher_Data/Managed/UnityEngine.AudioModule.dll</HintPath>
       <Private>false</Private>

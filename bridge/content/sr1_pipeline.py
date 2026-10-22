@@ -229,11 +229,11 @@ def publish_spec(cache_root: Path = CACHE_ROOT, spec_root: Path = SPEC_ROOT, led
     return {'ok': True, 'directory': str(out_dir), 'largos': len(largos), 'species': len(ready_species), 'source_spec': str(source)}
 
 
-def refresh_spec(repo_root: Path = REPO_ROOT) -> dict:
+def refresh_spec(repo_root: Path = REPO_ROOT, sr1_dir: Path | None = None, sr2_dir: Path | None = None) -> dict:
     """Publish a new SR2 spec when the Largo caches that exist differ from the Largos the newest one lists (the pack flow runs it)."""
     repo_root = Path(repo_root)
-    sr1_dir = repo_root / 'Lab' / 'Games' / 'SR1' / 'SlimeRancher_Data'
-    sr2_dir = repo_root / 'Lab' / 'Games' / 'SR2' / 'SlimeRancher2_Data'
+    sr1_dir = Path(sr1_dir) if sr1_dir else repo_root / 'Lab' / 'Games' / 'SR1' / 'SlimeRancher_Data'
+    sr2_dir = Path(sr2_dir) if sr2_dir else repo_root / 'Lab' / 'Games' / 'SR2' / 'SlimeRancher2_Data'
     cache_root = repo_root / 'Lab' / 'AssetCache'
     spec_root = repo_root / 'Lab' / 'GeneratedContent' / 'species-import'
     source = newest_spec(spec_root)

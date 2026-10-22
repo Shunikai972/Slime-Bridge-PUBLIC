@@ -291,7 +291,7 @@
     'mp-star': async a => { const fav = L.mp.servers.favourites.includes(a); await api.mp_remember(a, !fav); L.mp = await api.mp_state(); renderView(true); },
     'mp-join': async () => { const i = $('#mp-addr'), r = await safe(() => api.mp_remember(i.value.trim(), null)); if (r && !r.ok) { L.mp.error = r.error; renderView(true); } else if (r) { toast(t('mp.saved', { a: r.address }), 'good'); L.mp = await api.mp_state(); renderView(true); } },
     'mp-mode': async (a, el) => { L.mp.host.mode = el.dataset.v; renderView(true); },
-    'mp-srmp': async a => { const r = await safe(() => api.mp_srmp(a)); if (r && r.ok) { toast(t(a === 'install' ? 'mp.srmp_done' : 'mp.srmp_removed'), 'good'); L.mp = await api.mp_state(); renderView(true); } else if (r) toast(t('mp.srmp_err', { e: r.error || '?' }), 'bad'); },
+    'mp-online': async realm => { toast(t('mp.on_working'), 'info'); const r = await safe(() => api.mp_online(realm, 'install')); if (r && r.ok) { toast(t('mp.on_done'), 'good'); L.mp = await api.mp_state(); renderView(true); } else if (r) toast(t('mp.on_err', { e: r.error || '?' }), 'bad'); },
     'mp-save': async () => { const r = await safe(() => api.mp_host_save({ name: $('#mp-name').value, port: $('#mp-port').value, mode: L.mp.host.mode })); if (r) { if (r.ok) { L.mp.host = r.host; toast(t('mp.saved_host'), 'good'); } else toast(r.error, 'bad'); } },
 
     pref: async (a, el) => { await safe(() => api.set_preference(a, el.dataset.v)); await refresh(); renderChars(); },

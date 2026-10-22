@@ -27,10 +27,15 @@ First public preview.
   3D noise textures.
 - Normal game installs: the launcher writes `<game>/SlimeBridge/content.json` so the plugins load the extracted content
   even when the game is started from Steam or Epic (same path containment as the developer LAB).
-- Online: the Multi page installs/updates/removes SRMP Revival (bundled, GPL-3.0) and shows the content fingerprint;
-  imported species ids are fixed in `bridge/content/species_ids.json` so every install agrees.
+- Online for both games, installed together with the plugin: SRMP Revival for Slime Rancher (shipped), Ranching Together
+  Beta 0.3.9 + Starlight 4.0.4 for Slime Rancher 2 (downloaded from their official GitHub releases, SHA-256 pinned;
+  verified loading on SR2 1.3.0). Multi page: status per game, content fingerprint. Imported species ids are fixed in
+  `bridge/content/species_ids.json` so every install agrees.
+- New SR2 1.x Hyper slime and its 18 Largos imported into Slime Rancher, with their sunglasses and fire aura (rebuilt with
+  Slime Rancher's own fire particles, glow and a point light, since SR2's aura shader does not exist there).
+- Base species specs ship with SlimeBridge (`bridge/content/specs`, data only) and are seeded on a fresh install; the
+  Largo specs are rebuilt from the player's own game folders.
 
 ### Known limitations
-- Slime Rancher 2 online is not available yet; SRMP two-player sessions with imported content still need a two-PC test.
+- Two-player sessions with imported content still need a two-PC test (both games).
 - Creating a brand-new SR2 save from the portal is not available on SR2 1.x: link an existing SR2 save.
-- The SR2 1.x Hyper slime and its Largos are not extracted yet (new renderer components).

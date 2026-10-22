@@ -287,7 +287,8 @@ class LauncherAPI:
             # everything linked; real installs keep the explicit install flow (nothing is copied behind the player's back).
             lab_env = {}
             if pack.is_lab_copy(realm, primary['root']):
-                prepared = pack.prepare(realm, primary['root'])
+                installs = {r: (self._primary(r) or {}).get('root') for r in ('SR1', 'SR2')}
+                prepared = pack.prepare(realm, primary['root'], installs=installs)
                 warnings += [f'{realm}: {w}' for w in prepared['warnings']]
                 lab_env = pack.lab_env(realm, primary['root'])
             try:
@@ -364,7 +365,8 @@ class LauncherAPI:
             result = plugins.install(realm, primary['root'])
         except plugins.PluginError as exc:
             return {'ok': False, 'error': exc.code, 'detail': exc.detail}
-        return {**result, 'state': plugins.status(realm, primary['root'])['state']}
+        from apps.launcher import online
+        return {**result, 'state': plugins.status(realm, primary['root'])['state'], 'online': online.ensure(realm, primary['root'])}
 
     def crossings_poll(self) -> dict:
         """Drive and report portal crossings: a plugin asked BridgeHost to cross, the launcher moves the player between the two games."""
@@ -617,34 +619,35 @@ class LauncherAPI:
             content = content_manifest.hello_content()          # what this install would present when joining (imported species + Largos)
         except (OSError, ValueError, KeyError):
             content = {}
-        primary = self._primary('SR1')
-        srmp_state = {'state': 'no_game', 'loader': False}
-        if primary is not None:
-            from apps.launcher import srmp
+        from apps.launcher import online
+        states = {}
+        for realm in ('SR1', 'SR2'):
+            primary = self._primary(realm)
+            if primary is None:
+                states[realm] = {'state': 'no_game', 'loader': False}
+                continue
             try:
-                srmp_state = srmp.status(primary['root'])
+                states[realm] = online.status(realm, primary['root'])
             except OSError as exc:
-                srmp_state = {'state': 'error', 'loader': False, 'error': str(exc)}
+                states[realm] = {'state': 'error', 'loader': False, 'error': str(exc)}
         return {'ok': True, 'servers': settings['servers'], 'host': self._load()['mp_host'], 'content': content,
-                'srmp': srmp_state, 'network_adapter': srmp_state.get('state') in ('current', 'outdated', 'other'),
-                'note': 'Slime Rancher online is SRMP Revival: host or join from its in-game menu. '
-                        'Slime Rancher 2 online is not available yet.'}
+                'online': states, 'network_adapter': any(s.get('state') == 'current' for s in states.values())}
 
-    def mp_srmp(self, action: str) -> dict:
-        """Install/update (``install``) or remove (``remove``) SRMP Revival in the Slime Rancher installation."""
-        from apps.launcher import srmp
-        if action not in ('install', 'remove'):
-            raise ValueError('action must be install or remove')
-        primary = self._primary('SR1')
+    def mp_online(self, realm: str, action: str) -> dict:
+        """Install/update (``install``) or remove (``remove``) the online components of one game."""
+        from apps.launcher import online, srmp
+        if realm not in ('SR1', 'SR2') or action not in ('install', 'remove'):
+            raise ValueError('realm must be SR1/SR2 and action install/remove')
+        primary = self._primary(realm)
         if primary is None:
             return {'ok': False, 'error': 'GAME_NOT_FOUND'}
-        if self._launcher.running('SR1'):
+        if self._launcher.running(realm):
             return {'ok': False, 'error': 'GAME_RUNNING'}
         try:
-            result = srmp.install(primary['root']) if action == 'install' else srmp.remove(primary['root'])
-        except srmp.SrmpError as exc:
+            result = online.install(realm, primary['root']) if action == 'install' else online.remove(realm, primary['root'])
+        except (online.OnlineError, srmp.SrmpError) as exc:
             return {'ok': False, 'error': exc.code, 'detail': exc.detail}
-        return {**result, 'srmp': srmp.status(primary['root'])}
+        return {**result, 'online': online.status(realm, primary['root'])}
 
     def mp_remember(self, address: str, favourite: bool | None = None) -> dict:
         from bridge.app import settings as ST

@@ -69,13 +69,31 @@ def species_ready(repo_root=REPO_ROOT, spec=None):
     return missing, len(rows)
 
 
-def prepare(realm, game_root, repo_root=REPO_ROOT):
+def _data_dirs(installs):
+    """``SlimeRancher_Data`` / ``SlimeRancher2_Data`` of the player's installs ({} entries when unknown)."""
+    out = {}
+    for name, folder in (('SR1', 'SlimeRancher_Data'), ('SR2', 'SlimeRancher2_Data')):
+        root = (installs or {}).get(name)
+        if root and (Path(root) / folder).is_dir():
+            out[name] = Path(root) / folder
+    return out
+
+
+def prepare(realm, game_root, repo_root=REPO_ROOT, installs=None):
     """Idempotent: plugin, island layout and (LAB copies) species caches. Returns {'ok', 'steps', 'warnings'}; never raises."""
     steps, warnings = [], []
 
     def step(name, status, detail=''):
         steps.append({'step': name, 'status': status, 'detail': detail})
 
+    data = _data_dirs({**(installs or {}), realm: game_root})
+    try:
+        from bridge.content import spec_seed
+        seeded = spec_seed.ensure_specs(repo_root)
+        if seeded['seeded']:
+            step('species-spec', 'SEEDED', ', '.join(seeded['seeded']))
+    except (OSError, ValueError) as exc:
+        warnings.append(f'species spec: {exc}')
     try:
         state = plugins.status(realm, game_root, repo_root)
         if state['state'] in ('missing', 'outdated') and state['loader']:
@@ -92,6 +110,14 @@ def prepare(realm, game_root, repo_root=REPO_ROOT):
     except plugins.PluginError as exc:
         warnings.append(f'plugin: {exc}')
         step('plugin', 'FAILED', str(exc))
+
+    # Online comes with the plugin (SRMP Revival for SR1, Ranching Together + Starlight for SR2); never blocks a start.
+    from apps.launcher import online
+    outcome = online.ensure(realm, game_root)
+    if outcome['status'] == 'FAILED':
+        warnings.append(f"online: {outcome.get('detail', '')}")
+        outcome = {**outcome, 'status': 'UNAVAILABLE'}
+    step('online', outcome['status'], outcome.get('detail', ''))
 
     if realm == 'SR1':
         try:
@@ -125,7 +151,7 @@ def prepare(realm, game_root, repo_root=REPO_ROOT):
             step('species', 'READY', f'{total} imported species armed')
         try:
             from bridge.content import largos
-            refreshed = largos.refresh_spec(repo_root)
+            refreshed = largos.refresh_spec(repo_root, data.get('SR2'), data.get('SR1'))
             if refreshed.get('changed'):
                 step('largos', 'SPEC_PUBLISHED', f"{refreshed['largos']} Largos armed")
             elif refreshed.get('largos'):
@@ -138,7 +164,7 @@ def prepare(realm, game_root, repo_root=REPO_ROOT):
     if realm == 'SR2':
         try:
             from bridge.content import sr1_pipeline
-            refreshed = sr1_pipeline.refresh_spec(repo_root)
+            refreshed = sr1_pipeline.refresh_spec(repo_root, data.get('SR1'), data.get('SR2'))
             if refreshed.get('changed'):
                 step('sr1-content', 'SPEC_PUBLISHED', f"{refreshed['largos']} SR1 Largos armed")
             elif refreshed.get('largos'):

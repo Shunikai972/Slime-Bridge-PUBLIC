@@ -33,6 +33,16 @@ launcher can install it for online play. It is a separate program under the **GN
 https://github.com/Shunikai972/Slime-rancher-multiplayer-public-mode. SlimeBridge does not link to it; the two mods share a
 game process only.
 
+## Slime Rancher 2 online (downloaded by the launcher, not bundled)
+
+| Component | Version | License | Source |
+|---|---|---|---|
+| Ranching Together (SR2MP) | Beta 0.3.9 | GPL-3.0 | https://github.com/pyeight/SlimeRancher2Multiplayer |
+| Starlight | 4.0.4 | Starlight Source-Available License (no redistribution of its DLL) | https://github.com/ThatFinn/Starlight |
+
+The launcher downloads both from their official GitHub releases into the player's own game, checking the SHA-256 pinned in
+`apps/launcher/online.py`; neither file is part of SlimeBridge.
+
 ## Python packages (installed from PyPI by `Install-SlimeBridge.cmd`, not bundled)
 
 | Package | License | Role |

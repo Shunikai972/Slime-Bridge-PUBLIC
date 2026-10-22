@@ -1,0 +1,680 @@
+{
+  "entries": [
+    {
+      "appearance": {
+        "ammo": [
+          0.11369702,
+          0.6886792,
+          0.56047213,
+          1
+        ],
+        "palette": {
+          "bottom": [
+            0.30114558,
+            0.08235292,
+            0.69803923,
+            1
+          ],
+          "middle": [
+            0,
+            0.57471275,
+            1,
+            1
+          ],
+          "top": [
+            0.72832936,
+            0.6666667,
+            1,
+            1
+          ]
+        },
+        "save_set": "CLASSIC",
+        "source": "new:classic"
+      },
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.angler",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "MEAT"
+        ]
+      },
+      "display_name": "Angler",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900000,
+      "native_ref_id": "",
+      "notes": [
+        "favorites without a target crosswalk (dropped): ['IdentifiableType.SeaHen']"
+      ],
+      "plort": {
+        "canonical_id": "plort.angler",
+        "display_name": "Angler Plort",
+        "native_id": 900001,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    },
+    {
+      "appearance": {
+        "ammo": [
+          0.3534063,
+          0.16037735,
+          0.6415094,
+          1
+        ],
+        "palette": {
+          "bottom": [
+            0.16122028,
+            0.043137256,
+            0.43529412,
+            1
+          ],
+          "middle": [
+            0.40014383,
+            0.1372549,
+            0.7921569,
+            1
+          ],
+          "top": [
+            0.5469463,
+            0.2980392,
+            0.94509804,
+            1
+          ]
+        },
+        "save_set": "CLASSIC",
+        "source": "new:classic"
+      },
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.batty",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "FRUIT"
+        ]
+      },
+      "display_name": "Batty",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900010,
+      "native_ref_id": "",
+      "notes": [
+        "favorites without a target crosswalk (dropped): ['IdentifiableType.PomegraniteFruit']"
+      ],
+      "plort": {
+        "canonical_id": "plort.batty",
+        "display_name": "Batty Plort",
+        "native_id": 900011,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    },
+    {
+      "appearance": {
+        "ammo": [
+          0.8584906,
+          0.73871225,
+          0.28751338,
+          1
+        ],
+        "palette": {
+          "bottom": [
+            1,
+            0.8353373,
+            0.48584908,
+            1
+          ],
+          "middle": [
+            1,
+            0.7135567,
+            0.45882356,
+            1
+          ],
+          "top": [
+            1,
+            0.8871955,
+            0.5882353,
+            1
+          ]
+        },
+        "save_set": "CLASSIC",
+        "source": "new:classic"
+      },
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.cotton",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "VEGGIES"
+        ]
+      },
+      "display_name": "Cotton",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900020,
+      "native_ref_id": "",
+      "notes": [
+        "favorites without a target crosswalk (dropped): ['IdentifiableType.LettuceVeggie']"
+      ],
+      "plort": {
+        "canonical_id": "plort.cotton",
+        "display_name": "Cotton Plort",
+        "native_id": 900021,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    },
+    {
+      "appearance": {
+        "ammo": [
+          1,
+          0.69411767,
+          0.18431373,
+          1
+        ],
+        "palette": {
+          "bottom": [
+            0.7921569,
+            0.027450996,
+            0.51700157,
+            1
+          ],
+          "middle": [
+            1,
+            0.69551766,
+            0.18431371,
+            1
+          ],
+          "top": [
+            1,
+            0.82693875,
+            0.23137254,
+            1
+          ]
+        },
+        "save_set": "CLASSIC",
+        "source": "new:classic"
+      },
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.flutter",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "FRUIT"
+        ]
+      },
+      "display_name": "Flutter",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900030,
+      "native_ref_id": "",
+      "notes": [
+        "favorites without a target crosswalk (dropped): ['IdentifiableType.MoondewNectar']",
+        "curated diet: SR2 diet is Nectar (Moondew Nectar favourite); SR1 has no nectar group, FRUIT is the closest"
+      ],
+      "plort": {
+        "canonical_id": "plort.flutter",
+        "display_name": "Flutter Plort",
+        "native_id": 900031,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    },
+    {
+      "appearance": {
+        "ammo": [
+          0.48235297,
+          0.40000004,
+          0.34117648,
+          1
+        ],
+        "palette": {
+          "bottom": [
+            0.16078432,
+            0.1137255,
+            0.10196079,
+            1
+          ],
+          "middle": [
+            0.5019608,
+            0.3647059,
+            0.3137255,
+            1
+          ],
+          "top": [
+            0.48235297,
+            0.40000004,
+            0.34117648,
+            1
+          ]
+        },
+        "save_set": "CLASSIC",
+        "source": "new:classic"
+      },
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.ringtail",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "FRUIT",
+          "MEAT",
+          "VEGGIES"
+        ]
+      },
+      "display_name": "Ringtail",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900040,
+      "native_ref_id": "",
+      "notes": [],
+      "plort": {
+        "canonical_id": "plort.ringtail",
+        "display_name": "Ringtail Plort",
+        "native_id": 900041,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    },
+    {
+      "appearance": {
+        "ammo": [
+          0.27450982,
+          0.27450982,
+          0.27450982,
+          1
+        ],
+        "palette": {
+          "bottom": [
+            0.047058824,
+            0.05490196,
+            0.09411765,
+            1
+          ],
+          "middle": [
+            0.0627451,
+            0.10980392,
+            0.23529412,
+            1
+          ],
+          "top": [
+            0.1254902,
+            0.29411766,
+            0.43529412,
+            1
+          ]
+        },
+        "save_set": "CLASSIC",
+        "source": "new:classic"
+      },
+      "blockers": [
+        "can_largofy source=False target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.shadow",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 5,
+        "favorites": [],
+        "major_food_groups": []
+      },
+      "display_name": "Shadow",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900050,
+      "native_ref_id": "",
+      "notes": [
+        "curated diet: SR2 lists no diet for the Shadow slime: imported as non-feeding"
+      ],
+      "plort": {
+        "canonical_id": "plort.shadow",
+        "display_name": "Shadow Plort",
+        "native_id": 900051,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    },
+    {
+      "appearance": {
+        "ammo": [
+          0.9568628,
+          0.6392157,
+          0.9921569,
+          1
+        ],
+        "palette": {
+          "bottom": [
+            0.9607844,
+            0.6392157,
+            0.8705883,
+            1
+          ],
+          "middle": [
+            0,
+            0.5019608,
+            0.9607844,
+            1
+          ],
+          "top": [
+            0,
+            0.77647066,
+            1,
+            1
+          ]
+        },
+        "save_set": "CLASSIC",
+        "source": "new:classic"
+      },
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.sloomber",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "MEAT"
+        ]
+      },
+      "display_name": "Sloomber",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900060,
+      "native_ref_id": "",
+      "notes": [
+        "favorites without a target crosswalk (dropped): ['IdentifiableType.CandiedHen']"
+      ],
+      "plort": {
+        "canonical_id": "plort.sloomber",
+        "display_name": "Sloomber Plort",
+        "native_id": 900061,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    },
+    {
+      "appearance": {
+        "ammo": [
+          0.37254903,
+          0.67058825,
+          1,
+          1
+        ],
+        "palette": {
+          "bottom": [
+            0.11792449,
+            0.41771504,
+            1,
+            1
+          ],
+          "middle": [
+            0,
+            0.89161634,
+            1,
+            1
+          ],
+          "top": [
+            0.36078423,
+            0.9426008,
+            0.96078426,
+            1
+          ]
+        },
+        "save_set": "CLASSIC",
+        "source": "new:classic"
+      },
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.twin",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "FRUIT"
+        ]
+      },
+      "display_name": "Twin",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900070,
+      "native_ref_id": "",
+      "notes": [
+        "favorites without a target crosswalk (dropped): ['IdentifiableType.PolaricherryFruit']"
+      ],
+      "plort": {
+        "canonical_id": "plort.twin",
+        "display_name": "Twin Plort",
+        "native_id": 900071,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    },
+    {
+      "appearance": {
+        "ammo": [
+          0.7075472,
+          0.59027165,
+          0.32373622,
+          1
+        ],
+        "palette": {
+          "bottom": [
+            0.67058825,
+            0.6185663,
+            0.07058821,
+            1
+          ],
+          "middle": [
+            1,
+            0.9602713,
+            0.39150938,
+            1
+          ],
+          "top": [
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "save_set": "CLASSIC",
+        "source": "new:classic"
+      },
+      "blockers": [
+        "can_largofy source=False target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.yolky",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": []
+      },
+      "display_name": "Yolky",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900080,
+      "native_ref_id": "",
+      "notes": [
+        "curated diet: SR2 lists no diet for the Yolky slime (plorts come from the Hen Hen): imported as non-feeding"
+      ],
+      "plort": {
+        "canonical_id": "plort.yolky",
+        "display_name": "Yolky Plort",
+        "native_id": 900081,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    },
+    {
+      "appearance": {
+        "ammo": [
+          0.9569,
+          0.6036,
+          0.0,
+          1.0
+        ],
+        "save_set": "CLASSIC",
+        "source": "new:classic",
+        "palette": {
+          "top": [
+            0.9569,
+            0.6036,
+            0.0,
+            1.0
+          ],
+          "middle": [
+            0.8784,
+            0.4956,
+            0.0,
+            1.0
+          ],
+          "bottom": [
+            0.9137,
+            0.4192,
+            0.0,
+            1.0
+          ]
+        }
+      },
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.hyper",
+      "diet": {
+        "additional_foods": [
+          "SPICY_TOFU"
+        ],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "VEGGIES"
+        ]
+      },
+      "display_name": "Hyper",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900090,
+      "native_ref_id": "",
+      "notes": [
+        "SR2 1.x species (read from the game's SlimeDefinition)",
+        "favorites without a target crosswalk (dropped): ['IdentifiableType.TaterVeggie']",
+        "energy aura (lights) not ported"
+      ],
+      "plort": {
+        "canonical_id": "plort.hyper",
+        "display_name": "Hyper Plort",
+        "native_id": 900091,
+        "native_ref_id": "",
+        "template_native_ref": "PINK_PLORT"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "PINK_PLORT",
+        "slime_native_ref": "TABBY_SLIME"
+      }
+    }
+  ],
+  "realm": "SR1",
+  "schema": "bridge-imported-species-spec",
+  "schema_version": 1,
+  "source_classification_sha256": "41d975c56df4af18caf5ec3059e59f7f2ebf5fb3637319b6efe2f9ad0f21d5c8",
+  "source_diet_sha256": "c87509dab05d836d3b5a400f96897853981fefba0fb2432cc715243c8cd2a562"
+}

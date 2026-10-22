@@ -1,0 +1,230 @@
+{
+  "entries": [
+    {
+      "blockers": [
+        "can_largofy source=False target=false (largos reserved)",
+        "source diet has no captured food groups (unsupported or uncaptured)",
+        "no SR2 diet mapping for this species yet"
+      ],
+      "canonical_id": "slime.glitch",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": []
+      },
+      "display_name": "Glitch",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900000,
+      "native_ref_id": "SlimeBridge.SlimeDefinition.glitch",
+      "notes": [],
+      "plort": {
+        "canonical_id": "",
+        "display_name": "",
+        "native_id": 0,
+        "native_ref_id": "",
+        "template_native_ref": ""
+      },
+      "status": "PENDING_DATA",
+      "template": {
+        "plort_native_ref": "IdentifiableType.PinkPlort",
+        "slime_native_ref": "SlimeDefinition.Tabby"
+      }
+    },
+    {
+      "blockers": [
+        "can_largofy source=False target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.glitch_tarr",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "5b9057b72cf85464abd83c171306d5a2"
+        ]
+      },
+      "display_name": "Glitch Tarr",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900010,
+      "native_ref_id": "SlimeBridge.SlimeDefinition.glitch_tarr",
+      "notes": [
+        "additional foods without a target crosswalk (dropped): ['SPICY_TOFU']"
+      ],
+      "plort": {
+        "canonical_id": "",
+        "display_name": "",
+        "native_id": 0,
+        "native_ref_id": "",
+        "template_native_ref": ""
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "IdentifiableType.PinkPlort",
+        "slime_native_ref": "SlimeDefinition.Tabby"
+      }
+    },
+    {
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.mosaic",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "e38eda722d35407448074f612639533e"
+        ]
+      },
+      "display_name": "Mosaic",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900020,
+      "native_ref_id": "SlimeBridge.SlimeDefinition.mosaic",
+      "notes": [
+        "favorites without a target crosswalk (dropped): ['PARSNIP_VEGGIE']",
+        "additional foods without a target crosswalk (dropped): ['SPICY_TOFU']"
+      ],
+      "plort": {
+        "canonical_id": "plort.mosaic",
+        "display_name": "Mosaic Plort",
+        "native_id": 900021,
+        "native_ref_id": "SlimeBridge.IdentifiableType.mosaicPlort",
+        "template_native_ref": "IdentifiableType.PinkPlort"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "IdentifiableType.PinkPlort",
+        "slime_native_ref": "SlimeDefinition.Tabby"
+      }
+    },
+    {
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.quantum",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "cbc5186d760b70b4aa60b2b5d3ca288f"
+        ]
+      },
+      "display_name": "Quantum",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900030,
+      "native_ref_id": "SlimeBridge.SlimeDefinition.quantum",
+      "notes": [
+        "favorites without a target crosswalk (dropped): ['LEMON_FRUIT']",
+        "additional foods without a target crosswalk (dropped): ['SPICY_TOFU']"
+      ],
+      "plort": {
+        "canonical_id": "plort.quantum",
+        "display_name": "Quantum Plort",
+        "native_id": 900031,
+        "native_ref_id": "SlimeBridge.IdentifiableType.quantumPlort",
+        "template_native_ref": "IdentifiableType.PinkPlort"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "IdentifiableType.PinkPlort",
+        "slime_native_ref": "SlimeDefinition.Tabby"
+      }
+    },
+    {
+      "blockers": [
+        "can_largofy source=False target=false (largos reserved)",
+        "source diet has no captured food groups (unsupported or uncaptured)",
+        "no SR2 diet mapping for this species yet"
+      ],
+      "canonical_id": "slime.quicksilver",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 0,
+        "favorites": [],
+        "major_food_groups": []
+      },
+      "display_name": "Quicksilver",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900040,
+      "native_ref_id": "SlimeBridge.SlimeDefinition.quicksilver",
+      "notes": [],
+      "plort": {
+        "canonical_id": "",
+        "display_name": "",
+        "native_id": 0,
+        "native_ref_id": "",
+        "template_native_ref": ""
+      },
+      "status": "PENDING_DATA",
+      "template": {
+        "plort_native_ref": "IdentifiableType.PinkPlort",
+        "slime_native_ref": "SlimeDefinition.Tabby"
+      }
+    },
+    {
+      "blockers": [
+        "can_largofy source=True target=false (largos reserved)"
+      ],
+      "canonical_id": "slime.rad",
+      "diet": {
+        "additional_foods": [],
+        "favorite_production_count": 2,
+        "favorites": [],
+        "major_food_groups": [
+          "e38eda722d35407448074f612639533e"
+        ]
+      },
+      "display_name": "Rad",
+      "flags": {
+        "behavior_classification": "BLOCKED_ON_LOCAL_QUERY",
+        "can_largofy": false,
+        "visual_mode": "PLACEHOLDER_TEMPLATE"
+      },
+      "native_id": 900050,
+      "native_ref_id": "SlimeBridge.SlimeDefinition.rad",
+      "notes": [
+        "favorites without a target crosswalk (dropped): ['OCAOCA_VEGGIE']",
+        "additional foods without a target crosswalk (dropped): ['SPICY_TOFU']"
+      ],
+      "plort": {
+        "canonical_id": "plort.rad",
+        "display_name": "Rad Plort",
+        "native_id": 900051,
+        "native_ref_id": "SlimeBridge.IdentifiableType.radPlort",
+        "template_native_ref": "IdentifiableType.PinkPlort"
+      },
+      "status": "READY",
+      "template": {
+        "plort_native_ref": "IdentifiableType.PinkPlort",
+        "slime_native_ref": "SlimeDefinition.Tabby"
+      }
+    }
+  ],
+  "realm": "SR2",
+  "schema": "bridge-imported-species-spec",
+  "schema_version": 1,
+  "source_classification_sha256": "41d975c56df4af18caf5ec3059e59f7f2ebf5fb3637319b6efe2f9ad0f21d5c8",
+  "source_diet_sha256": "061f31b4e992881e63841df90d06dd438f9aac1c7d67ca3285160603e98e7e13"
+}

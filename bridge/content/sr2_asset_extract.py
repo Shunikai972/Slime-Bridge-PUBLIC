@@ -48,6 +48,42 @@ CONVERTER_VERSION = 5
 SKIP_TEXTURES = {'quantumStatic', 'noise_pixel', 'dptNoiseClouds', 'WorleyNoise32RGB'}
 # SR2 1.x shader inputs that are 3D noise volumes (snow/weather breakup): not displayable by the SR1 Standard shader.
 SKIP_TEXTURE_PROPERTIES = {'_SnowNoiseBreakup3d'}
+# SR2 FX shaders without an SR1 counterpart, drawn through the native slime body material with an authored look
+# (the destination re-skins slime-family parts with its own body shader and these colours):
+# the Hyper slime's sunglasses are near-black glossy glass with a warm tint.
+DISPLAY_SUBSTITUTES = {
+    'SR/AMP/Slimes/FX/Hyper Slime Shades': {
+        'shader': 'SR/AMP/Slime/Body', 'textures': [],
+        'colors': {'_TopColor': [0.17, 0.11, 0.07, 1.0], '_MiddleColor': [0.08, 0.05, 0.035, 1.0],
+                   '_BottomColor': [0.035, 0.022, 0.016, 1.0], '_GlossRGB': [1.6, 1.6, 1.6, 1.0],
+                   '_GlossPowerRGB': [2.5, 2.5, 2.5, 1.0]},
+        # the body family requires its three lighting controls (same as the Hyper body: plain lit, no UV lighting)
+        'floats': {'_BodyLightingContribution': 1.0, '_LightingUVContribution': 0.0, '_LightingUVHorizontalAdjust': 0.0}},
+}
+
+
+# Unity TextureFormat -> (numpy dtype, channels) for the float formats UnityPy hands to Pillow without a decoder.
+FLOAT_TEXTURE_FORMATS = {15: ('<f2', 1), 16: ('<f2', 2), 17: ('<f2', 4), 18: ('<f4', 1), 19: ('<f4', 2), 20: ('<f4', 4)}
+
+
+def float_texture_image(data):
+    """8-bit RGBA image of an uncompressed half/float texture (values clamped to 0..1, Unity's bottom-up rows flipped)."""
+    import numpy as np
+    from PIL import Image
+    layout = FLOAT_TEXTURE_FORMATS.get(int(getattr(data, 'm_TextureFormat', -1)))
+    if layout is None:
+        return None
+    dtype, channels = layout
+    width, height = int(data.m_Width), int(data.m_Height)
+    raw = bytes(data.image_data)
+    count = width * height * channels
+    values = np.frombuffer(raw, dtype=dtype, count=count).astype(np.float32).reshape(height, width, channels)
+    rgba = np.ones((height, width, 4), dtype=np.float32)
+    rgba[..., :channels] = values
+    if channels == 1:
+        rgba[..., 1] = rgba[..., 2] = rgba[..., 0]
+    pixels = (np.clip(np.nan_to_num(rgba), 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
+    return Image.fromarray(pixels[::-1].copy(), 'RGBA')
 
 
 def _sha256(path: Path) -> str:
@@ -380,7 +416,12 @@ class TextureExporter:
         target = self.out_dir / file_name
         refuse_existing_leaf(target)
         try:
-            image = data.image
+            try:
+                image = data.image
+            except ValueError:
+                image = float_texture_image(data)   # SR2 1.x gradient ramps are float textures Pillow has no raw mode for
+                if image is None:
+                    raise
             image.save(target)
         except Exception as ex:
             raise ValueError(
@@ -1344,6 +1385,7 @@ def extract_species(species: str, canonical: str | None, sr2_dir: Path, out_dir:
     loop_parts = mesh_scope['parts'] if appearance_mesh_only else parts
     skinned_renderers = []
     static_renderers = []
+    shell_paths = {}                     # source node path -> exported static node path (effects attach to their shell)
     texture_files: list[str] = []
     moved = set()
     for part in loop_parts:
@@ -1446,6 +1488,7 @@ def extract_species(species: str, canonical: str | None, sr2_dir: Path, out_dir:
             # attachment TRS and no skin data at all.
             if set(trs) != {'local_position', 'local_rotation', 'local_scale'}:
                 raise ValueError(f"static part {part['mesh_name']} has no authored local transform")
+            shell_paths[part.get('source_path')] = static_path
             static_renderers.append({
                 'enabled': True,
                 'role': part['role'],
@@ -1509,9 +1552,21 @@ def extract_species(species: str, canonical: str | None, sr2_dir: Path, out_dir:
         'skinned_renderers': skinned_renderers,
         'static_renderers': static_renderers,
     }
+    for row in skinned_renderers + static_renderers:
+        for slot, material in enumerate(row.get('materials', [])):
+            substitute = DISPLAY_SUBSTITUTES.get(material.get('shader'))
+            if substitute is not None:
+                row['materials'][slot] = dict(material, **substitute, source_shader=material.get('shader'))
     if appearance_mesh_only:
         # Reader provenance only: components beyond the mesh scope are explicitly unported.
         document['source_extraction_scope'] = mesh_scope['extraction_scope']
+        effects = []
+        for effect in mesh_scope.get('effects', []):
+            shell = shell_paths.get(effect['parent'])
+            if shell is not None:
+                effects.append({k: v for k, v in dict(effect, parent_path=shell).items() if k != 'parent'})
+        if effects:
+            document['effects'] = effects       # rebuilt by the destination with its own effects (lights, particles, glow)
 
     extra_files = []
     icon = None

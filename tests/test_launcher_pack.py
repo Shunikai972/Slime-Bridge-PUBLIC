@@ -27,6 +27,16 @@ def make_repo(root, with_spec=True, cache_for=()):
 
 
 class PackTests(unittest.TestCase):
+    def setUp(self):
+        # Online components are their own module (tests/test_launcher_online.py); here they are already current.
+        patcher = patch('apps.launcher.online.ensure', return_value={'step': 'online', 'status': 'CURRENT'})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        # Bundled spec seeding is its own module (tests/content/test_spec_seed.py); these repos bring their own specs.
+        seeder = patch('bridge.content.spec_seed.ensure_specs', return_value={'seeded': []})
+        seeder.start()
+        self.addCleanup(seeder.stop)
+
     def test_only_the_lab_copy_is_a_lab_copy(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = make_repo(Path(tmp))
@@ -69,7 +79,7 @@ class PackTests(unittest.TestCase):
             install.assert_called_once()
             island.assert_called_once_with(layout['path'], root)
             status = {s['step']: s['status'] for s in result['steps']}
-            self.assertEqual(status, {'plugin': 'INSTALLED', 'island': 'INSTALLED', 'species': 'CACHES_MISSING', 'largos': 'NO_CACHES'})
+            self.assertEqual(status, {'plugin': 'INSTALLED', 'online': 'CURRENT', 'island': 'INSTALLED', 'species': 'CACHES_MISSING', 'largos': 'NO_CACHES'})
             self.assertTrue(result['ok'])
             self.assertTrue(any('slime.cotton' in w for w in result['warnings']))
 
@@ -88,7 +98,7 @@ class PackTests(unittest.TestCase):
             install.assert_not_called()
             island.assert_not_called()
             self.assertEqual({s['step']: s['status'] for s in result['steps']},
-                             {'plugin': 'CURRENT', 'island': 'CURRENT', 'species': 'READY', 'largos': 'NO_CACHES'})
+                             {'plugin': 'CURRENT', 'online': 'CURRENT', 'island': 'CURRENT', 'species': 'READY', 'largos': 'NO_CACHES'})
             real_steps = {s['step']: s['status'] for s in real['steps']}
             self.assertEqual(real_steps['species'], 'READY')
             # A normal install gets the pointer file only when a spec exists; the plugin validates every path again.

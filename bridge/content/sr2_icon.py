@@ -152,6 +152,8 @@ def parent_icon_image(data_dir, species):
                 break
         if image is not None:
             break
+    if image is None:
+        image = full_art_icon(data_dir, species)      # SR2 1.x: one full-art bundle per icon
     _ICON_CACHE[key] = image
     return image
 
@@ -191,6 +193,61 @@ def export_largo_icon(assets, resolved, output_dir):
     }
 
 
+def full_art_icon(data_dir, species):
+    """The species' full-art icon (SR2 1.x: one ``fullarticons_..._iconslime<species>.png_<hash>.bundle`` each), or None."""
+    import UnityPy
+    folder = Path(data_dir) / 'StreamingAssets' / 'aa' / 'StandaloneWindows64'
+    wanted = 'iconslime' + species.lower() + '.png_'
+    for bundle in sorted(folder.glob('fullarticons_*.bundle')):
+        if wanted not in bundle.name.lower():
+            continue
+        env = UnityPy.load(str(bundle))
+        for obj in env.objects:
+            if obj.type.name == 'Texture2D':
+                try:
+                    return obj.read().image.convert('RGBA')
+                except Exception:  # noqa: BLE001 - an undecodable texture is simply not usable
+                    return None
+    return None
+
+
+def atlas_icon(assets, tree, atlas, sprite_id, appearance_id, output_dir):
+    """Plain 1024 square icon for an atlas-packed SR2 1.x sprite (full art first, else the sprite frame from the atlas)."""
+    from PIL import Image
+    from bridge.content.sr2_asset_extract import refuse_existing_leaf
+    name = str(tree['m_Name'])
+    species = name[len('iconSlime'):] if name.startswith('iconSlime') else name
+    species = species[:-len('_small')] if species.endswith('_small') else species
+    art = full_art_icon(assets.data_dir, species)
+    source = 'full-art'
+    if art is None:
+        rect = tree['m_Rect']
+        x, y, w, h = (float(rect[k]) for k in ('x', 'y', 'width', 'height'))
+        height = atlas.size[1]
+        art = atlas.crop((int(round(x)), int(round(height - y - h)), int(round(x + w)), int(round(height - y))))
+        source = 'atlas-frame'
+    art.thumbnail((860, 860), Image.LANCZOS)
+    if max(art.size) < 860:
+        scale = 860 / max(art.size)
+        art = art.resize((max(1, round(art.size[0] * scale)), max(1, round(art.size[1] * scale))), Image.LANCZOS)
+    canvas = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0))
+    canvas.alpha_composite(art, ((1024 - art.size[0]) // 2, (1024 - art.size[1]) // 2))
+    file = 'iconSlime' + species + '.source.png'
+    target = Path(output_dir) / file
+    refuse_existing_leaf(target)
+    canvas.save(target)
+    half = 5.12
+    return {
+        'schema': 'bridge-source-sprite', 'schema_version': 1, 'mandatory': False,
+        'file': file, 'texture_size': [1024, 1024], 'rect': [0, 0, 1024, 1024], 'pivot': [0.5, 0.5], 'pixels_per_unit': 100,
+        'vertices': [[-half, -half], [half, -half], [half, half], [-half, half]], 'triangles': [0, 1, 2, 0, 2, 3],
+        'source_sprite_name': name, 'source_sprite_path_id': sprite_id, 'source_appearance_path_id': appearance_id,
+        'source_texture_path_id': 0, 'source_texture_rect': [0, 0, 1024, 1024], 'source_texture_rect_offset': [0, 0],
+        'source_settings_raw': 64, 'packing_rotation': 0, 'source_uv_transform': [100, 512, 100, 512],
+        'pixel_encoding': 'composed-square-icon', 'icon_source': source,
+    }
+
+
 def export_source_icon(assets, resolved, output_dir):
     """Write the exact appearance-referenced Sprite texture in an already fresh cache."""
     if resolved.get('is_largo') and not resolved.get('sprite_id'):
@@ -218,8 +275,13 @@ def export_source_icon(assets, resolved, output_dir):
         mesh.process()
         vertices = [[float(v[0]), float(v[1])] for v in mesh.m_Vertices]
         triangles = [int(i) for group in mesh.get_triangles() for tri in group for i in tri]
-        descriptor = build_source_icon_descriptor(tree, image.size, vertices, triangles,
-            sprite_id=sprite_id, appearance_id=appearance_id)
+        try:
+            descriptor = build_source_icon_descriptor(tree, image.size, vertices, triangles,
+                sprite_id=sprite_id, appearance_id=appearance_id)
+        except ValueError:
+            # SR2 1.x: the appearance icon is a 128 px sprite packed in a shared atlas. Use the species' full-art icon
+            # (its own bundle) or, failing that, the sprite's frame cut out of the atlas, as a plain square icon.
+            return atlas_icon(assets, tree, image, sprite_id, appearance_id, output_dir)
         descriptor['source_assets_sha256'] = _hash(assets.data_dir / 'resources.assets')
         target = Path(output_dir) / descriptor['file']
         refuse_existing_leaf(target)

@@ -112,7 +112,8 @@ namespace SlimeBridge.SR1
                     if (rect[0] != 0 || rect[1] != 0 || rect[2] != 1024 || rect[3] != 1024 ||
                         size[0] != 1024 || size[1] != 1024 || pivot[0] != .5f || pivot[1] != .5f || ppu != 100 ||
                         Number(icon, "source_settings_raw") != 64 || Number(icon, "packing_rotation") != 0 ||
-                        Text(icon, "pixel_encoding") != "source-texture-rgba-unresampled") throw new InvalidDataException("source icon framing/packing unsupported");
+                        (Text(icon, "pixel_encoding") != "source-texture-rgba-unresampled" &&
+                         Text(icon, "pixel_encoding") != "composed-square-icon")) throw new InvalidDataException("source icon framing/packing unsupported");
                     if (mandatory && (Text(icon, "source_sprite_name") != "iconSlimeRingtail" ||
                         Number(icon, "source_sprite_path_id") != 3052 || Number(icon, "source_appearance_path_id") != 31303 ||
                         Number(icon, "source_texture_path_id") != 1324)) throw new InvalidDataException("Ringtail source icon identity invalid");

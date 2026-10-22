@@ -3,7 +3,7 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
-## [0.1.0] - unreleased
+## [0.1.0] - 2026-10-22
 
 First public preview.
 
@@ -20,7 +20,7 @@ First public preview.
   (Glitch, Mosaic, Quantum, Quicksilver, Rad and their Largos), stable Largo ids shared by every install, content
   fingerprint for mixed servers. Bundled SlimeBridge-AssetConverter (`tools/SlimeBridge-AssetConverter`).
 - Static GLB reader for user Largo imports.
-- One-click Windows installer (`Install-SlimeBridge.cmd`), self-check, release script.
+- Standalone `SlimeBridge.exe` (everything inside), one-click source installer (`Install-SlimeBridge.cmd`), self-check, release script.
 
 - Slime Rancher 2 1.x support (Unity 6, MelonLoader 0.7.3): SR2 plugin ported to the 1.x save, vacpack, currency and
   cutscene APIs; extractor reads the Addressables 2 binary catalog (`catalog.bin`) and skips 1.x radiant appearances and

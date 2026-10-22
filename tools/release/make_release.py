@@ -168,8 +168,10 @@ def notes(ver):
     text = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
     match = re.search(rf'^## \[?v?{re.escape(ver)}\]?.*?$(.*?)(?=^## |\Z)', text, re.M | re.S)
     body = match.group(1).strip() if match else 'See CHANGELOG.md.'
-    return (f'{body}\n\n### Install\n1. Download `SlimeBridge-v{ver}-win64.zip`, extract it to a normal folder (not Program Files).\n'
-            '2. Run `Install-SlimeBridge.cmd` once, then `SlimeBridge.cmd`.\n'
+    return (f'{body}\n\n### Install\n1. Download `SlimeBridge-v{ver}-win64-standalone.zip` (or the source zip `SlimeBridge-v{ver}-win64.zip`), '
+            'extract it to a normal folder (not Program Files).\n'
+            '2. Run `SlimeBridge.exe` from the standalone zip (everything inside), or from the source zip run '
+            '`Install-SlimeBridge.cmd` once, then `SlimeBridge.cmd`.\n'
             '3. Full guide: README.md (section *Installation*).\n\n'
             'SlimeBridge ships no Slime Rancher files: the extractor reads your own installed games on your PC.\n'
             'SlimeBridge is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Monomi Park. '

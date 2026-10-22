@@ -32,33 +32,33 @@ The installer takes care of Python 3.12 and the WebView2 runtime.
 
 ## Installation
 
-1. Download `SlimeBridge-vX.Y.Z-win64.zip` from the [Releases](../../releases) page.
+1. Download **`SlimeBridge-vX.Y.Z-win64-standalone.zip`** from the [Releases](../../releases) page.
 2. Extract it to a normal folder you own, e.g. `Documents\SlimeBridge` (**not** `Program Files`).
-3. Double-click **`Install-SlimeBridge.cmd`**. It checks/installs Python 3.12 and WebView2, creates a private `.venv`,
-   installs the dependencies, runs a self-check and puts a *SlimeBridge* shortcut on your desktop.
-4. Start **SlimeBridge** (desktop shortcut or `SlimeBridge.cmd`).
-5. In the launcher:
+3. Run **`SlimeBridge.exe`**. Everything is inside (Python, the launcher, the extractor, the plugins, Slime Rancher
+   online); nothing else to install. If the window stays white, install the Microsoft Edge WebView2 runtime.
+4. In the launcher:
    * **Games**: your Steam/Epic games are found automatically; otherwise pick the game folders yourself.
    * Install the **SlimeBridge plugin** in each game (the button appears once SRML / MelonLoader is present).
    * **Extract**: reads your games and builds the missing slimes and Largos (a few minutes, runs in the background).
    * **Sanctuary**: reads your SR1 and places the island and portal.
    * **Play**.
 
-Updating: extract the new zip over the old folder (your settings and extracted content in `Lab/` are kept) and run
-`Install-SlimeBridge.cmd` again. Uninstalling: remove the plugins from the launcher's Games page, then delete the folder.
+Updating: extract the new zip over the old folder (your settings and extracted content in `_internal/Lab/` are kept).
+Uninstalling: remove the plugins from the launcher's Games page, then delete the folder.
+
+From source instead: download `SlimeBridge-vX.Y.Z-win64.zip`, run `Install-SlimeBridge.cmd` (Python 3.12 + `.venv`),
+then `SlimeBridge.cmd`.
 
 ## Installation (FR)
 
-1. Télécharge `SlimeBridge-vX.Y.Z-win64.zip` dans l'onglet [Releases](../../releases).
+1. Télécharge **`SlimeBridge-vX.Y.Z-win64-standalone.zip`** dans l'onglet [Releases](../../releases).
 2. Dézippe-le dans un dossier à toi, par ex. `Documents\SlimeBridge` (**pas** dans `Program Files`).
-3. Double-clique **`Install-SlimeBridge.cmd`** : il vérifie/installe Python 3.12 et WebView2, crée `.venv`, installe les
-   dépendances, fait un auto-test et crée un raccourci *SlimeBridge* sur le bureau.
-4. Lance **SlimeBridge** (raccourci ou `SlimeBridge.cmd`).
-5. Dans le launcher : **Jeux** (détection auto Steam/Epic ou choix manuel du dossier) → installe le **plugin** dans chaque
+3. Lance **`SlimeBridge.exe`** : tout est dedans (Python, launcher, extracteur, plugins, online), rien d'autre à installer.
+4. Dans le launcher : **Jeux** (détection auto Steam/Epic ou choix manuel du dossier) → installe le **plugin** dans chaque
    jeu (il faut SRML pour SR1, MelonLoader 0.7 pour SR2) → **Extraire** → **Sanctuaire** → **Jouer**.
 
-Mise à jour : dézippe la nouvelle version par-dessus et relance `Install-SlimeBridge.cmd` (tes réglages et ton contenu
-extrait dans `Lab/` sont conservés).
+Mise à jour : dézippe la nouvelle version par-dessus (tes réglages et ton contenu extrait dans `_internal/Lab/` sont
+conservés).
 
 ## Troubleshooting
 

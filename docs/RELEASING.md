@@ -20,7 +20,7 @@ Players never need a .NET SDK or the game assemblies.
    `dist/SlimeBridge-vX.Y.Z-win64.zip`, `dist/SHA256SUMS.txt` and `dist/release-notes-vX.Y.Z.md`.
 6. Test the zip like a player: extract it to a new folder, run `Install-SlimeBridge.cmd`, start `SlimeBridge.cmd`, install
    the plugins into a game and play once.
-7. Publish (needs the GitHub CLI, `gh auth login` once):
+7. Publish (push + GitHub release through the API with the credential git already stores):
 
    ```
    py -3.12 -m tools.release.make_release --sr1-ref ... --sr2-ref ... --publish        # add --draft to review first

@@ -1,0 +1,51 @@
+{
+  "description": "Every parseable case analyzed together for an SR1 target.",
+  "expect": {
+    "content_conflicts": [
+      "slime.fixture_glimmer"
+    ],
+    "cycles": [
+      [
+        "fixture.cycle_a",
+        "fixture.cycle_b"
+      ]
+    ],
+    "diagnostic_codes": [
+      "CONTENT_ID_CONFLICT",
+      "DEPENDENCY_CYCLE",
+      "FILE_CONFLICT",
+      "MOD_ID_DUPLICATE",
+      "MOD_VERSION_CONFLICT"
+    ],
+    "duplicates": [
+      "fixture.twin"
+    ],
+    "file_conflicts": [
+      "srml/mods/fixtureglimmer/glimmer.bundle"
+    ],
+    "load_before": [
+      [
+        "fixture.ranch_helper",
+        "fixture.version_picky"
+      ]
+    ],
+    "missing": [
+      {
+        "dependency": "fixture.not_present",
+        "kind": "MOD",
+        "mod": "fixture.needs_missing"
+      }
+    ],
+    "version_conflicts": [
+      {
+        "constraint": ">=2.0",
+        "dependency": "fixture.ranch_helper",
+        "mod": "fixture.version_picky",
+        "present_version": "1.0.0"
+      }
+    ]
+  },
+  "schema": "bridge-mod-fixture-set",
+  "schema_version": 1,
+  "target_realm": "SR1"
+}

@@ -1,0 +1,96 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Optional, git-ignored: mods/local.props sets SR1LabPath / SR2LabPath to your own game folders. -->
+  <Import Project="../local.props" Condition="Exists('../local.props')" />
+  <PropertyGroup>
+    <!-- MelonLoader 0.7.3 hosts IL2CPP games on .NET 6 (MelonLoader/net6). -->
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>SlimeBridge.SR2</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DefineConstants>$(DefineConstants);SLIMEBRIDGE_SR2</DefineConstants>
+    <!-- Worktrees can reference the read-only lab without copying proprietary binaries. -->
+    <SR2LabPath Condition="'$(SR2LabPath)' == ''">../../Lab/Games/SR2</SR2LabPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>$(SR2LabPath)/MelonLoader/net6/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MelonLoader">
+      <HintPath>$(SR2LabPath)/MelonLoader/net6/MelonLoader.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/UnityEngine.AnimationModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/UnityEngine.ScreenCaptureModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.InputSystem">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/Unity.InputSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppDOTween">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/Il2CppDOTween.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Runtime">
+      <HintPath>$(SR2LabPath)/MelonLoader/net6/Il2CppInterop.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2Cppmscorlib">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/Il2Cppmscorlib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../shared/BridgeCommands.cs" Link="Shared/BridgeCommands.cs" />
+    <Compile Include="../shared/BackgroundGameFocus.cs" Link="Shared/BackgroundGameFocus.cs" />
+    <Compile Include="../shared/InventoryRules.cs" Link="Shared/InventoryRules.cs" />
+    <Compile Include="../shared/RegistrySnapshotFormat.cs" Link="Shared/RegistrySnapshotFormat.cs" />
+    <Compile Include="../shared/DietSnapshotFormat.cs" Link="Shared/DietSnapshotFormat.cs" />
+    <Compile Include="../shared/AppearanceColorsFormat.cs" Link="Shared/AppearanceColorsFormat.cs" />
+    <Compile Include="../shared/LabSpecPathGuard.cs" Link="Shared/LabSpecPathGuard.cs" />
+    <Compile Include="../shared/PlayerContent.cs" Link="Shared/PlayerContent.cs" />
+    <Compile Include="../shared/MiniJson.cs" Link="Shared/MiniJson.cs" />
+    <Compile Include="../shared/PerformanceTuner.cs" Link="Shared/PerformanceTuner.cs" />
+    <Compile Include="../shared/NativeMesh*.cs" Link="Shared/%(Filename)%(Extension)" />
+    <Compile Include="../shared/ImportedSpeciesSpec.cs" Link="Shared/ImportedSpeciesSpec.cs" />
+     <Compile Include="../shared/SaveSlotSelection.cs" Link="Shared/SaveSlotSelection.cs" />
+    <Compile Include="../shared/TravelAgent.cs" Link="Shared/TravelAgent.cs" />
+    <Compile Include="../shared/TravelOverlay.cs" Link="Shared/TravelOverlay.cs" />
+    <Compile Include="../shared/TravelThrottle.cs" Link="Shared/TravelThrottle.cs" />
+    <Compile Include="../shared/TravelCarry.cs" Link="Shared/TravelCarry.cs" />
+  </ItemGroup>
+</Project>

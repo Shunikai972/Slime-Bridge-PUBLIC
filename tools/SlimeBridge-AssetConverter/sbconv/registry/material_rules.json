@@ -1,0 +1,155 @@
+{
+  "schema": 1,
+  "note": "Explicit material translation rules. Names and conventions only (no game data). Every decision taken from these rules is echoed in the recipe's fidelity notes.",
+  "infrastructure_props": [
+    "^_Stencil",
+    "^_Tess",
+    "^_DiffusionProfile",
+    "^_Z(Test|Write)",
+    "^_(Src|Dst)Blend$",
+    "^_Alpha(Src|Dst)Blend$",
+    "^_Cull",
+    "^_OpaqueCull",
+    "^_Transparent",
+    "^_DoubleSided",
+    "^_RenderQueueType$",
+    "^_SurfaceType$",
+    "^_BlendMode$",
+    "^_Receives",
+    "^_RequireSplit",
+    "^_SupportDecals$",
+    "^_Label",
+    "^_DRAWER",
+    "^_.*Note\\d*$",
+    "^_NOTE",
+    "^_.*Header$",
+    "^_AddPrecomputedVelocity$",
+    "^_EnableFogOnTransparent$",
+    "^_UseShadowThreshold$",
+    "^_Distortion",
+    "^_AlphaToMask",
+    "^_AlphaCutoffEnable$",
+    "^_ZTest",
+    "^_drawer",
+    "^_headerPan",
+    "^unity_",
+    "^_texcoord",
+    "^__dirty$",
+    "^_RenderQueue",
+    "^_EmissionLM$",
+    "^_LightModelHeader$",
+    "^_ColorModelHeader$",
+    "^_FXHeader$",
+    "^_StripesRemapDraw",
+    "^_Mode$",
+    "^_UVSec$"
+  ],
+  "hdr_color_props": [
+    "_GlowColor",
+    "_EmissionColor",
+    "_GlowTop",
+    "_CrackColor",
+    "_SloomberTopColor",
+    "_SloomberBottomColor"
+  ],
+  "gameplay_driven_props": [
+    "_UnscaledTime",
+    "_HeldInVac",
+    "_Fade",
+    "_Static",
+    "_TwinEffectOffset",
+    "_FreezeTwinSplit"
+  ],
+  "shader_names": {
+    "SR1": {
+      "face": [
+        "SR/AMP/Slime/Face/Eyes Blush",
+        "SR/AMP/Slime/Face/Eyes Default",
+        "SR/AMP/Slime/Face/Eyes Feral",
+        "SR/AMP/Slime/Face/Eyes Feral Glow",
+        "SR/AMP/Slime/Face/Eyes Glow",
+        "SR/AMP/Slime/Face/Mouth Default",
+        "SR/AMP/Slime/Face/Mouth Glow"
+      ],
+      "body": [
+        "SR/AMP/Slime/Body/Default",
+        "SR/AMP/Slime/Body/Stripe",
+        "SR/AMP/Slime/Body/Normal",
+        "SR/AMP/Slime/Body/Normal Stripe",
+        "SR/AMP/Slime/Body/Attachment",
+        "SR/AMP/Slime/Body/Rad",
+        "SR/AMP/Slime/Body/Rad Stripe",
+        "SR/AMP/Slime/Body/Rad Normal",
+        "SR/AMP/Slime/Body/PhosCore",
+        "SR/AMP/Slime/Body/PhosCore Stripe",
+        "SR/AMP/Slime/Body/PhosCore Normal",
+        "SR/AMP/Slime/Body/PhosCore Rad",
+        "SR/AMP/Slime/Body/Quantum",
+        "SR/AMP/Slime/Body/Quantum Stripe",
+        "SR/AMP/Slime/Body/Quantum Normal",
+        "SR/AMP/Slime/Body/Quantum Rad",
+        "SR/AMP/Slime/Body/Quantum PhosCore",
+        "SR/AMP/Slime/Body/Quantum Attachment",
+        "SR/AMP/Slime/Body/BoomCracks",
+        "SR/AMP/Slime/Body/Stripe BoomCracks",
+        "SR/AMP/Slime/Body/Normal BoomCracks",
+        "SR/AMP/Slime/Body/Puddle",
+        "SR/AMP/Slime/Body/Matcap Stripe"
+      ]
+    },
+    "SR2": {
+      "face": [
+        "SR/AMP/Slime/Face/Eyes Blush",
+        "SR/AMP/Slime/Face/Eyes Default",
+        "SR/AMP/Slime/Face/Eyes Feral",
+        "SR/AMP/Slime/Face/Eyes Feral Glow",
+        "SR/AMP/Slime/Face/Eyes Glow",
+        "SR/AMP/Slime/Face/Eyes Shadow",
+        "SR/AMP/Slime/Face/Mouth Default",
+        "SR/AMP/Slime/Face/Mouth Glow",
+        "SR/AMP/Slime/Face/Mouth Sleep",
+        "SR/AMP/Slime/Face/Mouth Shadow"
+      ],
+      "body": [
+        "SR/AMP/Slime/Body"
+      ]
+    }
+  },
+  "face_fallbacks": {
+    "SR2->SR1": {
+      "SR/AMP/Slime/Face/Mouth Sleep": "SR/AMP/Slime/Face/Mouth Default",
+      "SR/AMP/Slime/Face/Eyes Shadow": "SR/AMP/Slime/Face/Eyes Default",
+      "SR/AMP/Slime/Face/Mouth Shadow": "SR/AMP/Slime/Face/Mouth Default"
+    },
+    "SR1->SR2": {}
+  },
+  "sr2_body_feature_floats": {
+    "stripes": "_EnableStripes",
+    "normals": "_EnableNormals",
+    "boom": "_EnableBoomCracks",
+    "phos": "_EnablePhosCore",
+    "quantum": "_GhostToggle",
+    "rad": "_RadExoticCore",
+    "twin": "_EnableTwinEffect",
+    "matcap": "_EnableMatcap",
+    "vortex": "_EnableVortex"
+  },
+  "sr1_shader_tokens_to_sr2_features": {
+    "Stripe": "stripes",
+    "Normal": "normals",
+    "BoomCracks": "boom",
+    "PhosCore": "phos",
+    "Quantum": "quantum",
+    "Rad": "rad",
+    "Matcap": "matcap"
+  },
+  "colorspace": {
+    "note": "Material colours are authored in sRGB in both games (non-HDR properties copy numerically). SR1 is Gamma, SR2 is Linear+HDRP: HDR colour properties (hdr_color_props) are stored as raw linear values in a Linear project but as display values in a Gamma project, so they are converted with the sRGB transfer function in the SR2->SR1 direction and its inverse in SR1->SR2. Textures are copied bit-exact; only normal-map channel layout is converted."
+  },
+  "shader_fallbacks": {
+    "SR1->SR2": {
+      "SR/Slime/Face Tarr Interior": "SR/Slime/Face Tarr"
+    },
+    "SR2->SR1": {}
+  }
+}

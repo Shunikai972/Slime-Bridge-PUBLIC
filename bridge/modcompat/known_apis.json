@@ -1,0 +1,101 @@
+{
+  "schema": "bridge-mod-known-apis",
+  "schema_version": 1,
+  "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+  "notice": "Identifiers only, each justified by the repository document named in its source. Not a verified API catalogue: no signature, behaviour, availability or game-build compatibility is claimed. Game (Assembly-CSharp) types are deliberately absent. The local provider replaces or extends this file from the exact lab builds (LOCAL_QUERY Q053 for SR1/SRML, Q054 for SR2 MelonLoader and community APIs).",
+  "system_assemblies": ["mscorlib", "netstandard", "System"],
+  "system_prefixes": ["System.", "Microsoft."],
+  "realms": {
+    "SR1": {
+      "loader": "SRML",
+      "loader_assemblies": ["SRML"],
+      "harmony_assemblies": ["0Harmony"],
+      "game_assemblies": ["Assembly-CSharp"],
+      "engine_prefixes": ["UnityEngine"],
+      "interop_assemblies": [],
+      "interop_prefixes": [],
+      "target_framework": "net472",
+      "sources": ["mods/sr1-bridge/SlimeBridge.SR1.csproj", "docs/RECON.md"]
+    },
+    "SR2": {
+      "loader": "MELONLOADER",
+      "loader_assemblies": ["MelonLoader"],
+      "harmony_assemblies": ["0Harmony"],
+      "game_assemblies": ["Assembly-CSharp"],
+      "engine_prefixes": ["UnityEngine", "Unity."],
+      "interop_assemblies": ["Il2CppInterop.Runtime"],
+      "interop_prefixes": ["Il2Cpp"],
+      "target_framework": "net6.0",
+      "sources": ["mods/sr2-bridge/SlimeBridge.SR2.csproj", "docs/RECON.md"]
+    }
+  },
+  "apis": [
+    {
+      "id": "srml.mod_entry_point",
+      "realm": "SR1",
+      "kind": "TYPE",
+      "assembly": "SRML",
+      "type": "SRML.ModEntryPoint",
+      "members": [".ctor", "PreLoad", "Load", "PostLoad", "Update", "Unload"],
+      "capability": "mod.lifecycle",
+      "source": "docs/RECON.md (SRML 0.2.1.0 SRML/IModEntryPoint.cs); mods/sr1-bridge/BridgeEntry.cs",
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF"
+    },
+    {
+      "id": "srml.modinfo_json",
+      "realm": "SR1",
+      "kind": "MANIFEST",
+      "assembly": null,
+      "type": null,
+      "members": null,
+      "capability": "mod.metadata",
+      "source": "mods/sr1-bridge/modinfo.json; docs/RECON.md (SRMod.cs ModVersion.Parse)",
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF"
+    },
+    {
+      "id": "melon.melon_mod",
+      "realm": "SR2",
+      "kind": "TYPE",
+      "assembly": "MelonLoader",
+      "type": "MelonLoader.MelonMod",
+      "members": [".ctor", "OnInitializeMelon", "OnUpdate", "OnDeinitializeMelon"],
+      "capability": "mod.lifecycle",
+      "source": "docs/RECON.md (MelonLoader 0.7.3); mods/sr2-bridge/BridgeMod.cs",
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF"
+    },
+    {
+      "id": "melon.melon_info_attribute",
+      "realm": "SR2",
+      "kind": "TYPE",
+      "assembly": "MelonLoader",
+      "type": "MelonLoader.MelonInfoAttribute",
+      "members": [".ctor"],
+      "capability": "mod.metadata",
+      "source": "docs/RECON.md ([MelonInfo]); mods/sr2-bridge/BridgeMod.cs",
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF"
+    },
+    {
+      "id": "melon.melon_game_attribute",
+      "realm": "SR2",
+      "kind": "TYPE",
+      "assembly": "MelonLoader",
+      "type": "MelonLoader.MelonGameAttribute",
+      "members": [".ctor"],
+      "capability": "mod.metadata",
+      "source": "docs/RECON.md ([MelonGame(\"MonomiPark\",\"SlimeRancher2\")]); mods/sr2-bridge/BridgeMod.cs",
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF"
+    }
+  ],
+  "capabilities": {
+    "mod.lifecycle": {
+      "description": "Loader entry point and lifecycle callbacks",
+      "SR1": "srml.mod_entry_point",
+      "SR2": "melon.melon_mod"
+    },
+    "mod.metadata": {
+      "description": "Loader-visible mod identity and version",
+      "SR1": "srml.modinfo_json",
+      "SR2": "melon.melon_info_attribute"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../mods/shared/BridgeCommands.cs" Link="Production/BridgeCommands.cs" />
+    <Compile Include="../../mods/sr2-bridge/NativeStorageBinding.cs" Link="Production/NativeStorageBinding.cs" />
+    <Compile Include="../../mods/sr2-bridge/InventoryAgent.cs" Link="Production/InventoryAgent.cs" />
+    <Compile Include="../../mods/shared/SaveSlotSelection.cs" Link="Production/SaveSlotSelection.cs" />
+    <Compile Include="../../mods/sr2-bridge/NativeStockDefinitions.cs" Link="Production/NativeStockDefinitions.cs" />
+    <Compile Include="../../mods/sr2-bridge/CounterpartCreator.cs" Link="Production/CounterpartCreator.cs" Condition="Exists('../../mods/sr2-bridge/CounterpartCreator.cs')" />
+  </ItemGroup>
+</Project>

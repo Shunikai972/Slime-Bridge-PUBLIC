@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "canonical_id": "slime.pink",
+      "content_kind": "slime",
+      "native": {
+        "SR1": {"id": 3, "verified": true},
+        "SR2": {"id": "SlimeDefinition.Pink", "verified": false}
+      }
+    },
+    {
+      "canonical_id": "plort.pink",
+      "content_kind": "plort",
+      "native": {
+        "SR1": {"id": 6, "verified": true},
+        "SR2": {"id": "IdentifiableType.PinkPlort", "verified": false}
+      }
+    }
+  ]
+}

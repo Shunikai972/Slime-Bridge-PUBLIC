@@ -1,0 +1,41 @@
+SlimeBridge — Proprietary License (All Rights Reserved)
+
+Copyright (c) 2026 Shunikai972. All rights reserved.
+
+This repository and everything in it that was written for SlimeBridge (source code, scripts, plugins, launcher,
+documentation, data files and build outputs, together "the Software") are the exclusive property of the copyright
+holder. The Software is NOT open source. Making the source visible does not grant any license to it.
+
+1. Permitted use
+   You may download the official release packages published by the copyright holder and run them on your own
+   computer, for your own personal, non-commercial play with legitimately owned copies of Slime Rancher and/or
+   Slime Rancher 2. Nothing else is permitted without prior written permission.
+
+2. Prohibited without prior written permission of the copyright holder
+   a) copying, reproducing, mirroring or redistributing the Software or any part of it, modified or not;
+   b) modifying, translating, adapting, or creating derivative works, including mods, ports, plugins or tools based
+      on the Software or on parts of its code;
+   c) forking the repository for any purpose other than the minimum required by the hosting platform's terms of
+      service; a fork may not be modified, built, published, distributed or used;
+   d) reusing any part of the code in another project, public or private;
+   e) selling, renting, sublicensing, or using the Software for any commercial purpose;
+   f) removing or altering this notice, copyright notices or the fan-content notice.
+
+   To request permission, open an issue on the official repository or contact the copyright holder there.
+
+3. Third-party components
+   Components written by others keep their own licenses and are not covered by this license. They are listed in
+   THIRD_PARTY_NOTICES.md (for example SRMP Revival, which is distributed under GPL-3.0 with its own source,
+   MelonLoader, SRML, Python packages and fonts). Slime Rancher and Slime Rancher 2 are property of Monomi Park, LLC;
+   SlimeBridge ships none of their files.
+
+4. No warranty
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. IN NO EVENT SHALL THE
+   COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES (INCLUDING LOSS OF SAVE DATA) OR OTHER LIABILITY ARISING FROM
+   THE USE OF THE SOFTWARE. Back up your saves.
+
+5. Termination
+   Any use outside section 1 terminates the permission granted there automatically.
+
+SlimeBridge is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Monomi Park.
+Portions of the materials used are property of Monomi Park, LLC. ©Monomi Park LLC.

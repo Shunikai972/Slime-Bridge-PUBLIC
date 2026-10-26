@@ -1,0 +1,111 @@
+{
+  "case": "glimmer_pack",
+  "description": "SR1 content-only pack: one asset bundle and one content table, no code.",
+  "evidence": {
+    "code": {
+      "assemblies": []
+    },
+    "config_files": [],
+    "content": {
+      "asset_bundles": [
+        {
+          "path": "SRML/Mods/FixtureGlimmer/glimmer.bundle",
+          "sha256": "2e92774ba9fec6104f216414589fd6d573fdd1bb63d8b31d501d4dab6147dab7",
+          "size": 2048
+        }
+      ],
+      "content_files": [
+        {
+          "path": "SRML/Mods/FixtureGlimmer/glimmer_content.json",
+          "sha256": "02e41131f7ab34d5ed9383d090988b110f8ca0d8c7c31771e81b272dbc050e09",
+          "size": 256
+        }
+      ],
+      "content_ids": [
+        "slime.fixture_glimmer",
+        "plort.fixture_glimmer"
+      ]
+    },
+    "extractor": {
+      "id": "fixture.static-extractor",
+      "version": "1.0.0"
+    },
+    "harmony": {
+      "patch_all_calls": 0,
+      "patches": []
+    },
+    "il2cpp": {
+      "il2cpp_type_references": 0,
+      "interop_references": false,
+      "type_injection": false
+    },
+    "manifest_id": null,
+    "mod_id": "fixture.glimmer_pack",
+    "native": {
+      "detour_indicators": [],
+      "function_pointer_hooks": false,
+      "pinvoke_modules": []
+    },
+    "references": [],
+    "reflection": {
+      "dynamic_invoke": false,
+      "emit": false,
+      "non_public_access": false,
+      "type_lookup_by_name": false
+    },
+    "schema": "bridge-mod-static-evidence",
+    "schema_version": 1,
+    "synthetic": true
+  },
+  "expect": {
+    "classification": "CONTENT_ONLY",
+    "diagnostic_codes": [],
+    "parse": "OK",
+    "portability": {
+      "SR1": "PORTABLE",
+      "SR2": "ADAPTER_REQUIRED"
+    },
+    "rule": "R5",
+    "unit_status": {
+      "SR1": "READY",
+      "SR2": "PENDING_ADAPTER"
+    }
+  },
+  "input": {
+    "document": {
+      "author": "Fixture Author",
+      "dependencies": [],
+      "id": "fixture.glimmer_pack",
+      "name": "Fixture Glimmer Pack",
+      "version": "1.0.0"
+    },
+    "files": [
+      {
+        "path": "SRML/Mods/FixtureGlimmer/modinfo.json",
+        "sha256": "1b69518e08825ac3103b7cc88f66ab9bf6bc61a3d52b9e77c559c8d85f26b1a0",
+        "size": 128
+      },
+      {
+        "path": "SRML/Mods/FixtureGlimmer/glimmer.bundle",
+        "sha256": "2e92774ba9fec6104f216414589fd6d573fdd1bb63d8b31d501d4dab6147dab7",
+        "size": 2048
+      },
+      {
+        "path": "SRML/Mods/FixtureGlimmer/glimmer_content.json",
+        "sha256": "02e41131f7ab34d5ed9383d090988b110f8ca0d8c7c31771e81b272dbc050e09",
+        "size": 256
+      }
+    ],
+    "format": "SRML_MODINFO",
+    "raw_text": null,
+    "source": {
+      "kind": "LOCAL_PATH",
+      "path": "SRML/Mods/FixtureGlimmer/modinfo.json",
+      "provider_id": null,
+      "ref": null,
+      "synthetic": true
+    }
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

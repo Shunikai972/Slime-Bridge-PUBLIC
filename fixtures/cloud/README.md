@@ -1,0 +1,2 @@
+# Synthetic Cloud fixtures
+All IDs, graphs and metadata here are fictional, authored for tests. No Monomi Park assets. cloud-fixture-v1 is a test envelope, not native scan or final IR. Native verified flags stay false. Expected classifications apply only inside this synthetic universe. scenarios.json includes missing assets, unknown behavior and changed build/schema cases. Consumers must migrate explicitly, never treat fixtures as actual registry proof.

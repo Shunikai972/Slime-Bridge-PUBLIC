@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- The linked production files carry latent nullable diagnostics (CS86xx on null
+         assignments/returns against Unity-style oblivious references) that the real Release
+         build of SlimeBridge.SR1 also emits as warnings today. Demote exactly the nullable
+         diagnostic family; every other warning stays fatal. -->
+    <WarningsNotAsErrors>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8619;CS8620;CS8625;CS8629</WarningsNotAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../mods/sr1-bridge/ImportedPetrification.cs" Link="Production/ImportedPetrification.cs" />
+    <Compile Include="../../mods/sr1-bridge/ImportedStoneForm.cs" Link="Production/ImportedStoneForm.cs" />
+    <Compile Include="../../mods/sr1-bridge/ImportedVisualMarker.cs" Link="Production/ImportedVisualMarker.cs" />
+    <Compile Include="../../mods/shared/LabSpecPathGuard.cs" Link="Shared/LabSpecPathGuard.cs" />
+    <Compile Include="../../mods/shared/PlayerContent.cs" Link="Shared/PlayerContent.cs" />
+    <Compile Include="../../mods/shared/MiniJson.cs" Link="Shared/MiniJson.cs" />
+  </ItemGroup>
+</Project>

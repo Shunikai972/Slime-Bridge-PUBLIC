@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "canonical_id": "slime.shared_test",
+      "content_kind": "slime",
+      "native": {
+        "SR2": {
+          "id": "Fixture.shared_test",
+          "verified": false
+        }
+      }
+    },
+    {
+      "canonical_id": "plort.shared_test",
+      "content_kind": "plort",
+      "native": {
+        "SR2": {
+          "id": "Fixture.Plort.shared_test",
+          "verified": false
+        }
+      }
+    },
+    {
+      "canonical_id": "slime.azure_test",
+      "content_kind": "slime",
+      "native": {
+        "SR2": {
+          "id": "Fixture.azure_test",
+          "verified": false
+        }
+      }
+    },
+    {
+      "canonical_id": "plort.azure_test",
+      "content_kind": "plort",
+      "native": {
+        "SR2": {
+          "id": "Fixture.Plort.azure_test",
+          "verified": false
+        }
+      }
+    }
+  ]
+}

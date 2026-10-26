@@ -1,0 +1,17 @@
+{
+  "schema": "slime-statue-exclusions",
+  "schema_version": 1,
+  "note": "Policy for the SR1 sanctuary statues. Keys are Identifiable.Id slime names without the _SLIME suffix. Slimes with no collectable plort are never required statues even when not listed here.",
+  "excluded": {
+    "QUICKSILVER": "event-only species",
+    "GLITCH": "technical/debug species",
+    "GLITCH_TARR": "technical/debug species",
+    "TARR": "no collectable plort",
+    "LUCKY": "no collectable plort"
+  },
+  "optional": {
+    "GOLD": "its plorts pay the island gate; the statue is a bonus, not part of the portal puzzle"
+  },
+  "hidden": ["PUDDLE", "SABER", "FIRE", "MOSAIC", "TANGLE", "CRYSTAL"],
+  "hidden_note": "Tucked away behind rock outcrops on the outer terrace of the island; never behind collision or out of reach."
+}

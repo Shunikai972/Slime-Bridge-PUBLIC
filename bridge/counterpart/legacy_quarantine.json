@@ -1,0 +1,581 @@
+{
+ "schema": "slimebridge-legacy-creation-quarantine",
+ "version": 1,
+ "status": "UNRESOLVED_LEGACY_INTENT_QUARANTINED",
+ "note": "Exact pins of individually audited historical creation folders. Quarantine is NOT success, finalization or cleanup proof; historical receipts are never rewritten. Any drift fails closed.",
+ "audit_report_sha256": "42b911761714278eef833ea6d8d27ff0cd7094593ef5cd9a36eec17bf25b6e19",
+ "root": "Lab/RuntimeArtifacts",
+ "folders": [
+  {
+   "folder_name": "creation-20261003-220444-991985",
+   "files": [
+    {
+     "path": "oracle-20261004-000600.json",
+     "bytes": 3448,
+     "sha256": "8793559ff151f28930ada2c17f4527055bcc173eff4d9c0d27f01e39f91de970"
+    },
+    {
+     "path": "oracle-20261004-000607.json",
+     "bytes": 8015,
+     "sha256": "8e3b9672ae4017866edb2dbca8734f04a44b982582cf8184ad8d889648418382"
+    },
+    {
+     "path": "oracle-result.json",
+     "bytes": 8015,
+     "sha256": "8e3b9672ae4017866edb2dbca8734f04a44b982582cf8184ad8d889648418382"
+    },
+    {
+     "path": "profiles.sqlite",
+     "bytes": 28672,
+     "sha256": "61cc8b5cea10308ec5d31d1ef7c7bcb15dc7b9a990e75e64a210e25c6374339c"
+    },
+    {
+     "path": "SR1-ops.journal",
+     "bytes": 624,
+     "sha256": "bcb66575aec265808b77a336e61a30f87c1716680e6804fba548068c9851b80f"
+    }
+   ],
+   "creation_ids": [
+    "ae635bb84dde47e192ae0f2e8cfaa278"
+   ],
+   "creation_ids_by_source": {
+    "journals": [
+     "ae635bb84dde47e192ae0f2e8cfaa278"
+    ],
+    "readonly_sqlite": [
+     "ae635bb84dde47e192ae0f2e8cfaa278"
+    ],
+    "receipts": [
+     "ae635bb84dde47e192ae0f2e8cfaa278"
+    ]
+   },
+   "audit_verdict": "UNRESOLVED_LEGACY_INTENT"
+  },
+  {
+   "folder_name": "creation-20261003-221346-808767",
+   "files": [
+    {
+     "path": "creation-result.json",
+     "bytes": 8871,
+     "sha256": "ca37d3d3f8357ca9d1642a98d58c930638d251978dd43f3356e6653fc53d93d5"
+    },
+    {
+     "path": "oracle-20261004-001509.json",
+     "bytes": 12743,
+     "sha256": "ab56e688197dabef04258182ff4d65a13fca99d8fa520683c86b1f423b99c165"
+    },
+    {
+     "path": "oracle-20261004-001516.json",
+     "bytes": 17313,
+     "sha256": "c11bdfad9dc0d9dc1133eb4d370c06e0a725b9b702555d6757e493c109ebe83b"
+    },
+    {
+     "path": "oracle-result.json",
+     "bytes": 17313,
+     "sha256": "c11bdfad9dc0d9dc1133eb4d370c06e0a725b9b702555d6757e493c109ebe83b"
+    },
+    {
+     "path": "profiles.sqlite",
+     "bytes": 28672,
+     "sha256": "db22499350d2adc8deb51c4a489f0e9b21724ce20f1c79799fc7a6a57227be9f"
+    },
+    {
+     "path": "SR1-ops.journal",
+     "bytes": 624,
+     "sha256": "950be630cf9f135906bf1998fa4eef0b17146e96b08e66766b316e09cf175e6e"
+    }
+   ],
+   "creation_ids": [
+    "07afb0b92e1b4461be1560b7da6b995d"
+   ],
+   "creation_ids_by_source": {
+    "journals": [
+     "07afb0b92e1b4461be1560b7da6b995d"
+    ],
+    "readonly_sqlite": [
+     "07afb0b92e1b4461be1560b7da6b995d"
+    ],
+    "receipts": [
+     "07afb0b92e1b4461be1560b7da6b995d"
+    ]
+   },
+   "audit_verdict": "UNRESOLVED_LEGACY_INTENT"
+  },
+  {
+   "folder_name": "creation-20261003-231126-364258",
+   "files": [
+    {
+     "path": "creation-result.json",
+     "bytes": 203,
+     "sha256": "28eb58cc29653a0e89b32726c885e0bce16cc6fb689a4fc3d76512204e6fe862"
+    },
+    {
+     "path": "oracle-20261004-011242.json",
+     "bytes": 3465,
+     "sha256": "9b9d4ebca923fe104d3f6697989d14aaf73cf6d37d126fa4b1f911f279c3c68f"
+    },
+    {
+     "path": "oracle-20261004-011245.json",
+     "bytes": 7610,
+     "sha256": "b61d03e198396cb1aed994eacc1bd58c7306f8e536fe865fa2a50f8cef2717d0"
+    },
+    {
+     "path": "oracle-result.json",
+     "bytes": 7610,
+     "sha256": "b61d03e198396cb1aed994eacc1bd58c7306f8e536fe865fa2a50f8cef2717d0"
+    },
+    {
+     "path": "profiles.sqlite",
+     "bytes": 28672,
+     "sha256": "a2907830d872b2a6aeecbaec6dcf908fecde8327ab39155cecce15b1a53d98f6"
+    },
+    {
+     "path": "SR1-ops.journal",
+     "bytes": 624,
+     "sha256": "950be630cf9f135906bf1998fa4eef0b17146e96b08e66766b316e09cf175e6e"
+    },
+    {
+     "path": "SR1-player-log-slimebridge-lines.txt",
+     "bytes": 663,
+     "sha256": "425b86a2f700690280b3d25a4f2d9160870b1d3df4c46600d3d3267435c30a7e"
+    }
+   ],
+   "creation_ids": [
+    "07afb0b92e1b4461be1560b7da6b995d",
+    "9f1fea2d47ef4594a540a5eb83805802"
+   ],
+   "creation_ids_by_source": {
+    "journals": [
+     "07afb0b92e1b4461be1560b7da6b995d"
+    ],
+    "readonly_sqlite": [
+     "9f1fea2d47ef4594a540a5eb83805802"
+    ],
+    "receipts": []
+   },
+   "audit_verdict": "UNRESOLVED_LEGACY_INTENT"
+  },
+  {
+   "folder_name": "creation-20261003-232257-605213",
+   "files": [
+    {
+     "path": "creation-result.json",
+     "bytes": 8993,
+     "sha256": "bd46e0b411a704b0ba45bc0d472475fa60488938acb325155029dc3cd97be70b"
+    },
+    {
+     "path": "oracle-20261004-012427.json",
+     "bytes": 13163,
+     "sha256": "c0f5104abd4c9b0c411ee8d9b51c077ff7f6505ff5efe3e296a855f4910c6158"
+    },
+    {
+     "path": "oracle-20261004-012434.json",
+     "bytes": 17730,
+     "sha256": "3ef0aecd3554f1bf46967677ee372596aeccaadcdbc0ff4ff1eb56daa8a5f919"
+    },
+    {
+     "path": "oracle-result.json",
+     "bytes": 17730,
+     "sha256": "3ef0aecd3554f1bf46967677ee372596aeccaadcdbc0ff4ff1eb56daa8a5f919"
+    },
+    {
+     "path": "profiles.sqlite",
+     "bytes": 28672,
+     "sha256": "d33b4abf416c8a39a2486e439c3cd07d5347ac198dda695781273fe97a182185"
+    },
+    {
+     "path": "SR1-ops.journal",
+     "bytes": 1247,
+     "sha256": "a2e0966780762bdd0b6c6c9ac051b49b2ad7e0aa8204fa1db4d1b1f914072302"
+    }
+   ],
+   "creation_ids": [
+    "07afb0b92e1b4461be1560b7da6b995d",
+    "3209eadc2fd14b35982ac256f733091b"
+   ],
+   "creation_ids_by_source": {
+    "journals": [
+     "07afb0b92e1b4461be1560b7da6b995d",
+     "3209eadc2fd14b35982ac256f733091b"
+    ],
+    "readonly_sqlite": [
+     "3209eadc2fd14b35982ac256f733091b"
+    ],
+    "receipts": [
+     "3209eadc2fd14b35982ac256f733091b"
+    ]
+   },
+   "audit_verdict": "UNRESOLVED_LEGACY_INTENT"
+  },
+  {
+   "folder_name": "creation-20261003-233512-312891",
+   "files": [
+    {
+     "path": "creation-result.json",
+     "bytes": 9003,
+     "sha256": "d011cfdc9ac9f41739c71c403492f6d79d65747b25988da06591b92bc37ac9d2"
+    },
+    {
+     "path": "oracle-20261004-013647.json",
+     "bytes": 12742,
+     "sha256": "d76aa32a42f4643f1d4d3d89375b441bed3e9b5704d906459e249bb2e2d814e7"
+    },
+    {
+     "path": "oracle-20261004-013654.json",
+     "bytes": 18184,
+     "sha256": "2bba3b7c583e71561bc9eb38427287999cd82c451c3a966b1664c81b8a076648"
+    },
+    {
+     "path": "oracle-result.json",
+     "bytes": 18184,
+     "sha256": "2bba3b7c583e71561bc9eb38427287999cd82c451c3a966b1664c81b8a076648"
+    },
+    {
+     "path": "profiles.sqlite",
+     "bytes": 28672,
+     "sha256": "f3ee357d11b913ba9421ecf4449bbce8dffff55a1cb8e53f3877f5433c5e45f1"
+    },
+    {
+     "path": "SR1-ops.journal",
+     "bytes": 624,
+     "sha256": "fba1577184101788707134412dc84947bf15cfff9152745183951639a786235f"
+    }
+   ],
+   "creation_ids": [
+    "56a077126cb24847b4e46f1216fb0ec4"
+   ],
+   "creation_ids_by_source": {
+    "journals": [
+     "56a077126cb24847b4e46f1216fb0ec4"
+    ],
+    "readonly_sqlite": [
+     "56a077126cb24847b4e46f1216fb0ec4"
+    ],
+    "receipts": [
+     "56a077126cb24847b4e46f1216fb0ec4"
+    ]
+   },
+   "audit_verdict": "UNRESOLVED_LEGACY_INTENT"
+  },
+  {
+   "folder_name": "creation-20261004-045112-777859",
+   "files": [
+    {
+     "path": "creation-result.json",
+     "bytes": 8277,
+     "sha256": "030298c3a922daebb75274a7417242d72d6b8ad37e34330e042afac2e3f12cc7"
+    },
+    {
+     "path": "oracle-20261004-065326.json",
+     "bytes": 3455,
+     "sha256": "664c1634036ae36fb3d73aac88770e656fa3863e75dc6de69be41c70480ff3f2"
+    },
+    {
+     "path": "oracle-20261004-065330.json",
+     "bytes": 8623,
+     "sha256": "de3634f2dd84ab3c431e22b91454b3226ccc96813b817f7ebebbdc3206e04d1e"
+    },
+    {
+     "path": "oracle-result.json",
+     "bytes": 8623,
+     "sha256": "de3634f2dd84ab3c431e22b91454b3226ccc96813b817f7ebebbdc3206e04d1e"
+    },
+    {
+     "path": "profiles.sqlite",
+     "bytes": 28672,
+     "sha256": "65ea046d2dda6c14b01e158bd4de59563eee62a7caf724830ba200f11826a343"
+    },
+    {
+     "path": "SR1-ops.journal",
+     "bytes": 634,
+     "sha256": "de7978ab9cc8309c5c18d6c5bd2ef53123c72b797bd79635d455491893c20f5b"
+    }
+   ],
+   "creation_ids": [
+    "b767b95d44d546cfa11bf567e46fdfb3"
+   ],
+   "creation_ids_by_source": {
+    "journals": [
+     "b767b95d44d546cfa11bf567e46fdfb3"
+    ],
+    "readonly_sqlite": [
+     "b767b95d44d546cfa11bf567e46fdfb3"
+    ],
+    "receipts": [
+     "b767b95d44d546cfa11bf567e46fdfb3"
+    ]
+   },
+   "audit_verdict": "UNRESOLVED_LEGACY_INTENT"
+  },
+  {
+   "folder_name": "creation-20261004-050017-810364",
+   "files": [
+    {
+     "path": "creation-result.json",
+     "bytes": 8278,
+     "sha256": "08c82bcfae17e5bdfb68d61d4cb45ed10d97b8bb065ef48e846c9938527bf463"
+    },
+    {
+     "path": "oracle-20261004-070229.json",
+     "bytes": 3456,
+     "sha256": "537d0bdbf0914b6ad0e8d2728ed25ea5d5b7665937e57fbc53cee3952109a3e2"
+    },
+    {
+     "path": "oracle-20261004-070243.json",
+     "bytes": 8624,
+     "sha256": "54796195374433070b39ac1bb942087d7528a3c96c33d4ea982b50d9f1bd2b4c"
+    },
+    {
+     "path": "oracle-result.json",
+     "bytes": 8624,
+     "sha256": "54796195374433070b39ac1bb942087d7528a3c96c33d4ea982b50d9f1bd2b4c"
+    },
+    {
+     "path": "profiles.sqlite",
+     "bytes": 28672,
+     "sha256": "fbfc3a0f008e9d5a46f66ff8f8934174767db5e7474f7a72a5b8cf36fca6118e"
+    },
+    {
+     "path": "SR1-ops.journal",
+     "bytes": 634,
+     "sha256": "31bc65ce0c5f3ff4982bb8acf5d20008cf202276469d5a1e405e7b6b8e480339"
+    }
+   ],
+   "creation_ids": [
+    "2e2a689bf0f7452eb63db918ffd4036c"
+   ],
+   "creation_ids_by_source": {
+    "journals": [
+     "2e2a689bf0f7452eb63db918ffd4036c"
+    ],
+    "readonly_sqlite": [
+     "2e2a689bf0f7452eb63db918ffd4036c"
+    ],
+    "receipts": [
+     "2e2a689bf0f7452eb63db918ffd4036c"
+    ]
+   },
+   "audit_verdict": "UNRESOLVED_LEGACY_INTENT"
+  },
+  {
+   "folder_name": "creation-20261004-050723-673978",
+   "files": [
+    {
+     "path": "creation-result.json",
+     "bytes": 8275,
+     "sha256": "fc5706bd0a407132eb37693558d023a803c82cdc08a027b725184cd89df16e1c"
+    },
+    {
+     "path": "oracle-20261004-070829.json",
+     "bytes": 3455,
+     "sha256": "a6fd1b16e8cc5f50602c611eb12ec29bf0ff70ac5a11ef0a44e8326deb1a1fe2"
+    },
+    {
+     "path": "oracle-20261004-070835.json",
+     "bytes": 8623,
+     "sha256": "6836b861f0b9e3881e07686e9097c52c7bb9a13f5dd5e706b7d62c48473e6e34"
+    },
+    {
+     "path": "oracle-result.json",
+     "bytes": 8623,
+     "sha256": "6836b861f0b9e3881e07686e9097c52c7bb9a13f5dd5e706b7d62c48473e6e34"
+    },
+    {
+     "path": "profiles.sqlite",
+     "bytes": 28672,
+     "sha256": "0d304f2dddd211c8c4987426024836f4cbc8a5d8f04888e1a16e5151f783e375"
+    },
+    {
+     "path": "SR1-ops.journal",
+     "bytes": 634,
+     "sha256": "418d98cf2f30eebdad42ae7185bdb1e5a73c7ad594d041ad80cdad198052ae92"
+    }
+   ],
+   "creation_ids": [
+    "c5c48aa00cda4e378dc3a0375571f9e3"
+   ],
+   "creation_ids_by_source": {
+    "journals": [
+     "c5c48aa00cda4e378dc3a0375571f9e3"
+    ],
+    "readonly_sqlite": [
+     "c5c48aa00cda4e378dc3a0375571f9e3"
+    ],
+    "receipts": [
+     "c5c48aa00cda4e378dc3a0375571f9e3"
+    ]
+   },
+   "audit_verdict": "UNRESOLVED_LEGACY_INTENT"
+  },
+  {
+   "folder_name": "creation-20261004-055852-002017",
+   "files": [
+    {
+     "path": "creation-result.json",
+     "bytes": 9168,
+     "sha256": "4b0dce5bf0457f50e71fb6455a04a269bdeb2545440e96376d10ffdb70af6218"
+    },
+    {
+     "path": "oracle-20261004-080103.json",
+     "bytes": 12924,
+     "sha256": "6b15e14b73afae5d233cbc5bcc0730f8d05b88a0c90905dcbeacf11796e6baee"
+    },
+    {
+     "path": "oracle-20261004-080118.json",
+     "bytes": 18092,
+     "sha256": "af0df62b996e79f7451f73d579ca9587d7e8bba1ee26078ab5be6db3b7192e29"
+    },
+    {
+     "path": "oracle-result.json",
+     "bytes": 18092,
+     "sha256": "af0df62b996e79f7451f73d579ca9587d7e8bba1ee26078ab5be6db3b7192e29"
+    },
+    {
+     "path": "profiles.sqlite",
+     "bytes": 28672,
+     "sha256": "8e09f5e79866eb91a7b982bbeb11940234273d4c683ebfa6e437d32fdd6272a7"
+    },
+    {
+     "path": "SR1-ops.journal",
+     "bytes": 634,
+     "sha256": "fcec85377aafdebc7294f2eb78e834fd0713628c72c8c20fa2b2ea25bdbfea7e"
+    }
+   ],
+   "creation_ids": [
+    "ef9415e10fdf4b509039141770bd03d5"
+   ],
+   "creation_ids_by_source": {
+    "journals": [
+     "ef9415e10fdf4b509039141770bd03d5"
+    ],
+    "readonly_sqlite": [
+     "ef9415e10fdf4b509039141770bd03d5"
+    ],
+    "receipts": [
+     "ef9415e10fdf4b509039141770bd03d5"
+    ]
+   },
+   "audit_verdict": "UNRESOLVED_LEGACY_INTENT"
+  },
+  {
+   "folder_name": "creation-host-atomicity-20261005-040933",
+   "files": [
+    {
+     "path": "python-full.out",
+     "bytes": 2828,
+     "sha256": "728e0824b456dac5f0c22410dd42078e9bdf5eeb29909a1c59553792b0294a6c"
+    }
+   ],
+   "creation_ids": [],
+   "creation_ids_by_source": {
+    "journals": [],
+    "readonly_sqlite": [],
+    "receipts": []
+   },
+   "audit_verdict": "SCOPED_SYNTHETIC_OUTPUT_ONLY_NO_NATIVE_RUN_PROOF"
+  },
+  {
+   "folder_name": "creation-host-validation-20261005-035436",
+   "files": [
+    {
+     "path": "commands-harness.out",
+     "bytes": 79,
+     "sha256": "977d90f98e67580bbb7ee6c4cf1773e29220e8e4b9e3301fec3fbe7d51d2040a"
+    },
+    {
+     "path": "creator-harness.out",
+     "bytes": 1368,
+     "sha256": "4171e80874347e8d1334837f2e85b9ad24865e045a773086eda5c9d8413510d8"
+    },
+    {
+     "path": "sr1-release.out",
+     "bytes": 141,
+     "sha256": "8d0573c2286e3867c7dcde5012b19b710a603c5f249619e68389e6a61294e4b7"
+    },
+    {
+     "path": "sr2-release.out",
+     "bytes": 141,
+     "sha256": "ce2a3c0c06a2510b913dcf3103fc17169476209b25de60f02ee6501a98f5901a"
+    }
+   ],
+   "creation_ids": [],
+   "creation_ids_by_source": {
+    "journals": [],
+    "readonly_sqlite": [],
+    "receipts": []
+   },
+   "audit_verdict": "SCOPED_SYNTHETIC_OUTPUT_ONLY_NO_NATIVE_RUN_PROOF"
+  },
+  {
+   "folder_name": "creation-oracle-integration-20261005",
+   "files": [
+    {
+     "path": "creation-harness.out",
+     "bytes": 1368,
+     "sha256": "4171e80874347e8d1334837f2e85b9ad24865e045a773086eda5c9d8413510d8"
+    },
+    {
+     "path": "journal-harness.out",
+     "bytes": 79,
+     "sha256": "977d90f98e67580bbb7ee6c4cf1773e29220e8e4b9e3301fec3fbe7d51d2040a"
+    },
+    {
+     "path": "python-full.out",
+     "bytes": 8416,
+     "sha256": "158f637a32e6def61c9976cf4fb458562da35d60fbf41d898c077afb3d8f2ce7"
+    },
+    {
+     "path": "sr1-release.out",
+     "bytes": 141,
+     "sha256": "53fc02e22013eef37c44d49241fbf57cefe9ea8c3e568b21f35fff094a3f158e"
+    },
+    {
+     "path": "sr2-release.out",
+     "bytes": 141,
+     "sha256": "e84bbadb8095752ba8987ce942bddf30bb2b298d8ba0776b60a8d490f889f748"
+    }
+   ],
+   "creation_ids": [],
+   "creation_ids_by_source": {
+    "journals": [],
+    "readonly_sqlite": [],
+    "receipts": []
+   },
+   "audit_verdict": "SCOPED_SYNTHETIC_OUTPUT_ONLY_NO_NATIVE_RUN_PROOF"
+  },
+  {
+   "folder_name": "creation-oracle-review-fixes-20261005",
+   "files": [
+    {
+     "path": "audit.json",
+     "bytes": 1067,
+     "sha256": "217b017068d2b2bed91f518ede2f855ec2adcf4dd83804200f3eb65da4651331"
+    },
+    {
+     "path": "python-full.out",
+     "bytes": 8416,
+     "sha256": "08ecc334ca5eb49e3547ed76f01aa1e3c06bb8403cd9fe981a3178ade3527265"
+    }
+   ],
+   "creation_ids": [],
+   "creation_ids_by_source": {
+    "journals": [],
+    "readonly_sqlite": [],
+    "receipts": []
+   },
+   "audit_verdict": "SCOPED_SYNTHETIC_OUTPUT_ONLY_NO_NATIVE_RUN_PROOF"
+  }
+ ],
+ "retired_creation_ids": [
+  "07afb0b92e1b4461be1560b7da6b995d",
+  "2e2a689bf0f7452eb63db918ffd4036c",
+  "3209eadc2fd14b35982ac256f733091b",
+  "56a077126cb24847b4e46f1216fb0ec4",
+  "9f1fea2d47ef4594a540a5eb83805802",
+  "ae635bb84dde47e192ae0f2e8cfaa278",
+  "b767b95d44d546cfa11bf567e46fdfb3",
+  "c5c48aa00cda4e378dc3a0375571f9e3",
+  "ef9415e10fdf4b509039141770bd03d5"
+ ],
+ "pins_sha256": "1818b885103f9d1fbf9aced90464b72f809e161de79e35320cd53ecb8ba9c6e4"
+}

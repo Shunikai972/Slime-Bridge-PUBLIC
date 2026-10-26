@@ -1,0 +1,9 @@
+[project]
+name = "sbconv"
+version = "0.1.0"
+description = "SlimeBridge AssetConverter: local SR1 <-> SR2 slime asset converter (no game assets shipped)"
+requires-python = ">=3.10"
+dependencies = ["UnityPy==1.25.4", "numpy>=2.0", "Pillow>=11", "pygltflib>=1.16", "texture2ddecoder>=1.0"]
+
+[project.scripts]
+sbconv = "sbconv.cli:main"

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- SR2 (Unity 2021.3, IL2CPP, MelonLoader 0.7.x net6): compiled against the interop assemblies MelonLoader generates for the game. -->
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>SbRuntime.Unity.SR2</AssemblyName>
+    <RootNamespace>SbRuntime.UnityBuild</RootNamespace>
+    <DefineConstants>$(DefineConstants);SB_IL2CPP</DefineConstants>
+    <!-- Point at an SR2 install that MelonLoader has already run on: -p:SR2Root=... -->
+    <SR2Root Condition="'$(SR2Root)' == ''">$(MSBuildThisFileDirectory)..\..\..\..\..\Lab\Games\SR2</SR2Root>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\*.cs" />
+    <ProjectReference Include="..\..\SbRuntime.Core\SbRuntime.Core.csproj" />
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(SR2Root)\MelonLoader\Il2CppAssemblies\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(SR2Root)\MelonLoader\Il2CppAssemblies\UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(SR2Root)\MelonLoader\Il2CppAssemblies\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2Cppmscorlib"><HintPath>$(SR2Root)\MelonLoader\Il2CppAssemblies\Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Runtime"><HintPath>$(SR2Root)\MelonLoader\net6\Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Il2CppInterop.Common"><HintPath>$(SR2Root)\MelonLoader\net6\Il2CppInterop.Common.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,20 @@
+{
+  "components": {
+    "Fixture.Embers": {
+      "capability": "diet.fire_feeding"
+    },
+    "Fixture.Glow": {
+      "capability": null
+    },
+    "Fixture.Sparkle": {
+      "capability": "hazard.aura"
+    },
+    "Fixture.Wings": {
+      "capability": "movement.flight"
+    }
+  },
+  "realm": "SR1",
+  "schema": "bridge-behaviour-profile",
+  "schema_version": 1,
+  "synthetic": true
+}

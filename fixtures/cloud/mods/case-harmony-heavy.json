@@ -1,0 +1,182 @@
+{
+  "case": "harmony_heavy",
+  "description": "SR1 Harmony-heavy mod: PatchAll, six patches incl. a transpiler, non-public reflection.",
+  "evidence": {
+    "code": {
+      "assemblies": [
+        {
+          "assembly_name": "FixtureHarmonyHeavy",
+          "path": "SRML/Mods/FixtureHarmonyHeavy/FixtureHarmonyHeavy.dll",
+          "sha256": "3bdf8e2843cb5da8ea69d1bfe0ec45d897a9707ac569ed044d90ed61cf506c7f",
+          "size": 4096
+        }
+      ]
+    },
+    "config_files": [],
+    "content": {
+      "asset_bundles": [],
+      "content_files": [],
+      "content_ids": []
+    },
+    "extractor": {
+      "id": "fixture.static-extractor",
+      "version": "1.0.0"
+    },
+    "harmony": {
+      "patch_all_calls": 1,
+      "patches": [
+        {
+          "finalizer": 0,
+          "postfix": 0,
+          "prefix": 1,
+          "target": "FixtureGame.RanchDirector::Tick",
+          "transpiler": 0
+        },
+        {
+          "finalizer": 0,
+          "postfix": 1,
+          "prefix": 0,
+          "target": "FixtureGame.RanchDirector::Spawn",
+          "transpiler": 0
+        },
+        {
+          "finalizer": 0,
+          "postfix": 1,
+          "prefix": 1,
+          "target": "FixtureGame.MarketBoard::Sell",
+          "transpiler": 0
+        },
+        {
+          "finalizer": 0,
+          "postfix": 0,
+          "prefix": 0,
+          "target": "FixtureGame.MarketBoard::Price",
+          "transpiler": 1
+        },
+        {
+          "finalizer": 0,
+          "postfix": 2,
+          "prefix": 0,
+          "target": "FixtureGame.Weather::Update",
+          "transpiler": 0
+        },
+        {
+          "finalizer": 1,
+          "postfix": 0,
+          "prefix": 0,
+          "target": "FixtureGame.Weather::Roll",
+          "transpiler": 0
+        }
+      ]
+    },
+    "il2cpp": {
+      "il2cpp_type_references": 0,
+      "interop_references": false,
+      "type_injection": false
+    },
+    "manifest_id": null,
+    "mod_id": "fixture.harmony_heavy",
+    "native": {
+      "detour_indicators": [],
+      "function_pointer_hooks": false,
+      "pinvoke_modules": []
+    },
+    "references": [
+      {
+        "assembly": "mscorlib",
+        "members": [
+          "System.Object::.ctor"
+        ],
+        "types": [
+          "System.Object"
+        ]
+      },
+      {
+        "assembly": "SRML",
+        "members": [
+          "SRML.ModEntryPoint::.ctor",
+          "SRML.ModEntryPoint::Load"
+        ],
+        "types": [
+          "SRML.ModEntryPoint"
+        ]
+      },
+      {
+        "assembly": "0Harmony",
+        "members": [
+          "HarmonyLib.Harmony::.ctor",
+          "HarmonyLib.Harmony::PatchAll"
+        ],
+        "types": [
+          "HarmonyLib.Harmony"
+        ]
+      },
+      {
+        "assembly": "Assembly-CSharp",
+        "members": [
+          "FixtureGame.MarketBoard::Sell",
+          "FixtureGame.RanchDirector::Tick"
+        ],
+        "types": [
+          "FixtureGame.MarketBoard",
+          "FixtureGame.RanchDirector"
+        ]
+      }
+    ],
+    "reflection": {
+      "dynamic_invoke": false,
+      "emit": false,
+      "non_public_access": true,
+      "type_lookup_by_name": false
+    },
+    "schema": "bridge-mod-static-evidence",
+    "schema_version": 1,
+    "synthetic": true
+  },
+  "expect": {
+    "classification": "HARMONY_PATCH",
+    "diagnostic_codes": [],
+    "parse": "OK",
+    "portability": {
+      "SR1": "PORTABLE",
+      "SR2": "MANUAL_PORT"
+    },
+    "rule": "R2",
+    "unit_status": {
+      "SR1": "EXPERIMENTAL",
+      "SR2": "PENDING_ADAPTER"
+    }
+  },
+  "input": {
+    "document": {
+      "author": "Fixture Author",
+      "dependencies": [],
+      "id": "fixture.harmony_heavy",
+      "name": "Fixture Harmony Heavy",
+      "version": "1.0.0"
+    },
+    "files": [
+      {
+        "path": "SRML/Mods/FixtureHarmonyHeavy/modinfo.json",
+        "sha256": "6eab3934b4803dc7cdfd63c83f0f0878919e939b34fce534f4ec555be607e1f7",
+        "size": 128
+      },
+      {
+        "path": "SRML/Mods/FixtureHarmonyHeavy/FixtureHarmonyHeavy.dll",
+        "sha256": "3bdf8e2843cb5da8ea69d1bfe0ec45d897a9707ac569ed044d90ed61cf506c7f",
+        "size": 4096
+      }
+    ],
+    "format": "SRML_MODINFO",
+    "raw_text": null,
+    "source": {
+      "kind": "LOCAL_PATH",
+      "path": "SRML/Mods/FixtureHarmonyHeavy/modinfo.json",
+      "provider_id": null,
+      "ref": null,
+      "synthetic": true
+    }
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

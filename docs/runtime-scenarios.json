@@ -1,0 +1,1677 @@
+{
+  "scenarios": [
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR1"
+          }
+        },
+        {
+          "action": "bridge.await_counterpart",
+          "args": {
+            "target": "SR2"
+          }
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "counterpart.intent_persisted",
+        "counterpart.dispatched",
+        "counterpart.native_observed",
+        "counterpart.verified",
+        "counterpart.linked"
+      ],
+      "expected_state": {
+        "journal.phase": "LINKED",
+        "profile.state": "LINKED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.sr1_to_sr2",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR1 save",
+        "SR2 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "sr2-melon-log",
+        "save-readback",
+        "profile-db-dump"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "sr1_to_sr2",
+        "simulator": "counterpart"
+      },
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR1"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "SR1 save gets an automatic SR2 counterpart"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR2"
+          }
+        },
+        {
+          "action": "bridge.await_counterpart",
+          "args": {
+            "target": "SR1"
+          }
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "counterpart.intent_persisted",
+        "counterpart.dispatched",
+        "counterpart.native_observed",
+        "counterpart.verified",
+        "counterpart.linked"
+      ],
+      "expected_state": {
+        "journal.phase": "LINKED",
+        "profile.state": "LINKED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.sr2_to_sr1",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR2 save",
+        "SR1 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "sr1-player-log",
+        "save-readback",
+        "profile-db-dump"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "sr2_to_sr1",
+        "simulator": "counterpart"
+      },
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR2"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "SR2 save gets an automatic SR1 counterpart"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR1"
+          }
+        },
+        {
+          "action": "bridge.await_policy",
+          "args": {}
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "counterpart.failed"
+      ],
+      "expected_state": {
+        "profile.state": "UNLINKED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.slots_full",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR1 save",
+        "SR2 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "slot-probe"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "no_capacity",
+        "simulator": "counterpart"
+      },
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR1"
+          }
+        },
+        {
+          "action": "lab.fill_save_slots",
+          "args": {
+            "realm": "SR2"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Destination has no free save slot"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR2"
+          }
+        },
+        {
+          "action": "bridge.await_counterpart",
+          "args": {
+            "target": "SR1"
+          }
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "counterpart.dispatched",
+        "counterpart.failed"
+      ],
+      "expected_state": {
+        "journal.phase": "FAILED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.slot_race",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR2 save",
+        "SR1 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "save-listing-before-after"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "slot_race",
+        "simulator": "counterpart"
+      },
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR2"
+          }
+        },
+        {
+          "action": "lab.arm_slot_race",
+          "args": {
+            "realm": "SR1"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "A slot is taken between selection and creation"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR1"
+          }
+        },
+        {
+          "action": "bridge.await_counterpart",
+          "args": {
+            "target": "SR2"
+          }
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "counterpart.dispatched",
+        "counterpart.reconciled",
+        "counterpart.linked"
+      ],
+      "expected_state": {
+        "profile.state": "LINKED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.wrong_save",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR1 save",
+        "SR2 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "rejection-log"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "wrong_target_save",
+        "simulator": "counterpart"
+      },
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR1"
+          }
+        },
+        {
+          "action": "lab.inject_reply",
+          "args": {
+            "field": "save_id",
+            "value": "foreign"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Plugin reports a save with foreign provenance"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR1"
+          }
+        },
+        {
+          "action": "bridge.await_counterpart",
+          "args": {
+            "target": "SR2"
+          }
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "counterpart.dispatched"
+      ],
+      "expected_state": {
+        "other_profile.state": "UNLINKED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.wrong_profile",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR1 save",
+        "SR2 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "rejection-log"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR1"
+          }
+        },
+        {
+          "action": "lab.inject_reply",
+          "args": {
+            "field": "profile_id",
+            "value": "other"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "A result for another profile is rejected"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR2"
+          }
+        },
+        {
+          "action": "bridge.await_counterpart",
+          "args": {
+            "target": "SR1"
+          }
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "counterpart.dispatched",
+        "counterpart.uncertain",
+        "counterpart.reconciled",
+        "counterpart.linked"
+      ],
+      "expected_state": {
+        "profile.state": "LINKED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.lost_ack",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR2 save",
+        "SR1 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "save-listing-before-after"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "lost_ack",
+        "simulator": "counterpart"
+      },
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR2"
+          }
+        },
+        {
+          "action": "lab.drop_next_reply",
+          "args": {
+            "realm": "SR1"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Native creation succeeds but the acknowledgement is lost"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR1"
+          }
+        },
+        {
+          "action": "bridge.kill_host_after",
+          "args": {
+            "event": "counterpart.dispatched"
+          }
+        },
+        {
+          "action": "bridge.start_host",
+          "args": {}
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "counterpart.dispatched",
+        "system.restarted",
+        "counterpart.uncertain",
+        "counterpart.reconciled",
+        "counterpart.linked"
+      ],
+      "expected_state": {
+        "profile.state": "LINKED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.bridge_restart",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR1 save",
+        "SR2 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "journal-dump"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "host_crash_after_dispatch",
+        "simulator": "counterpart"
+      },
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR1"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "BridgeHost restarts right after dispatch"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR1"
+          }
+        },
+        {
+          "action": "lab.kill_game_after",
+          "args": {
+            "event": "native_write",
+            "realm": "SR2"
+          }
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR2"
+          }
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "counterpart.dispatched",
+        "system.game_restarted",
+        "counterpart.reconciled",
+        "counterpart.linked"
+      ],
+      "expected_state": {
+        "profile.state": "LINKED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.game_restart",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR1 save",
+        "SR2 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "save-readback"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "plugin_crash_after_create",
+        "simulator": "counterpart"
+      },
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR1"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Destination game crashes after writing the save"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR2"
+          }
+        },
+        {
+          "action": "lab.power_cycle_vm_after",
+          "args": {
+            "event": "counterpart.dispatched"
+          }
+        }
+      ],
+      "area": "COUNTERPART",
+      "cleanup": [
+        {
+          "action": "lab.close_games",
+          "args": {}
+        },
+        {
+          "action": "lab.restore_saves",
+          "args": {}
+        }
+      ],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "system.restarted",
+        "counterpart.uncertain",
+        "counterpart.reconciled"
+      ],
+      "expected_state": {
+        "journal.terminal_or_linked": true
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "counterpart.overwrite",
+        "counterpart.linked_unverified"
+      ],
+      "id": "counterpart.system_restart",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a profile with exactly one SR2 save",
+        "SR1 Lab copy with the Bridge plugin"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "journal-dump",
+        "save-readback"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [
+        "restore native saves from the pre-run backup"
+      ],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.snapshot_saves",
+          "args": {}
+        },
+        {
+          "action": "lab.launch",
+          "args": {
+            "realm": "SR2"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Machine restarts with a creation in flight"
+    },
+    {
+      "actions": [
+        {
+          "action": "bridge.open_profile",
+          "args": {
+            "realm": "SR1"
+          }
+        }
+      ],
+      "area": "SYSTEM",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "system.build_changed",
+        "system.reverify_required",
+        "counterpart.verified"
+      ],
+      "expected_state": {
+        "pair.status": "LINKED"
+      },
+      "forbidden_events": [
+        "counterpart.duplicate_created",
+        "content.partial_install"
+      ],
+      "id": "system.game_update",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "a LINKED profile"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "endpoint-meta-dump"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [
+        {
+          "action": "lab.swap_build_fingerprint",
+          "args": {
+            "realm": "SR2"
+          }
+        }
+      ],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "A game update marks linked endpoints for re-verification"
+    },
+    {
+      "actions": [
+        {
+          "action": "content.deploy",
+          "args": {
+            "package": "fixture.incompatible"
+          }
+        }
+      ],
+      "area": "CONTENT",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "content.quarantined"
+      ],
+      "expected_state": {
+        "inventory.unit_state": "QUARANTINED"
+      },
+      "forbidden_events": [
+        "content.registered",
+        "content.partial_install"
+      ],
+      "id": "content.package_incompatible",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run"
+      ],
+      "proof_artifacts": [
+        "deploy-journal"
+      ],
+      "realms": [
+        "SR1"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "A package built for another build is not enabled"
+    },
+    {
+      "actions": [
+        {
+          "action": "content.batch",
+          "args": {
+            "direction": "SR2->SR1"
+          }
+        }
+      ],
+      "area": "CONTENT",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "content.quarantined"
+      ],
+      "expected_state": {},
+      "forbidden_events": [
+        "content.registered"
+      ],
+      "id": "content.provider_missing",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run"
+      ],
+      "proof_artifacts": [
+        "batch-report"
+      ],
+      "realms": [
+        "SR2"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Registry provider unavailable: nothing converts, nothing breaks"
+    },
+    {
+      "actions": [
+        {
+          "action": "content.batch",
+          "args": {
+            "direction": "SR2->SR1"
+          }
+        }
+      ],
+      "area": "CONTENT",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "content.package_built",
+        "content.quarantined"
+      ],
+      "expected_state": {},
+      "forbidden_events": [
+        "content.partial_install"
+      ],
+      "id": "content.conversion_failure",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run"
+      ],
+      "proof_artifacts": [
+        "batch-report"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "A broken species is isolated from the batch"
+    },
+    {
+      "actions": [
+        {
+          "action": "content.convert",
+          "args": {
+            "species": "fixture.unknown_shader"
+          }
+        }
+      ],
+      "area": "CONTENT",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "content.package_built"
+      ],
+      "expected_state": {
+        "package.status": "PENDING_ADAPTER"
+      },
+      "forbidden_events": [
+        "content.registered"
+      ],
+      "id": "content.material_failure",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run"
+      ],
+      "proof_artifacts": [
+        "package-manifest"
+      ],
+      "realms": [
+        "SR1"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "An unmappable material keeps the species pending"
+    },
+    {
+      "actions": [
+        {
+          "action": "content.deploy",
+          "args": {
+            "package": "fixture.first_species"
+          }
+        },
+        {
+          "action": "lab.fail_registration",
+          "args": {}
+        }
+      ],
+      "area": "CONTENT",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "content.deployed",
+        "content.rolled_back"
+      ],
+      "expected_state": {
+        "inventory.unit_state": "ABSENT"
+      },
+      "forbidden_events": [
+        "content.partial_install"
+      ],
+      "id": "content.registration_failure",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run"
+      ],
+      "proof_artifacts": [
+        "deploy-journal",
+        "game-log"
+      ],
+      "realms": [
+        "SR1"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Runtime registration fails and the package rolls back"
+    },
+    {
+      "actions": [
+        {
+          "action": "portal.enter",
+          "args": {
+            "portal": "portal.sr1.sanctuary_gate"
+          }
+        },
+        {
+          "action": "lab.block_world_load",
+          "args": {
+            "realm": "SR2"
+          }
+        }
+      ],
+      "area": "TRANSITION",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "transition.started",
+        "transition.rolled_back"
+      ],
+      "expected_state": {
+        "transition.stage": "ROLLED_BACK"
+      },
+      "forbidden_events": [
+        "transition.visible_before_ready",
+        "transition.player_stranded",
+        "transition.committed"
+      ],
+      "id": "transition.destination_fails_to_load",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "LINKED profile"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "overlay-capture"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "world_ready_never",
+        "simulator": "transition"
+      },
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Destination never becomes ready: player stays home"
+    },
+    {
+      "actions": [
+        {
+          "action": "portal.enter",
+          "args": {
+            "portal": "portal.sr1.sanctuary_gate"
+          }
+        },
+        {
+          "action": "lab.load_other_save",
+          "args": {
+            "realm": "SR2"
+          }
+        }
+      ],
+      "area": "TRANSITION",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "transition.started",
+        "transition.rolled_back"
+      ],
+      "expected_state": {
+        "transition.stage": "ROLLED_BACK"
+      },
+      "forbidden_events": [
+        "transition.visible_before_ready",
+        "transition.player_stranded",
+        "transition.committed"
+      ],
+      "id": "transition.world_ready_wrong_save",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "LINKED profile"
+      ],
+      "proof_artifacts": [
+        "host-log"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "destination_wrong_save",
+        "simulator": "transition"
+      },
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "WORLD_READY for the wrong save is rejected"
+    },
+    {
+      "actions": [
+        {
+          "action": "portal.enter",
+          "args": {
+            "portal": "portal.sr1.sanctuary_gate"
+          }
+        }
+      ],
+      "area": "TRANSITION",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_VISUAL_PROOF",
+      "expected_events": [
+        "transition.started",
+        "transition.world_ready",
+        "transition.source_hidden",
+        "transition.destination_visible",
+        "transition.committed"
+      ],
+      "expected_state": {
+        "transition.stage": "COMMITTED"
+      },
+      "forbidden_events": [
+        "transition.visible_before_ready",
+        "transition.player_stranded"
+      ],
+      "id": "transition.sr1_to_sr2_warm",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "LINKED profile",
+        "SR2 prepared in the background"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "overlay-capture",
+        "screen-recording"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "sr1_to_sr2",
+        "simulator": "transition"
+      },
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Warm switch SR1 -> SR2 through the sanctuary gate"
+    },
+    {
+      "actions": [
+        {
+          "action": "portal.enter",
+          "args": {
+            "portal": "portal.sr1.sanctuary_gate"
+          }
+        },
+        {
+          "action": "lab.kill_game_after",
+          "args": {
+            "event": "transition.source_hidden",
+            "realm": "SR2"
+          }
+        }
+      ],
+      "area": "TRANSITION",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "transition.started",
+        "transition.source_hidden",
+        "transition.rolled_back"
+      ],
+      "expected_state": {
+        "transition.stage": "ROLLED_BACK"
+      },
+      "forbidden_events": [
+        "transition.visible_before_ready",
+        "transition.player_stranded",
+        "transition.committed"
+      ],
+      "id": "transition.fails_mid_switch",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "LINKED profile"
+      ],
+      "proof_artifacts": [
+        "host-log",
+        "screen-recording"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "failure_after_source_hidden",
+        "simulator": "transition"
+      },
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Destination crashes after the source was hidden"
+    },
+    {
+      "actions": [
+        {
+          "action": "portal.enter",
+          "args": {
+            "portal": "portal.sr2.return_portal"
+          }
+        },
+        {
+          "action": "overlay.cancel",
+          "args": {}
+        }
+      ],
+      "area": "TRANSITION",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "transition.started",
+        "transition.rolled_back"
+      ],
+      "expected_state": {
+        "transition.stage": "ROLLED_BACK"
+      },
+      "forbidden_events": [
+        "transition.visible_before_ready",
+        "transition.player_stranded",
+        "transition.committed"
+      ],
+      "id": "transition.cancel_rollback",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run",
+        "LINKED profile"
+      ],
+      "proof_artifacts": [
+        "host-log"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": {
+        "scenario": "cancel_before_commit",
+        "simulator": "transition"
+      },
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Player cancels before commit"
+    },
+    {
+      "actions": [
+        {
+          "action": "net.drop_connection",
+          "args": {
+            "client": "a"
+          }
+        },
+        {
+          "action": "net.send_chat",
+          "args": {
+            "client": "b"
+          }
+        },
+        {
+          "action": "net.reconnect",
+          "args": {
+            "client": "a"
+          }
+        }
+      ],
+      "area": "MULTIPLAYER",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "net.connected",
+        "net.resumed"
+      ],
+      "expected_state": {
+        "server.players": 2
+      },
+      "forbidden_events": [
+        "net.duplicate_applied"
+      ],
+      "id": "net.reconnect",
+      "preconditions": [
+        "hybrid server running",
+        "two clients in different realms"
+      ],
+      "proof_artifacts": [
+        "server-log"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Multiplayer client reconnects and resumes without duplicates"
+    },
+    {
+      "actions": [
+        {
+          "action": "net.join",
+          "args": {
+            "realm": "SR2"
+          }
+        }
+      ],
+      "area": "MULTIPLAYER",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "net.connected",
+        "net.rejected"
+      ],
+      "expected_state": {
+        "client.realm": null
+      },
+      "forbidden_events": [
+        "net.duplicate_applied"
+      ],
+      "id": "net.server_mismatch",
+      "preconditions": [
+        "server requires a content manifest the client lacks"
+      ],
+      "proof_artifacts": [
+        "server-log"
+      ],
+      "realms": [
+        "SR2"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Content mismatch restricts the realm, not membership"
+    },
+    {
+      "actions": [
+        {
+          "action": "content.deploy",
+          "args": {
+            "package": "fixture.tampered"
+          }
+        }
+      ],
+      "area": "DEPLOY",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_RUNTIME_PROOF",
+      "expected_events": [
+        "content.rolled_back"
+      ],
+      "expected_state": {
+        "inventory.unchanged": true
+      },
+      "forbidden_events": [
+        "content.deployed",
+        "content.partial_install"
+      ],
+      "id": "content.package_hash_mismatch",
+      "preconditions": [
+        "Lab copies only; source installs untouched",
+        "native saves backed up and hash-verified before the run"
+      ],
+      "proof_artifacts": [
+        "deploy-journal"
+      ],
+      "realms": [
+        "SR1"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "A tampered artifact is refused before any change"
+    },
+    {
+      "actions": [
+        {
+          "action": "lab.import_model",
+          "args": {
+            "format": "glb"
+          }
+        },
+        {
+          "action": "lab.capture_views",
+          "args": {
+            "angles": "front,back,side,approach"
+          }
+        }
+      ],
+      "area": "CONTENT",
+      "cleanup": [],
+      "evidence": "NEEDS_LOCAL_VISUAL_PROOF",
+      "expected_events": [
+        "content.registered"
+      ],
+      "expected_state": {},
+      "forbidden_events": [
+        "content.partial_install"
+      ],
+      "id": "content.portal_model_visual",
+      "preconditions": [
+        "portal GLB generated by bridge.meshgen"
+      ],
+      "proof_artifacts": [
+        "view-front",
+        "view-back",
+        "view-side",
+        "view-approach"
+      ],
+      "realms": [
+        "SR1",
+        "SR2"
+      ],
+      "rehearsal": null,
+      "rollback_requirements": [],
+      "schema": "bridge-runtime-scenario",
+      "schema_version": 1,
+      "setup": [],
+      "status": "NOT_RUN",
+      "timeout_policy": {
+        "on_timeout": "ROLLBACK",
+        "step_seconds": 300,
+        "total_seconds": 900
+      },
+      "title": "Procedural gateway loads and reads well in both games"
+    }
+  ],
+  "schema": "bridge-runtime-scenario-catalog",
+  "schema_version": 1
+}

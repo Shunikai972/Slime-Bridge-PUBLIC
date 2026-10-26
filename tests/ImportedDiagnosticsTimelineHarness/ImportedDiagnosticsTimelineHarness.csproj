@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8619;CS8620;CS8625;CS8629</WarningsNotAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../mods/sr1-bridge/DiagnosticsTimeline.cs" Link="Production/DiagnosticsTimeline.cs" />
+    <Compile Include="../../mods/shared/RegistrySnapshotFormat.cs" Link="Shared/RegistrySnapshotFormat.cs" />
+    <Compile Include="../../mods/shared/MiniJson.cs" Link="Shared/MiniJson.cs" />
+  </ItemGroup>
+</Project>

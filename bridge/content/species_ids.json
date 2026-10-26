@@ -1,0 +1,13 @@
+{
+ "_comment": "Stable native ids of imported (non-Largo) species, per target game: [species id, plort id] (0 = no plort). Shared by every SlimeBridge install so saves and online play (SRMP) agree on what id 9000xx is. Decides before any previous spec. Never renumber: append only, new species take the next free 10-step slot.",
+ "SR1": {
+  "slime.angler": [900000, 900001], "slime.batty": [900010, 900011], "slime.cotton": [900020, 900021],
+  "slime.flutter": [900030, 900031], "slime.ringtail": [900040, 900041], "slime.shadow": [900050, 900051],
+  "slime.sloomber": [900060, 900061], "slime.twin": [900070, 900071], "slime.yolky": [900080, 900081],
+  "slime.hyper": [900090, 900091]
+ },
+ "SR2": {
+  "slime.glitch": [900000, 0], "slime.glitch_tarr": [900010, 0], "slime.mosaic": [900020, 900021],
+  "slime.quantum": [900030, 900031], "slime.quicksilver": [900040, 0], "slime.rad": [900050, 900051]
+ }
+}

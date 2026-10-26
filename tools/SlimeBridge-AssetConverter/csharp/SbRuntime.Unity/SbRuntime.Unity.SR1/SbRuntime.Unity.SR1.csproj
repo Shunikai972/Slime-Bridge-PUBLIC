@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- SR1 (Unity 2019.4, Mono, SRML): compiled against the game's own UnityEngine assemblies (read-only references). -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>SbRuntime.Unity.SR1</AssemblyName>
+    <RootNamespace>SbRuntime.UnityBuild</RootNamespace>
+    <!-- Point at any SR1 install's SlimeRancher_Data\Managed folder: -p:SR1Managed=... -->
+    <SR1Managed Condition="'$(SR1Managed)' == ''">$(MSBuildThisFileDirectory)..\..\..\..\..\Lab\Games\SR1\SlimeRancher_Data\Managed</SR1Managed>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\*.cs" />
+    <ProjectReference Include="..\..\SbRuntime.Core\SbRuntime.Core.csproj" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(SR1Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(SR1Managed)\UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(SR1Managed)\UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

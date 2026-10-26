@@ -1,0 +1,56 @@
+{
+  "case": "loader_mismatch",
+  "description": "SRML is the SR1 loader; an SRML manifest cannot claim SR2.",
+  "evidence": null,
+  "expect": {
+    "classification": null,
+    "diagnostic_codes": [
+      "MANIFEST_LOADER_REALM_MISMATCH"
+    ],
+    "parse": "REJECTED",
+    "portability": null,
+    "rule": null,
+    "unit_status": null
+  },
+  "input": {
+    "document": {
+      "authors": [
+        "Fixture Author"
+      ],
+      "dependencies": [],
+      "files": [],
+      "game_versions": [],
+      "id": "fixture.loader_mismatch",
+      "load_after": [],
+      "load_before": [],
+      "loader": "SRML",
+      "name": "Fixture Loader Mismatch",
+      "native_id": "fixture.loader_mismatch",
+      "provides_assemblies": [],
+      "realm": "SR2",
+      "schema": "bridge-mod-manifest",
+      "schema_version": 1,
+      "source": {
+        "kind": "PROVIDER",
+        "path": null,
+        "provider_id": "fixture.mod-provider",
+        "ref": "fixture/fixture.loader_mismatch",
+        "synthetic": true
+      },
+      "version": {
+        "parts": [
+          1,
+          0,
+          0
+        ],
+        "text": "1.0.0"
+      }
+    },
+    "files": [],
+    "format": "BRIDGE_MANIFEST",
+    "raw_text": null,
+    "source": null
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

@@ -1,0 +1,34 @@
+# Never commit proprietary extractions, caches, outputs, game files or the venv.
+.venv/
+__pycache__/
+*.py[cod]
+/output/
+/work/
+/cache/
+/logs/
+*.glb
+*.gltf
+*.png
+*.jpg
+*.tga
+*.dds
+*.wav
+*.ogg
+*.fbx
+*.obj
+*.bundle
+*.assets
+*.resS
+*.resource
+*.unity3d
+*.assetbundle
+*.bin
+*.dll
+*.exe
+.env
+
+# build outputs and scratch dirs
+output*/
+**/bin/
+**/obj/
+*.sbmesh

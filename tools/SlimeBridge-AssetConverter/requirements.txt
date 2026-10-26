@@ -1,0 +1,7 @@
+# Core extraction engine (MIT) and numeric/image helpers. Pinned to the versions validated on this machine.
+UnityPy==1.25.4
+numpy>=2.0
+Pillow>=11
+pygltflib>=1.16
+texture2ddecoder>=1.0
+PyYAML>=6.0

@@ -1,0 +1,36 @@
+{
+  "schema": "cloud-fixture-v1",
+  "synthetic": true,
+  "cases": [
+    {
+      "id": "missing-assets",
+      "remove_assets": [
+        "mesh.test"
+      ],
+      "expected": "QUARANTINED"
+    },
+    {
+      "id": "unknown-behaviour",
+      "add_capability": "fixture.unknown.teleport",
+      "expected": "PENDING_ADAPTER"
+    },
+    {
+      "id": "new-game-build",
+      "source_build": "fixture-build-b2",
+      "expected": "CACHE_MISS"
+    },
+    {
+      "id": "future-schema",
+      "schema": "cloud-fixture-v999",
+      "expected": "REJECT_OR_EXPLICIT_MIGRATION"
+    },
+    {
+      "id": "cycle",
+      "add_edge": [
+        "mesh.test",
+        "prefab.test"
+      ],
+      "expected": "DETERMINISTIC_CYCLE_REPORT"
+    }
+  ]
+}

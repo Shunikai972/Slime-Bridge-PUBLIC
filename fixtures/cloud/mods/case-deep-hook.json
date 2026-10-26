@@ -1,0 +1,127 @@
+{
+  "case": "deep_hook",
+  "description": "SR2 Melon with native detours, a P/Invoke module and function-pointer hooks.",
+  "evidence": {
+    "code": {
+      "assemblies": [
+        {
+          "assembly_name": "FixtureDeepHook",
+          "path": "Mods/FixtureDeepHook.dll",
+          "sha256": "9232ffdbb579d2b9aa06a22cd9bae8d0ee0a95fbc5551d59195a6a3c9f9e949d",
+          "size": 4096
+        }
+      ]
+    },
+    "config_files": [],
+    "content": {
+      "asset_bundles": [],
+      "content_files": [],
+      "content_ids": []
+    },
+    "extractor": {
+      "id": "fixture.static-extractor",
+      "version": "1.0.0"
+    },
+    "harmony": {
+      "patch_all_calls": 0,
+      "patches": []
+    },
+    "il2cpp": {
+      "il2cpp_type_references": 3,
+      "interop_references": true,
+      "type_injection": false
+    },
+    "manifest_id": null,
+    "mod_id": "fixture.deep_hook",
+    "native": {
+      "detour_indicators": [
+        "inline_detour",
+        "page_protection_change"
+      ],
+      "function_pointer_hooks": true,
+      "pinvoke_modules": [
+        "fixture_native_hook"
+      ]
+    },
+    "references": [
+      {
+        "assembly": "MelonLoader",
+        "members": [
+          "MelonLoader.MelonMod::.ctor",
+          "MelonLoader.MelonMod::OnInitializeMelon"
+        ],
+        "types": [
+          "MelonLoader.MelonMod"
+        ]
+      }
+    ],
+    "reflection": {
+      "dynamic_invoke": false,
+      "emit": false,
+      "non_public_access": false,
+      "type_lookup_by_name": false
+    },
+    "schema": "bridge-mod-static-evidence",
+    "schema_version": 1,
+    "synthetic": true
+  },
+  "expect": {
+    "classification": "NATIVE_DEEP_PATCH",
+    "diagnostic_codes": [],
+    "parse": "OK",
+    "portability": {
+      "SR1": "NOT_PORTABLE",
+      "SR2": "PORTABLE"
+    },
+    "rule": "R1",
+    "unit_status": {
+      "SR1": "QUARANTINED",
+      "SR2": "QUARANTINED"
+    }
+  },
+  "input": {
+    "document": {
+      "additional_files": [],
+      "assembly": {
+        "file": {
+          "path": "Mods/FixtureDeepHook.dll",
+          "sha256": "9232ffdbb579d2b9aa06a22cd9bae8d0ee0a95fbc5551d59195a6a3c9f9e949d",
+          "size": 4096
+        },
+        "name": "FixtureDeepHook",
+        "target_framework": "net6.0"
+      },
+      "declared_id": "fixture.deep_hook",
+      "dependencies": [],
+      "extractor": {
+        "id": "fixture.melon-attribute-reader",
+        "version": "1.0.0"
+      },
+      "game_versions": [
+        "0.6.2"
+      ],
+      "melon_games": [
+        {
+          "developer": "MonomiPark",
+          "name": "SlimeRancher2"
+        }
+      ],
+      "melon_info": {
+        "author": "Fixture Author",
+        "name": "Fixture Deep Hook",
+        "type_name": "Fixture.FixtureDeepHook.Entry",
+        "version": "0.3.0"
+      },
+      "platform_domain": "IL2CPP",
+      "schema": "bridge-melon-metadata",
+      "schema_version": 1,
+      "synthetic": true
+    },
+    "files": [],
+    "format": "MELON_METADATA",
+    "raw_text": null,
+    "source": null
+  },
+  "schema": "bridge-mod-fixture-case",
+  "schema_version": 1
+}

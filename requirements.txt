@@ -1,0 +1,15 @@
+# Everything the launcher, BridgeHost and the extractor need (Install-SlimeBridge.cmd installs it into .venv).
+# Python 3.12 (64-bit). Versions are the ones SlimeBridge is tested with.
+
+# Launcher window (uses the Microsoft Edge WebView2 runtime that ships with Windows 10/11)
+pywebview==6.2
+
+# Reading your own Slime Rancher 1 / 2 installs (nothing is ever shipped or uploaded)
+UnityPy==1.25.4
+TypeTreeGeneratorAPI==0.0.10
+dnfile==0.18.0
+texture2ddecoder>=1.0.5
+numpy>=2.0
+Pillow>=11
+pygltflib>=1.16
+PyYAML>=6.0

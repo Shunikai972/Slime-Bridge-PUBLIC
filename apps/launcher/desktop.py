@@ -195,6 +195,41 @@ class LauncherAPI:
         state['repairable'] = sum(c['missing'] for c in integrity.repair_candidates(game, root)) if state['missing_count'] else 0
         return state
 
+    def update_check(self) -> dict:
+        """Is there a newer release on GitHub? {'current','latest','update','frozen'}."""
+        from apps.launcher import updater
+        try:
+            return {'ok': True, **updater.check()}
+        except updater.UpdateError as exc:
+            return {'ok': False, 'error': exc.code, 'detail': exc.detail}
+
+    def update_apply(self) -> dict:
+        """Download + verify the latest standalone build, then restart into it (the window closes, the new one opens)."""
+        from apps.launcher import updater
+        if any(self._launcher.running(r) for r in ('SR1', 'SR2')):
+            return {'ok': False, 'error': 'GAME_RUNNING'}
+        try:
+            ready = updater.prepare()
+            helper = updater.restart_into(ready['folder'])
+        except updater.UpdateError as exc:
+            return {'ok': False, 'error': exc.code, 'detail': exc.detail}
+        import threading
+
+        def _quit():
+            import time
+            time.sleep(1.0)                    # let the page show "restarting"
+            try:
+                self.shutdown()
+            finally:
+                if self._window is not None:
+                    try:
+                        self._window.destroy()
+                    except Exception:  # noqa: BLE001
+                        pass
+                os._exit(0)
+        threading.Thread(target=_quit, daemon=True).start()
+        return {'ok': True, 'version': ready['version'], **helper}
+
     def diagnostics(self) -> dict:
         """Plain-text report of everything that matters (Debug page, 'Copy' button). Read-only."""
         from apps.launcher import diagnostics

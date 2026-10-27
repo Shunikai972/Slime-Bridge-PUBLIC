@@ -114,6 +114,8 @@
     async loader_install() { return { ok: true, state: 'installed' }; },
     async game_repair() { return { ok: true }; },
     async diagnostics() { return { ok: true, text: 'SlimeBridge diagnostic (demo)' }; },
+    async update_check() { return { ok: true, current: '0.1.5', latest: '0.1.5', update: false, frozen: true }; },
+    async update_apply() { return { ok: true, version: '0.1.5' }; },
     async sanctuary_state() { return sanctState(); },
     async sanctuary_status() { return { ok: true, job: S.sanct.job ? { ...S.sanct.job } : null }; },
     async sanctuary_build() {

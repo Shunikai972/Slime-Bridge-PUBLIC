@@ -72,6 +72,10 @@
   <div class="page-title"><h1>${t('nav.options')}</h1><p>${t('opt.sub')}</p></div>
   <div class="grid cols-2 opt-cols">
     <div class="stack">
+      <section class="panel"><h2>${t('upd.title')}</h2>
+        <div class="setting"><div><div class="name">${t('upd.current', { v: (L.update && L.update.current) || '…' })}</div><div class="desc">${L.update ? (L.update.ok === false ? t('upd.offline') : (L.update.update ? t('upd.available', { v: L.update.latest }) : t('upd.uptodate'))) : t('upd.d')}</div></div>
+        ${L.update && L.update.update ? `<button class="btn btn--bridge" data-act="update-apply">${t('upd.apply', { v: L.update.latest })}</button>` : `<button class="btn" data-act="update-check">${t('upd.check')}</button>`}</div>
+      </section>
       <section class="panel"><h2>${t('opt.launcher')}</h2>
         <div class="setting"><div class="name">${t('opt.language')}</div>${segment('pref', 'language', P.language, [['auto', 'Auto'], ['en', 'English'], ['fr', 'Français']])}</div>
         <div class="setting"><div><div class="name">${t('opt.perf')}</div><div class="desc">${t('opt.perf_d')}</div></div>${segment('pref', 'performance', P.performance || 'off', [['off', t('opt.perf_off')], ['balanced', t('opt.perf_balanced')], ['fast', t('opt.perf_fast')]])}</div>

@@ -10,6 +10,9 @@ whose title matches `VERSION`.
   detected and selected games, missing game files and repair archives, mod loader, plugin, online, the SR2 code schema,
   island, MelonLoader and game logs, antivirus detections touching a Slime folder, network, last extraction log) and
   gives a text to copy and send. Read-only.
+- Updates: Settings > Updates checks the latest GitHub release (also at start-up) and "Update and restart" downloads
+  the standalone build, verifies it against the release's SHA256SUMS.txt, replaces the program files (your data in
+  Lab/ is kept) and reopens the launcher. `SlimeBridge.exe --self-update` does the same from a terminal.
 - Linux build: every published release also gets `SlimeBridge-vX.Y.Z-linux-x64-standalone.tar.gz`, built on GitHub
   Actions. The launcher window uses GTK/WebKit there and Steam libraries under `~/.steam` / Flatpak are searched.
 

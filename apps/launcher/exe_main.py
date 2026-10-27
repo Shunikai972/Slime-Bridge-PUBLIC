@@ -63,6 +63,17 @@ def main() -> None:
         sys.argv = [module] + sys.argv[3:]
         runpy.run_module(module, run_name='__main__', alter_sys=True)
         return
+    if len(sys.argv) >= 2 and sys.argv[1] == '--self-update':
+        # same as the Settings button: download + verify the latest release, then restart into it
+        from apps.launcher import updater
+        state = updater.check()
+        if not state['update']:
+            print(f"up to date ({state['current']})")
+            return
+        ready = updater.prepare()
+        updater.restart_into(ready['folder'])
+        print(f"updating to {ready['version']}")
+        return
     if len(sys.argv) >= 2 and sys.argv[1] == '--selfcheck':
         from apps.launcher import selfcheck
         sys.exit(0 if selfcheck.run() else 1)

@@ -297,6 +297,8 @@
     pref: async (a, el) => { await safe(() => api.set_preference(a, el.dataset.v)); await refresh(); renderChars(); },
     'pref-bool': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') !== 'true')); await refresh(); },
     'pref-bool-inv': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') === 'true')); await refresh(); },
+    'update-check': async () => { L.update = await safe(() => api.update_check()); renderView(true); if (L.update && L.update.ok && !L.update.update) toast(t('upd.uptodate'), 'good'); },
+    'update-apply': async () => { if (L.update && L.update.frozen === false) { toast(t('upd.source'), 'warn'); return; } toast(t('upd.busy'), 'info'); const r = await safe(() => api.update_apply()); if (r && r.ok) toast(t('upd.restarting', { v: r.version }), 'good'); else toast(t('upd.err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
     'diag-run': async () => { L.diag = { busy: true, text: '' }; renderView(true); const r = await safe(() => api.diagnostics()); L.diag = { busy: false, text: r && r.text ? r.text : t('diag.failed') }; renderView(true); },
     'diag-copy': async () => { const text = (L.diag && L.diag.text) || ''; try { await navigator.clipboard.writeText(text); toast(t('diag.copied'), 'good'); } catch (e) { const ta = $('#diag-text'); if (ta) { ta.select(); document.execCommand('copy'); toast(t('diag.copied'), 'good'); } } },
     'game-repair': async a => { toast(t('games.repair_busy'), 'info'); const r = await safe(() => api.game_repair(a)); if (r && r.ok) { toast(t('games.repair_done'), 'good'); await refresh(); } else toast(t('games.repair_err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
@@ -345,6 +347,7 @@
     if (!S) return; splash.progress(38, t('boot.2')); applyPrefs();
     const first = !localStorage.getItem('sb.detected');
     if (!S.installations.length && first) { try { await api.autodetect(); } catch (e) { /* shown on the Games page */ } localStorage.setItem('sb.detected', '1'); S = await api.get_state(); }
+    safe(() => api.update_check()).then(u => { if (u && u.ok) { L.update = u; if (u.update) toast(t('upd.available', { v: u.latest }) + ' — ' + t('nav.options'), 'info'); } });
     splash.progress(62, t('boot.3'));
     const initial = location.hash.replace('#/', ''); if (SB.pages[initial]) page = initial;
     splash.progress(78, t('boot.4'));

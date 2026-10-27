@@ -3,6 +3,18 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.1.2] - 2026-10-27
+
+### Fixed
+- Game detection and manual folder selection for Slime Rancher 2:
+  - Auto-detection now scans Windows redirected shell folders (`Downloads`, `Desktop`, `Documents`, `Games`, `Jeux`) and
+    user folders on secondary drives, as well as nested archive wrapper folders (`Slime.Rancher.2.v1.3.0/.../Slime Rancher 2`).
+  - Manual folder selection now prioritizes Slime Rancher folders inside crowded parent folders (such as `Downloads`),
+    recognizes the game when a subfolder (`SlimeRancher2_Data`, `D3D12`, etc.) is selected, and immediately sets the
+    chosen folder as the active installation for that game.
+  - Recognized Slime Rancher 2 1.3.0 (`Unity 6000.0.73f1`) in `SlimeBridge-AssetConverter` and seeded the shipped
+    species import specs automatically when running extraction on a fresh install.
+
 ## [0.1.1] - 2026-10-26
 
 ### Fixed

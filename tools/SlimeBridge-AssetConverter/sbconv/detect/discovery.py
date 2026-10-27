@@ -35,18 +35,26 @@ def _is_root(path, game):
 
 def find_game_root(path, game, max_depth=5):
     """Return the real game root at/below ``path`` (it may be a wrapper folder, e.g. an archive
-    extraction directory holding the install several levels down), or None."""
+    extraction directory holding the install several levels down, or a subfolder inside the game root), or None."""
     base = Path(path)
+    if base.is_file():
+        base = base.parent
     if not base.is_dir():
         return None
     if _is_root(base, game):
         return str(base)
+    for parent in list(base.parents)[:2]:
+        if _is_root(parent, game):
+            return str(parent)
     frontier = [base]
     for _ in range(max_depth):
         nxt = []
         for d in frontier:
             try:
-                kids = [k for k in d.iterdir() if k.is_dir()]
+                kids = sorted(
+                    (k for k in d.iterdir() if k.is_dir()),
+                    key=lambda k: (0 if 'slime' in k.name.casefold() else 1, k.name.casefold()),
+                )
             except OSError:
                 continue
             for k in kids:
@@ -169,8 +177,24 @@ def _epic_candidates():
 def default_search_roots():
     roots = [p for p in os.environ.get('SBCONV_SEARCH_PATHS', '').split(os.pathsep) if p]
     home = Path.home()
-    roots += [str(home / sub) for sub in ('Desktop', 'Downloads', 'Games')]
-    return roots
+    roots += [str(home / sub) for sub in ('Desktop', 'Downloads', 'Games', 'Jeux', 'Bureau')]
+    if os.name == 'nt':
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                r'Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders') as k:
+                for name in ('Desktop', 'Personal', '{374DE290-123F-4565-9164-39C4925E467B}',
+                             '{7D83EE9B-2244-4E70-B1F5-5393042AF1E4}'):
+                    try:
+                        folder = Path(os.path.expandvars(str(winreg.QueryValueEx(k, name)[0])))
+                        roots.append(str(folder))
+                        for sib in ('Games', 'Jeux', 'Downloads', 'Desktop', 'Bureau'):
+                            roots.append(str(folder.parent / sib))
+                    except OSError:
+                        continue
+        except (ImportError, OSError):
+            pass
+    return list(dict.fromkeys(roots))
 
 
 def _search_root_candidates(roots, max_depth=6):

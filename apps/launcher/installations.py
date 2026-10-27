@@ -34,7 +34,10 @@ def discover_manual(path: str | Path, store: str = 'manual') -> GameInstallation
             continue
         if game == 'SR1' and (data / 'Managed' / 'Assembly-CSharp.dll').is_file():
             return GameInstallation(game, root.resolve(), exe.resolve(), store, 'mono')
-        if game == 'SR2' and (root / 'GameAssembly.dll').is_file() and (data / 'il2cpp_data' / 'Metadata' / 'global-metadata.dat').is_file():
+        if game == 'SR2' and (root / 'GameAssembly.dll').is_file() and (
+            (data / 'il2cpp_data' / 'Metadata' / 'global-metadata.dat').is_file()
+            or (data / 'globalgamemanagers').is_file()
+        ):
             return GameInstallation(game, root.resolve(), exe.resolve(), store, 'il2cpp')
     return None
 

@@ -181,7 +181,8 @@ class LauncherAPI:
         paths = data['manual_paths']
         if str(item.root).casefold() not in {str(p).casefold() for p in paths}:
             paths.append(str(item.root))
-            self._save(data)
+        data['selected'][item.game] = str(item.root)
+        self._save(data)
         return self._installation_info(item)
 
     def select_manual(self, kind: str = 'folder') -> dict | None:
@@ -215,7 +216,7 @@ class LauncherAPI:
             raise ValueError('realm must be SR1 or SR2')
         data = self._load()
         def keep(path):
-            item = discover_manual(path)
+            item = discover_manual(path) or detect.resolve_install(path)
             return item is None or item.game != realm
         data['manual_paths'] = [p for p in data['manual_paths'] if keep(p)]
         data['detected_paths'] = [p for p in data['detected_paths'] if keep(p)]
@@ -232,15 +233,27 @@ class LauncherAPI:
     def _primary(self, realm: str):
         rows = [r for r in self._installations() if r['game'] == realm]
         data = self._load()
-        chosen = [r for r in rows if r['root'] == data['selected'].get(realm)]
+        selected_root = str(data['selected'].get(realm) or '').casefold()
+        chosen = [r for r in rows if str(r['root']).casefold() == selected_root] if selected_root else []
         wanted_role = 'lab' if data['prefer_lab'] else 'source'
-        return next(iter(chosen or [r for r in rows if r['role'] == wanted_role] or rows), None)
+        manual_roots = {str(Path(p).resolve()).casefold() for p in data['manual_paths']}
+        role_rows = [r for r in rows if r['role'] == wanted_role] or rows
+        role_rows = sorted(
+            role_rows,
+            key=lambda r: (
+                0 if str(r['root']).casefold() in manual_roots else 1,
+                0 if (realm != 'SR2' or (Path(r['root']) / 'SlimeRancher2_Data' / 'StreamingAssets' / 'aa' / 'catalog.bin').is_file()) else 1,
+            ),
+        )
+        return next(iter(chosen or role_rows), None)
 
     def choose_install(self, realm: str, root: str) -> dict:
-        if realm not in EXECUTABLES or not any(r['root'] == root and r['game'] == realm for r in self._installations()):
+        matched = next((r['root'] for r in self._installations()
+                        if r['game'] == realm and str(r['root']).casefold() == str(root).casefold()), None)
+        if realm not in EXECUTABLES or matched is None:
             raise ValueError('unknown installation')
         data = self._load()
-        data['selected'][realm] = root
+        data['selected'][realm] = matched
         self._save(data)
         return {'ok': True}
 

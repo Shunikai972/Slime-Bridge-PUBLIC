@@ -78,6 +78,18 @@ class DetectTests(unittest.TestCase):
             (fake / 'SlimeRancher.exe').write_bytes(b'')   # no Unity runtime files
             self.assertEqual(detect.auto_detect(drives=[Path(tmp)], registry=False, epic_manifest_dir=Path(tmp) / 'x'), [])
 
+    def test_finds_sr2_in_user_downloads_wrapper_and_crowded_parent_or_data_subfolder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            drive = Path(tmp)
+            downloads = drive / 'Player' / 'Downloads'
+            for i in range(450):
+                (downloads / f'aaa_other_{i:03d}' / 'sub').mkdir(parents=True)
+            sr2 = make_sr2(downloads / 'Slime.Rancher.2.v1.3.0' / 'Slime.Rancher.2.v1.3.0' / 'Slime Rancher 2')
+            found = detect.auto_detect(drives=[drive], registry=False, epic_manifest_dir=drive / 'no-epic')
+            self.assertEqual([(i.game, i.root) for i in found], [('SR2', sr2.resolve())])
+            self.assertEqual(detect.resolve_install(downloads).root, sr2.resolve())
+            self.assertEqual(detect.resolve_install(sr2 / 'SlimeRancher2_Data').root, sr2.resolve())
+
 
 class FakeProc:
     def __init__(self, alive=True):

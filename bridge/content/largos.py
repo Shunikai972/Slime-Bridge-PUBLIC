@@ -82,6 +82,10 @@ def imported_species(spec_path: Path | None = None) -> set[str]:
 def _newest_species_spec() -> Path | None:
     """Newest spec of the species themselves (the ones the Largo generator has not appended to)."""
     specs = [p for p in sorted(SPEC_ROOT.glob('*/' + SPEC_FILE)) if not p.parent.name.endswith('-largos')]
+    if not specs:
+        from bridge.content import spec_seed
+        spec_seed.ensure_specs(REPO_ROOT)
+        specs = [p for p in sorted(SPEC_ROOT.glob('*/' + SPEC_FILE)) if not p.parent.name.endswith('-largos')]
     return specs[-1] if specs else None
 
 

@@ -427,7 +427,8 @@ class BuiltinExtractJob:
             self._log(f'SR2 spec not published: {type(exc).__name__}: {exc}')
 
     def _work(self):
-        from bridge.content import species_pipeline as pipeline
+        from bridge.content import spec_seed, species_pipeline as pipeline
+        spec_seed.ensure_specs(REPO_ROOT)
         self._set(status='RUNNING', started=time.time())
         try:
             self._set(phase='list', phase_label='Counting species', progress=0.02)

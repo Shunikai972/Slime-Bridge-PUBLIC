@@ -33,6 +33,22 @@
         "SlimeRancher2_Data/il2cpp_data/Metadata/global-metadata.dat": "50962da11e0f533c742335d2931f9b0f100883660a4be1c385e30c2c841aefe9"
       },
       "game_version_reported": "0.6.2 [20250115013847-97426]"
+    },
+    {
+      "game": "SR2",
+      "unity_version": "6000.0.73f1",
+      "backend": "il2cpp",
+      "game_version": "1.3.0",
+      "validated": [
+        "detect"
+      ],
+      "fingerprint": {
+        "SlimeRancher2.exe": "fb186f4b9d02a47817a0c1d8e7581d7b9a6b77d65e034355f39dae138e61fc28",
+        "UnityPlayer.dll": "767cfd330d75ca990e44c315a1ddc59395da9fd931030353512120197f643067",
+        "GameAssembly.dll": "786006ede0d198f6e15a2c01f90ef9108afe694745fa0ad894e1c3ed342385b7",
+        "SlimeRancher2_Data/il2cpp_data/Metadata/global-metadata.dat": "117934823ff9d62f2583b0bd11f26789eddb5aa334cc18018653e80c8cad4f82"
+      },
+      "game_version_reported": "1.3.0"
     }
   ]
 }

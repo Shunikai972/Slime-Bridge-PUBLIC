@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from apps.launcher.detect import resolve_install
 from apps.launcher.installations import discover_manual, discover_stores
 
 
@@ -13,7 +14,7 @@ KNOWN_MANUAL_SR2 = Path(os.environ['SLIMEBRIDGE_SR2_DIR']) if os.environ.get('SL
 def available_installations(manual_paths=()):
     candidates = {(item.game, item.root): item for item in discover_stores()}
     for path in manual_paths:
-        item = discover_manual(path)
+        item = discover_manual(path) or resolve_install(path)
         # Manually re-selecting a store install must not erase its Steam/Epic provenance.
         if item is not None and (item.game, item.root) not in candidates:
             candidates[(item.game, item.root)] = item

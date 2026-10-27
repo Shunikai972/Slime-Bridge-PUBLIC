@@ -39,6 +39,10 @@ COMPLETE_MARKERS = ('icon-descriptor.json', 'source-animation-provenance.json', 
 # ---------------------------------------------------------------------------------------------------------------- roster
 def newest_spec(spec_root: Path = SPEC_ROOT) -> Path | None:
     specs = sorted(Path(spec_root).glob('*/import-spec-SR1.json'))
+    if not specs and Path(spec_root) == SPEC_ROOT:
+        from bridge.content import spec_seed
+        spec_seed.ensure_specs(REPO_ROOT)
+        specs = sorted(Path(spec_root).glob('*/import-spec-SR1.json'))
     return specs[-1] if specs else None
 
 

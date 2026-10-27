@@ -588,7 +588,7 @@ class LauncherAPI:
         return {'ok': True, 'job': job.snapshot()}
 
     def extract_status(self) -> dict:
-        return {'ok': True, 'job': self._extract.snapshot() if self._extract else None}
+        return {'ok': True, 'job': self._extract.snapshot(log_tail=200) if self._extract else None}
 
     def extract_cancel(self) -> dict:
         if self._extract is not None:

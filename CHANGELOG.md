@@ -17,6 +17,9 @@ whose title matches `VERSION`.
   Actions. The launcher window uses GTK/WebKit there and Steam libraries under `~/.steam` / Flatpak are searched.
 
 ### Fixed
+- "Details" under an extraction (and the download / island boxes) did not open: the box is redrawn several
+  times a second while a job runs and closed it again. Opened sections now stay open and follow the newest lines
+  (last 200 instead of 40).
 - The island (sanctuary + portal) was "not present" on every PC but the developer's: its kit (a description of native
   Slime Rancher objects - names and positions, no game data) now ships with SlimeBridge, so the island is built on the
   player's PC and installed with the SR1 plugin and before Play.

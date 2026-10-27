@@ -100,9 +100,16 @@
   function renderRibbon() {
     $('#ribbon').innerHTML = `<span class="txt">${t('ribbon.a')}<a data-act="open-url" data-arg="${FAN_POLICY}">${t('ribbon.link')}</a>${t('ribbon.b')}</span>`;
   }
+  // polling redraws boxes several times a second: keep opened <details> (logs...) open and their text where it was
+  function redraw(el, html) {
+    const key = (d, i) => d.dataset.key || d.className + ':' + i, opened = new Map();
+    $$('details', el).forEach((d, i) => { if (d.open) { const pre = d.querySelector('pre'); opened.set(key(d, i), pre ? { top: pre.scrollTop, end: pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4 } : {}); } });
+    el.innerHTML = html;
+    if (opened.size) $$('details', el).forEach((d, i) => { const s = opened.get(key(d, i)); if (!s) return; d.open = true; const pre = d.querySelector('pre'); if (pre) pre.scrollTop = s.end ? pre.scrollHeight : s.top; });
+  }
   function renderView(keep) {
     const root = $('#view'), top = root.scrollTop, def = SB.pages[page];
-    root.innerHTML = def.render(S);
+    if (keep) redraw(root, def.render(S)); else root.innerHTML = def.render(S);
     root.scrollTop = keep ? top : 0;
     SB.net.hydrate(root);
     renderSide(); renderDock();
@@ -185,7 +192,7 @@
       const r = await api.extract_status().catch(() => null);
       if (r && r.job) {
         const was = job0.status; L.assets.job = r.job; renderDock();
-        const box = $('#jobbox'); if (box) box.innerHTML = SB.jobBox(r.job);
+        const box = $('#jobbox'); if (box) redraw(box, SB.jobBox(r.job));
         if (was !== r.job.status && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'assets') renderView(true); if (r.job.status === 'DONE') { toast(t('assets.done'), 'good'); confetti($('.play') || document.body, 26); } }
       }
     }
@@ -193,7 +200,7 @@
     if (dl0 && ['RUNNING', 'QUEUED'].includes(dl0.status)) {
       const r = await api.models_state().catch(() => null);
       if (r) {
-        L.models = r; renderDock(); const box = $('#dlbox'); if (box && r.download) box.innerHTML = SB.dlBox(r.download);
+        L.models = r; renderDock(); const box = $('#dlbox'); if (box && r.download) redraw(box, SB.dlBox(r.download));
         if (r.download && dl0.status !== r.download.status && !['RUNNING', 'QUEUED'].includes(r.download.status)) { if (page === 'models') renderView(true); if (r.download.status === 'DONE') toast(t('models.done'), 'good'); }
       }
     }
@@ -201,7 +208,7 @@
     if (sj0 && ['RUNNING', 'QUEUED'].includes(sj0.status)) {
       const r = await api.sanctuary_state().catch(() => null);
       if (r) {
-        L.sanct = r; const box = $('#sanctbox'); if (box) box.innerHTML = SB.sanctBox(r);
+        L.sanct = r; const box = $('#sanctbox'); if (box) redraw(box, SB.sanctBox(r));
         if (r.job && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'assets') renderView(true); toast(r.job.status === 'DONE' ? t('sanct.done') : (r.job.error || t('sanct.failed')), r.job.status === 'DONE' ? 'good' : 'bad'); if (r.job.status === 'DONE') confetti($('.sanct') || document.body, 24); }
       }
     }

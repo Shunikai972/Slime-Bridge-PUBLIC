@@ -48,8 +48,8 @@
       if (c.skipped_ram) out += `<p class="warn">${t('assets.skipped_ram', { n: c.skipped_ram.count })}</p>`;
       if (specs.length) out += `<p class="faint small">${t('assets.spec_ok', { n: specs.reduce((a, x) => a + (x.largos || 0), 0) })}</p>`;
     }
-    const logs = (job.logs || []).slice(-40);
-    out += `<details class="logs"><summary>${t('assets.log')} (${logs.length})</summary><pre class="mono">${esc(logs.join('\n'))}</pre></details>`;
+    const logs = (job.logs || []).slice(-200);
+    out += `<details class="logs" data-key="extract-logs"><summary>${t('assets.log')} (${logs.length})</summary><pre class="mono">${esc(logs.join('\n'))}</pre></details>`;
     return bar + out;
   }
   const phaseLabel = job => (['DONE', 'FAILED', 'CANCELLED'].includes(job.status) ? t('job.' + job.status) : null) || ({ list: t('job.list'), convert: t('job.convert'), verify: t('job.verify'), export: t('job.export') }[job.phase] || t('job.starting'));

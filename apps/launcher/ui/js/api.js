@@ -113,6 +113,7 @@
     async plugin_install() { return { ok: true, state: 'current' }; },
     async loader_install() { return { ok: true, state: 'installed' }; },
     async game_repair() { return { ok: true }; },
+    async diagnostics() { return { ok: true, text: 'SlimeBridge diagnostic (demo)' }; },
     async sanctuary_state() { return sanctState(); },
     async sanctuary_status() { return { ok: true, job: S.sanct.job ? { ...S.sanct.job } : null }; },
     async sanctuary_build() {

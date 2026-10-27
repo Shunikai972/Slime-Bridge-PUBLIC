@@ -1,0 +1,46 @@
+name: Linux build
+
+# Each published release gets a Linux build of the launcher, attached to the same release.
+# The Slime Rancher plugins are platform-independent .NET files: they come from the release's own source zip.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build (e.g. v0.1.5)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: System libraries for the launcher window (GTK + WebKit)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgirepository1.0-dev libcairo2-dev pkg-config gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+      - name: Python packages
+        run: python -m pip install -r requirements.txt "pyinstaller>=6.10" "PyGObject<3.51"
+      - name: Plugins from the release
+        run: |
+          VER="${TAG#v}"
+          gh release download "$TAG" -p "SlimeBridge-$TAG-win64.zip" -D /tmp/release
+          unzip -q "/tmp/release/SlimeBridge-$TAG-win64.zip" -d /tmp/release/src
+          mkdir -p "dist/SlimeBridge-v$VER"
+          cp -r /tmp/release/src/SlimeBridge/plugins "dist/SlimeBridge-v$VER/plugins"
+      - name: Build
+        run: python -m tools.release.build_exe
+      - name: Attach to the release
+        run: gh release upload "$TAG" "dist/SlimeBridge-$TAG-linux-x64-standalone.tar.gz" --clobber

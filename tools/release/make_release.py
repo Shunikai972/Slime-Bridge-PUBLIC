@@ -170,6 +170,8 @@ def notes(ver):
     body = match.group(1).strip() if match else 'See CHANGELOG.md.'
     return (f'{body}\n\n### Install\n1. Download `SlimeBridge-v{ver}-win64-standalone.zip` (or the source zip `SlimeBridge-v{ver}-win64.zip`), '
             'extract it to a normal folder (not Program Files).\n'
+            '   Linux: `SlimeBridge-v' + ver + '-linux-x64-standalone.tar.gz` (attached a few minutes after the release), '
+            'then run `SlimeBridge/SlimeBridge`.\n'
             '2. Run `SlimeBridge.exe` from the standalone zip (everything inside), or from the source zip run '
             '`Install-SlimeBridge.cmd` once, then `SlimeBridge.cmd`.\n'
             '3. Full guide: README.md (section *Installation*).\n\n'

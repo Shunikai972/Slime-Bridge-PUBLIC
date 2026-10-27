@@ -123,6 +123,16 @@
     });
   }
 
-  SB.pages = Object.assign(SB.pages || {}, { multiplayer: { render: multiplayer }, options: { render: options }, about: { render: about } });
+  function debug(S) {
+    const D = SB.local.diag || {};
+    return `<section class="page">
+  <div class="page-title"><h1>${t('nav.debug')}</h1><p>${t('diag.sub')}</p></div>
+  <div class="card"><div class="row"><button class="btn btn--bridge" data-act="diag-run" ${D.busy ? 'disabled' : ''}>${D.busy ? t('diag.running') : t('diag.run')}</button>
+  ${D.text ? `<button class="btn" data-act="diag-copy">${t('diag.copy')}</button>` : ''}</div>
+  ${D.text ? `<textarea id="diag-text" class="diag" readonly spellcheck="false" style="width:100%;min-height:420px;font-family:monospace;font-size:12px;white-space:pre;margin-top:12px">${SB.ui.esc(D.text)}</textarea>` : `<p class="muted">${t('diag.hint')}</p>`}</div>
+</section>`;
+  }
+
+  SB.pages = Object.assign(SB.pages || {}, { multiplayer: { render: multiplayer }, options: { render: options }, about: { render: about }, debug: { render: debug } });
   SB.showLegal = showLegal;
 })(window.SB = window.SB || {});

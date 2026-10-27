@@ -6,7 +6,7 @@
   SB.errors = [];
   window.addEventListener('error', e => SB.errors.push(String(e.message)));
   window.addEventListener('unhandledrejection', e => SB.errors.push(String(e.reason && e.reason.message || e.reason)));
-  const NAV = ['home', 'news', 'games', 'assets', 'models', 'multiplayer', 'profiles', 'recovery', 'options'];
+  const NAV = ['home', 'news', 'games', 'assets', 'models', 'multiplayer', 'profiles', 'recovery', 'debug', 'options'];
   const NAMES = { SR1: 'Slime Rancher', SR2: 'Slime Rancher 2' }, LOADERS = { SR1: 'SRML', SR2: 'MelonLoader' };
   const FAN_POLICY = 'https://www.slimerancher.com/fan-content-policy';
   let S = null, page = 'home', pollTimer = 0, busy = new Set(), menu = null;
@@ -58,7 +58,7 @@
     SB.net.hydrate($('#head'));
   }
   function renderSide() {
-    $('#side').innerHTML = `<nav class="nav" aria-label="Main">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${k === page ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>`;
+    $('#side').innerHTML = `<nav class="nav" aria-label="Main">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${k === page ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k === 'debug' ? 'recovery' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>`;
   }
   function renderChars() {
     const N = SB.NEWS || {}, pick = re => (N.slimes || []).find(u => re.test(u));
@@ -297,6 +297,8 @@
     pref: async (a, el) => { await safe(() => api.set_preference(a, el.dataset.v)); await refresh(); renderChars(); },
     'pref-bool': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') !== 'true')); await refresh(); },
     'pref-bool-inv': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') === 'true')); await refresh(); },
+    'diag-run': async () => { L.diag = { busy: true, text: '' }; renderView(true); const r = await safe(() => api.diagnostics()); L.diag = { busy: false, text: r && r.text ? r.text : t('diag.failed') }; renderView(true); },
+    'diag-copy': async () => { const text = (L.diag && L.diag.text) || ''; try { await navigator.clipboard.writeText(text); toast(t('diag.copied'), 'good'); } catch (e) { const ta = $('#diag-text'); if (ta) { ta.select(); document.execCommand('copy'); toast(t('diag.copied'), 'good'); } } },
     'game-repair': async a => { toast(t('games.repair_busy'), 'info'); const r = await safe(() => api.game_repair(a)); if (r && r.ok) { toast(t('games.repair_done'), 'good'); await refresh(); } else toast(t('games.repair_err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
     'loader-install': async a => { toast(t('games.loader_busy'), 'info'); const r = await safe(() => api.loader_install(a)); if (r && r.ok) { toast(t('games.loader_done'), 'good'); await refresh(); } else toast(t('games.loader_err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
     'plugin-install': async a => { const r = await safe(() => api.plugin_install(a)); if (r && r.ok) { toast(t('games.plugin_done'), 'good'); await refresh(); } else toast(t('games.plugin_err.' + (r && r.error ? r.error : 'x')) !== 'games.plugin_err.' + (r && r.error ? r.error : 'x') ? t('games.plugin_err.' + r.error) : t('games.plugin_err.x'), 'bad'); },

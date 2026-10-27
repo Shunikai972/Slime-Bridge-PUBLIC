@@ -48,6 +48,8 @@ _VALIDATORS = {
 }
 
 
+GUI = 'edgechromium' if sys.platform == 'win32' else 'gtk'      # pywebview backend per platform
+
 class LauncherAPI:
     def __init__(self, config_path: Path = CONFIG, known_paths: tuple[Path, ...] = (KNOWN_MANUAL_SR1, KNOWN_MANUAL_SR2),
                  lab_games: Path = LAB_GAMES, *, popen=None, host_popen=None, opener=None, news_opener=None):
@@ -192,6 +194,16 @@ class LauncherAPI:
         state = integrity.check(game, root)
         state['repairable'] = sum(c['missing'] for c in integrity.repair_candidates(game, root)) if state['missing_count'] else 0
         return state
+
+    def diagnostics(self) -> dict:
+        """Plain-text report of everything that matters (Debug page, 'Copy' button). Read-only."""
+        from apps.launcher import diagnostics
+        logs = None
+        if self._extract is not None:
+            logs = self._extract.snapshot(log_tail=400).get('logs')
+        if not logs and extract.LAST_LOG.is_file():
+            logs = extract.LAST_LOG.read_text(encoding='utf-8', errors='replace').splitlines()
+        return {'ok': True, 'text': diagnostics.report(self, logs)}
 
     def game_repair(self, realm: str) -> dict:
         """One click: put back missing game files from the game's own zips found on this PC, or move a too-deep
@@ -420,7 +432,19 @@ class LauncherAPI:
         except plugins.PluginError as exc:
             return {'ok': False, 'error': exc.code, 'detail': exc.detail}
         from apps.launcher import online
-        return {**result, 'state': plugins.status(realm, primary['root'])['state'], 'online': online.ensure(realm, primary['root'])}
+        island = None
+        if realm == 'SR1':                     # the island (sanctuary + portal) comes with the SR1 plugin
+            try:
+                sanctuary.refresh_layout()
+                latest = sanctuary.latest_layout()
+                current = sanctuary.installed(primary['root'])
+                if latest and not current.get('matches_latest'):
+                    sanctuary.install_layout(latest['path'], primary['root'])
+                island = sanctuary.installed(primary['root']).get('present')
+            except Exception as exc:  # noqa: BLE001 - the plugin is installed either way
+                island = f'failed: {exc}'
+        return {**result, 'state': plugins.status(realm, primary['root'])['state'], 'online': online.ensure(realm, primary['root']),
+                'island': island}
 
     def loader_install(self, realm: str) -> dict:
         """Download (official release, pinned SHA-256) and install the game's mod loader: SRML for SR1, MelonLoader for SR2."""
@@ -919,7 +943,7 @@ def main() -> None:
                     result['error'] = 'Desktop UI did not render the game cards'
                     return
                 # every page must render with the real backend and without a JavaScript error
-                for name in ('news', 'games', 'assets', 'models', 'multiplayer', 'options', 'about', 'home'):
+                for name in ('news', 'games', 'assets', 'models', 'multiplayer', 'debug', 'options', 'about', 'home'):
                     window.evaluate_js(f"SB.app.go('{name}')")
                     time.sleep(0.6)
                     rendered = window.evaluate_js("!!document.querySelector('#view .page')")
@@ -934,11 +958,11 @@ def main() -> None:
                 result.clear()
             finally:
                 window.destroy()
-        webview.start(close_after_load, gui='edgechromium')
+        webview.start(close_after_load, gui=GUI)
         if result:
             raise RuntimeError(result['error'])
     else:
-        webview.start(gui='edgechromium')
+        webview.start(gui=GUI)
 
 
 if __name__ == '__main__':

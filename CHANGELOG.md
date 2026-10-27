@@ -3,6 +3,21 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.1.5] - 2026-10-27
+
+### Added
+- Debug page: one button checks everything SlimeBridge needs on this PC (versions, Windows long-path setting, disk space,
+  detected and selected games, missing game files and repair archives, mod loader, plugin, online, the SR2 code schema,
+  island, MelonLoader and game logs, antivirus detections touching a Slime folder, network, last extraction log) and
+  gives a text to copy and send. Read-only.
+- Linux build: every published release also gets `SlimeBridge-vX.Y.Z-linux-x64-standalone.tar.gz`, built on GitHub
+  Actions. The launcher window uses GTK/WebKit there and Steam libraries under `~/.steam` / Flatpak are searched.
+
+### Fixed
+- The island (sanctuary + portal) was "not present" on every PC but the developer's: its kit (a description of native
+  Slime Rancher objects - names and positions, no game data) now ships with SlimeBridge, so the island is built on the
+  player's PC and installed with the SR1 plugin and before Play.
+
 ## [0.1.4] - 2026-10-27
 
 ### Fixed

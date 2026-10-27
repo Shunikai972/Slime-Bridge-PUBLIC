@@ -70,6 +70,10 @@ def steam_roots(registry=True, drives=None):
     for drive in drives if drives is not None else fixed_drives():
         for rel in ('Program Files (x86)/Steam', 'Program Files/Steam', 'Steam', 'SteamLibrary'):
             roots.append(drive / rel)
+    if os.name != 'nt' and drives is None:
+        home = Path.home()
+        roots += [home / '.steam' / 'steam', home / '.local' / 'share' / 'Steam',
+                  home / '.var' / 'app' / 'com.valvesoftware.Steam' / '.local' / 'share' / 'Steam']
     out, seen = [], set()
     for root in roots:
         key = str(root).casefold()

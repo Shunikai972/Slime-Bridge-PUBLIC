@@ -52,6 +52,8 @@ def selected_games(direction):
     return {'sr1-to-sr2': ('SR1',), 'sr2-to-sr1': ('SR2',), 'both': ('SR1', 'SR2')}[direction]
 
 
+LAST_LOG = REPO_ROOT / 'Lab' / 'Launcher' / 'last-extraction.log'
+
 class ExtractJob:
     """One extraction run on a background thread. Safe to poll from the UI thread via ``snapshot``."""
 
@@ -403,6 +405,11 @@ class BuiltinExtractJob:
     def _log(self, message):
         with self._lock:
             self._logs.append(str(message)[:400])
+        try:
+            with LAST_LOG.open('a', encoding='utf-8') as f:
+                f.write(str(message)[:400] + '\n')
+        except OSError:
+            pass
 
     def _sr1_rows(self, data_dir):
         """What SR1 has and SR2 lacks (species and Largos); never fatal."""
@@ -428,6 +435,11 @@ class BuiltinExtractJob:
 
     def _work(self):
         from bridge.content import spec_seed, species_pipeline as pipeline
+        try:
+            LAST_LOG.parent.mkdir(parents=True, exist_ok=True)
+            LAST_LOG.write_text(f"extraction {time.strftime('%Y-%m-%d %H:%M:%S')}\n", encoding='utf-8')
+        except OSError:
+            pass
         spec_seed.ensure_specs(REPO_ROOT)
         self._set(status='RUNNING', started=time.time())
         try:

@@ -20,6 +20,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 KIT_ROOT = REPO_ROOT / 'Lab' / 'AssetCache'
 LAYOUT_ROOT = REPO_ROOT / 'Lab' / 'GeneratedContent' / 'sanctuary'
+# shipped island kit: a description of native SR1 objects (names, transforms, parameters; no game data), so every
+# install can build its island without reading the game first
+BUNDLED_KIT_ROOT = REPO_ROOT / 'bridge' / 'sanctuary' / 'bundled'
 INSTALL_PARTS = ('SlimeBridge', 'sanctuary')
 INSTALL_FILES = ('sanctuary-layout.json', 'install-receipt.json')
 DEPENDENCIES = {'UnityPy': 'UnityPy==1.25.4', 'TypeTreeGeneratorAPI': 'TypeTreeGeneratorAPI==0.0.10', 'dnfile': 'dnfile'}
@@ -47,8 +50,15 @@ def _newest(root, prefix, marker):
     return folders[-1] if folders else None
 
 
-def latest_kit(root=None):
+def _kit_dir(root=None):
     folder = _newest(root or KIT_ROOT, 'sanctuary-kit-', 'sanctuary-kit.json')
+    if folder is None and root is None:
+        folder = _newest(BUNDLED_KIT_ROOT, 'sanctuary-kit-', 'sanctuary-kit.json')
+    return folder
+
+
+def latest_kit(root=None):
+    folder = _kit_dir(root)
     if folder is None:
         return None
     try:
@@ -83,7 +93,7 @@ def refresh_layout(kit_root=None, layout_root=None, publisher=None):
     Returns the new layout folder name, or None when the newest layout is already current (or there is no kit to build from).
     """
     from bridge.sanctuary import layout as layout_module
-    kit_dir = _newest(kit_root or KIT_ROOT, 'sanctuary-kit-', 'sanctuary-kit.json')
+    kit_dir = _kit_dir(kit_root)
     if kit_dir is None:
         return None
     layout_root = Path(layout_root or LAYOUT_ROOT)

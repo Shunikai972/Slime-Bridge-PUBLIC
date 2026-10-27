@@ -4,7 +4,10 @@ every dependency inside, plus the prebuilt plugins and SRMP Revival. Players unz
     py -3.12 -m tools.release.build_exe [--plugins dist/SlimeBridge-v<VERSION>/plugins]
 
 Run tools.release.make_release first (it builds the plugins and stages them). Output:
-dist/SlimeBridge-v<VERSION>-win64-standalone.zip containing SlimeBridge/SlimeBridge.exe.
+dist/SlimeBridge-v<VERSION>-win64-standalone.zip (SlimeBridge/SlimeBridge.exe) on Windows, or
+dist/SlimeBridge-v<VERSION>-linux-x64-standalone.tar.gz (SlimeBridge/SlimeBridge) on Linux. The Linux build runs on
+GitHub Actions (.github/workflows/linux-release.yml) each time a release is published, with the plugins taken from
+that release's source zip.
 
 Everything SlimeBridge writes at run time (settings, extracted content) goes to the Lab folder inside the program folder,
 so the folder must stay somewhere the player can write (not Program Files). Starlight (Slime Rancher 2 online) is not
@@ -24,8 +27,10 @@ DIST = ROOT / 'dist'
 WORK = ROOT / 'build' / 'pyinstaller'
 DATA_DIRS = ('apps', 'bridge', 'tools/SlimeBridge-AssetConverter', 'tools/lab', 'tools/content', 'fixtures')
 DATA_SKIP = re.compile(r'(__pycache__|\.pyc$|/bin/|/obj/|/\.venv/|/output[^/]*/|/work/)')
+WINDOWS = sys.platform == 'win32'
+PLATFORM = 'win64' if WINDOWS else 'linux-x64'
 COLLECT_ALL = ('webview', 'UnityPy', 'TypeTreeGeneratorAPI', 'fmod_toolkit', 'texture2ddecoder', 'etcpak', 'astc_encoder',
-               'pygltflib', 'dnfile', 'lz4', 'brotli', 'archspec', 'tpk_ar', 'clr_loader', 'pythonnet')
+               'pygltflib', 'dnfile', 'lz4', 'brotli', 'archspec', 'tpk_ar') + (('clr_loader', 'pythonnet') if WINDOWS else ())
 TOP_FILES = ('README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'LICENSES.md', 'CHANGELOG.md', 'VERSION')
 
 
@@ -126,14 +131,22 @@ def main():
     for name in TOP_FILES:
         if (ROOT / name).is_file():
             shutil.copy2(ROOT / name, app / name)
-    archive = DIST / f'SlimeBridge-v{version}-win64-standalone.zip'
-    if archive.exists():
-        archive.unlink()
-    with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
-        for path in sorted(app.rglob('*')):
-            if path.is_file():
-                zf.write(path, f'SlimeBridge/{path.relative_to(app).as_posix()}')
-    print(f'OK  {app / "SlimeBridge.exe"}\n    {archive} ({archive.stat().st_size / 1e6:.1f} MB)')
+    if WINDOWS:
+        archive = DIST / f'SlimeBridge-v{version}-win64-standalone.zip'
+        if archive.exists():
+            archive.unlink()
+        with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+            for path in sorted(app.rglob('*')):
+                if path.is_file():
+                    zf.write(path, f'SlimeBridge/{path.relative_to(app).as_posix()}')
+    else:
+        import tarfile
+        archive = DIST / f'SlimeBridge-v{version}-linux-x64-standalone.tar.gz'
+        if archive.exists():
+            archive.unlink()
+        with tarfile.open(archive, 'w:gz') as tf:
+            tf.add(app, arcname='SlimeBridge')
+    print(f'OK  {app / ("SlimeBridge.exe" if WINDOWS else "SlimeBridge")}\n    {archive} ({archive.stat().st_size / 1e6:.1f} MB)')
 
 
 if __name__ == '__main__':

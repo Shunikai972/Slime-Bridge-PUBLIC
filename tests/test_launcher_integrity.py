@@ -1,5 +1,7 @@
 import tempfile
 import unittest
+import zipfile
+from unittest import mock
 from pathlib import Path
 
 from apps.launcher import integrity
@@ -52,6 +54,53 @@ class IntegrityTests(unittest.TestCase):
         _make(root, integrity.REQUIRED['SR1'][:2])
         state = integrity.check('SR1', root)
         self.assertEqual((state['complete'], state['hint_code']), (False, 'missing'))
+
+
+class RepairTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.base = Path(self.tmp.name)
+
+    def _game(self, root, skip=()):
+        files = [f if isinstance(f, str) else f[0] for f in integrity.REQUIRED['SR2']]
+        files += [f'{integrity.SR2_BUNDLES}/b{i}.bundle' for i in range(integrity.MIN_SR2_BUNDLES)]
+        _make(root, [f for f in files if f not in skip])
+        return files
+
+    def test_missing_files_come_back_from_the_original_zip_even_when_nested_twice(self):
+        # Downloads/Game.v1/Game.v1/Slime Rancher 2: a zip extracted into a folder of its own name
+        outer = self.base / 'Downloads' / 'Game.v1'
+        root = outer / 'Game.v1' / 'Slime Rancher 2'
+        files = self._game(root, skip={'SlimeRancher2_Data/resources.assets'})
+        with zipfile.ZipFile(self.base / 'Downloads' / 'Game.v1.zip', 'w') as zf:
+            for f in files:
+                zf.writestr(f'Game.v1/Slime Rancher 2/{f}', b'data')
+        with mock.patch.object(integrity, 'MIN_ZIP', 0):
+            cands = integrity.repair_candidates('SR2', root, [self.base / 'Downloads'])
+            self.assertEqual([(Path(c['base']), c['missing']) for c in cands], [(outer, 1)])
+            out = integrity.repair('SR2', root, [self.base / 'Downloads'])
+        self.assertEqual(out['restored'], 1)
+        self.assertTrue(out['state']['complete'])
+        self.assertFalse((outer / 'Slime Rancher 2').exists())       # nothing written at the wrong nesting level
+
+    def test_an_unrelated_zip_is_ignored(self):
+        root = self.base / 'Games' / 'Game.v1' / 'Slime Rancher 2'
+        self._game(root, skip={'SlimeRancher2_Data/resources.assets'})
+        with zipfile.ZipFile(self.base / 'Games' / 'Other.zip', 'w') as zf:
+            zf.writestr('Other/readme.txt', b'x')
+        with mock.patch.object(integrity, 'MIN_ZIP', 0):
+            self.assertEqual(integrity.repair_candidates('SR2', root, [self.base / 'Games']), [])
+
+    def test_move_short_renames_on_the_same_drive(self):
+        root = self.base / 'deep' / 'Slime Rancher 2'
+        self._game(root)
+        target = self.base / 'Jeux' / 'Slime Rancher 2'
+        with mock.patch.object(integrity, 'short_home', return_value=target):
+            new = integrity.move_short('SR2', root)
+        self.assertEqual(new, target)
+        self.assertTrue((target / 'SlimeRancher2.exe').is_file())
+        self.assertFalse(root.exists())
 
 
 if __name__ == '__main__':

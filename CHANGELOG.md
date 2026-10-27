@@ -10,6 +10,11 @@ whose title matches `VERSION`.
   launcher checks the game's core files first: the game card shows "Game folder incomplete" with what is missing, and
   the extraction stops with a clear reason. A folder named like a Google Drive split download
   (`...-20261027T155201Z-1-001`) is recognised and the message says to extract ALL the zip parts into the same folder.
+- One-click repair: when the game's own archives are on the PC (the other parts of a split download, or the original
+  zip in Downloads), the missing files are extracted from them automatically - when the extraction starts, or with
+  "Repair the game" on the game card. Only missing files are written, long paths included (what Windows' extractor skips).
+- A game folder too deep for Windows (files beyond 260 characters while long paths are off) is reported, with a
+  "Move the game to <drive>:\Jeux\..." button: a rename on the same drive, and the launcher follows the new folder.
 
 ## [0.1.3] - 2026-10-27
 

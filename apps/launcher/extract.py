@@ -437,6 +437,13 @@ class BuiltinExtractJob:
                     try:
                         integrity.require(game, root)
                     except integrity.IncompleteGame as exc:
+                        if exc.state['missing_count'] and integrity.repair_candidates(game, root):
+                            self._log(f'{game} folder incomplete: restoring the missing files from the game archives found on this PC')
+                            fixed = integrity.repair(game, root, progress=lambda n: self._log(f'  {n} files restored'))
+                            self._log(f"  {fixed['restored']} files restored")
+                            if fixed['state']['complete']:
+                                continue
+                            exc = integrity.IncompleteGame(game, root, fixed['state'])
                         self._log(str(exc))
                         self._set(status='FAILED', error=str(exc), finished=time.time())
                         return

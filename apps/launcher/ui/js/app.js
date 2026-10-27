@@ -297,6 +297,7 @@
     pref: async (a, el) => { await safe(() => api.set_preference(a, el.dataset.v)); await refresh(); renderChars(); },
     'pref-bool': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') !== 'true')); await refresh(); },
     'pref-bool-inv': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') === 'true')); await refresh(); },
+    'game-repair': async a => { toast(t('games.repair_busy'), 'info'); const r = await safe(() => api.game_repair(a)); if (r && r.ok) { toast(t('games.repair_done'), 'good'); await refresh(); } else toast(t('games.repair_err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
     'loader-install': async a => { toast(t('games.loader_busy'), 'info'); const r = await safe(() => api.loader_install(a)); if (r && r.ok) { toast(t('games.loader_done'), 'good'); await refresh(); } else toast(t('games.loader_err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
     'plugin-install': async a => { const r = await safe(() => api.plugin_install(a)); if (r && r.ok) { toast(t('games.plugin_done'), 'good'); await refresh(); } else toast(t('games.plugin_err.' + (r && r.error ? r.error : 'x')) !== 'games.plugin_err.' + (r && r.error ? r.error : 'x') ? t('games.plugin_err.' + r.error) : t('games.plugin_err.x'), 'bad'); },
     unlink: async a => { const r = await safe(() => api.travel_unlink('SR1', a)); if (r && r.ok) toast(t('opt.links_done'), 'good'); L.links = null; loadLinks(); },

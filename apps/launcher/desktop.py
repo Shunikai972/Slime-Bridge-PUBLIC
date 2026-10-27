@@ -136,7 +136,7 @@ class LauncherAPI:
             bridge = (root / 'Mods' / 'SlimeBridge.SR2.dll').is_file()
         from apps.launcher import integrity
         return {'game': item.game, 'root': str(root), 'store': item.store, 'runtime': item.unity_runtime,
-                'integrity': integrity.check(item.game, root),
+                'integrity': LauncherAPI._integrity(item.game, root),
                 'loader': loader, 'bridge_plugin': bridge, 'plugin_state': plugins.status(item.game, root)['state'],
                 'version': 'Not fingerprinted', 'role': role}
 
@@ -185,6 +185,41 @@ class LauncherAPI:
         data['selected'][item.game] = str(item.root)
         self._save(data)
         return self._installation_info(item)
+
+    @staticmethod
+    def _integrity(game, root):
+        from apps.launcher import integrity
+        state = integrity.check(game, root)
+        state['repairable'] = sum(c['missing'] for c in integrity.repair_candidates(game, root)) if state['missing_count'] else 0
+        return state
+
+    def game_repair(self, realm: str) -> dict:
+        """One click: put back missing game files from the game's own zips found on this PC, or move a too-deep
+        install to a short folder on the same drive (and point the launcher at it)."""
+        if realm not in ('SR1', 'SR2'):
+            raise ValueError('realm must be SR1 or SR2')
+        primary = self._primary(realm)
+        if primary is None:
+            return {'ok': False, 'error': 'GAME_NOT_FOUND'}
+        if self._launcher.running(realm):
+            return {'ok': False, 'error': 'GAME_RUNNING'}
+        from apps.launcher import integrity
+        root = primary['root']
+        state = integrity.check(realm, root)
+        done = {}
+        try:
+            if state['missing_count']:
+                done = integrity.repair(realm, root)
+                state = done['state']
+            if state.get('too_long') and not state['missing_count']:
+                new_root = integrity.move_short(realm, root)
+                self.add_manual_path(str(new_root))
+                done['moved_to'] = str(new_root)
+                state = integrity.check(realm, new_root)
+        except OSError as exc:
+            return {'ok': False, 'error': 'REPAIR_FAILED', 'detail': str(exc)}
+        return {'ok': state['complete'], 'state': state, **{k: v for k, v in done.items() if k != 'state'},
+                'error': None if state['complete'] else ('STILL_INCOMPLETE' if state['missing_count'] else 'STILL_TOO_LONG')}
 
     def select_manual(self, kind: str = 'folder') -> dict | None:
         if self._window is None:

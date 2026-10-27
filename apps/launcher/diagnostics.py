@@ -99,8 +99,9 @@ def _game(out, game, root):
     except Exception as exc:  # noqa: BLE001
         out.append(f'  online: ? ({exc})')
     if game == 'SR2':
-        schema = root / 'MelonLoader' / 'Dependencies' / 'Il2CppAssemblyGenerator' / 'Cpp2IL' / 'cpp2il_out' / 'Assembly-CSharp.dll'
-        out.append(f'  code schema (Cpp2IL, made by MelonLoader on the first game start): {"present" if schema.is_file() else "MISSING - start the game once with MelonLoader"}')
+        from bridge.content import sr2_schema
+        schema = sr2_schema.schema_dir(root)
+        out.append(f'  code schema (Cpp2IL): {schema if schema else "not made yet (Extract makes it, 1-3 minutes)"}')
         log = root / 'MelonLoader' / 'Latest.log'
         if log.is_file():
             out.append('  MelonLoader/Latest.log (end):')

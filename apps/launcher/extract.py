@@ -461,6 +461,12 @@ class BuiltinExtractJob:
                         return
             self._set(phase='list', phase_label='Counting species', progress=0.02)
             data_dir = Path(self.sr2_root) / 'SlimeRancher2_Data'
+            if self.sr2_root:
+                from bridge.content import sr2_schema
+                try:
+                    sr2_schema.ensure(self.sr2_root, log=self._log)
+                except Exception as exc:  # noqa: BLE001 - species will say why they fail; SR1 -> SR2 still runs
+                    self._log(f'SR2 code schema: {exc}')
             plan = []                                        # (mode, rows): SR2 -> SR1 first, then SR1 -> SR2
             largo_rows = []
             if self.direction in ('sr2-to-sr1', 'both'):

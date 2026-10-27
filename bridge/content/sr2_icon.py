@@ -303,7 +303,8 @@ def extract_ringtail_icon(data_dir, output_dir):
     if sprite.type.name != 'Sprite':
         raise ValueError('source object is not a Sprite')
     generator = TypeTreeGenerator(sprite.assets_file.unity_version)
-    dlls = data_dir.parent / 'MelonLoader/Dependencies/Il2CppAssemblyGenerator/Cpp2IL/cpp2il_out'
+    from bridge.content import sr2_schema
+    dlls = sr2_schema.schema_dir(data_dir.parent) or data_dir.parent / sr2_schema.MELON_OUT
     generator.load_local_dll_folder(str(dlls))
     env.typetree_generator = generator
     appearance = objects[APPEARANCE_ID].read_typetree()

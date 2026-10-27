@@ -226,11 +226,11 @@ def collect_source_appearance(assets, species: str, parts: list[dict], skeleton=
 
     version = next(iter(objects.values())).assets_file.unity_version
     generator = TypeTreeGenerator(version)
-    # MelonLoader already produces the exact Cpp2IL schema locally. Prefer it:
-    # load_local_game's native path cannot generate these nodes on the LAB build.
-    schema_dir = (assets.data_dir.parent / 'MelonLoader' / 'Dependencies' /
-                  'Il2CppAssemblyGenerator' / 'Cpp2IL' / 'cpp2il_out')
-    if (schema_dir / 'Assembly-CSharp.dll').is_file():
+    # the Cpp2IL schema (MelonLoader's, or the one sr2_schema.ensure made): load_local_game's native path cannot
+    # generate these nodes on 1.x builds
+    from bridge.content import sr2_schema
+    schema_dir = sr2_schema.schema_dir(assets.data_dir.parent)
+    if schema_dir is not None:
         generator.load_local_dll_folder(str(schema_dir))
     else:
         generator.load_local_game(str(assets.data_dir.parent))

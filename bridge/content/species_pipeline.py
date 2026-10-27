@@ -325,7 +325,8 @@ def _run_rows(rows, sr2_dir, cache_root, force, progress, cancelled) -> dict:
                       'error': f'{type(ex).__name__}: {ex}'[:300], 'notes': []}
         reports.append(report)
         if progress:
-            progress(index + 1, len(rows), f"[{row['canonical']}] {report['status']}" + (f" ({report.get('mode')})" if report.get('mode') else ''))
+            progress(index + 1, len(rows), f"[{row['canonical']}] {report['status']}" + (f" ({report.get('mode')})" if report.get('mode') else '')
+                     + (f": {report.get('error')}" if report['status'] == 'FAILED' and report.get('error') else ''))
     tally: dict[str, int] = {}
     for r in reports:
         tally[r['status']] = tally.get(r['status'], 0) + 1

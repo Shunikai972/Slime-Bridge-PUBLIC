@@ -415,6 +415,10 @@ class ApiTests(unittest.TestCase):
         integ = patch('apps.launcher.integrity.require', return_value={'complete': True})
         integ.start()
         self.addCleanup(integ.stop)
+        # ...and must never download or run Cpp2IL (sr2_schema has its own tests)
+        schema = patch('bridge.content.sr2_schema.ensure', return_value=None)
+        schema.start()
+        self.addCleanup(schema.stop)
         self.started = []
         self.api = LauncherAPI(config_path=self.root / 'Lab' / 'Launcher' / 'installations.json', known_paths=(self.sr1, self.sr2),
                                lab_games=self.root / 'nolab',

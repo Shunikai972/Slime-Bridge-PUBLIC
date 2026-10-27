@@ -3,6 +3,15 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.1.6] - 2026-10-27
+
+### Fixed
+- Extracting from Slime Rancher 2 failed for every species ("failed to dump nodes raw") when the game had never been
+  started with MelonLoader: the extractor needs the code schema MelonLoader makes on the first start. Extract now makes
+  it itself when it is missing, exactly like MelonLoader (same Cpp2IL release from its official GitHub page, sha256
+  pinned, same plugin and command line), in about 15 seconds, cached per game build in `Lab/Cache/cpp2il`.
+- A failed species shows its reason on the same log line ("FAILED: ...") instead of only at the end.
+
 ## [0.1.5] - 2026-10-27
 
 ### Added

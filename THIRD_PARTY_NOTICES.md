@@ -43,6 +43,15 @@ game process only.
 The launcher downloads both from their official GitHub releases into the player's own game, checking the SHA-256 pinned in
 `apps/launcher/online.py`; neither file is part of SlimeBridge.
 
+## Mod loaders (downloaded by the launcher, not bundled)
+
+- **SRML** 0.2.1c (Slime Rancher Mod Loader) - https://github.com/SlimeRancherModding/SRML - GPL-3.0. The launcher
+  downloads the official `SRMLInstaller_0.2.1c.zip` release and runs the installer in its unattended mode.
+- **MelonLoader** 0.7.3 - https://github.com/LavaGang/MelonLoader - Apache-2.0. The launcher downloads the official
+  `MelonLoader.x64.zip` release and extracts it into the Slime Rancher 2 folder.
+
+Both downloads are verified against a pinned SHA-256 before use.
+
 ## Python packages (installed from PyPI by `Install-SlimeBridge.cmd`, not bundled)
 
 | Package | License | Role |

@@ -3,6 +3,17 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.1.3] - 2026-10-27
+
+### Added
+- The launcher installs the mod loader itself: SRML 0.2.1c for Slime Rancher (its official installer, run unattended) and
+  MelonLoader 0.7.3 for Slime Rancher 2, downloaded from the projects' official GitHub releases and checked against a
+  pinned SHA-256. It happens automatically with "Install the plugin" and before Play, and the game card has an
+  "Install SRML" / "Install MelonLoader" button while the loader is missing.
+
+### Fixed
+- A MelonLoader installed under another proxy name (`winhttp.dll`, `winmm.dll`, ...) or layout is now recognised.
+
 ## [0.1.2] - 2026-10-27
 
 ### Fixed

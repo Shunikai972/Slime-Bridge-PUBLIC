@@ -44,10 +44,8 @@ def destination(realm, game_root):
 
 
 def loader_ready(realm, game_root):
-    root = Path(game_root)
-    if realm == 'SR1':
-        return (root / 'SlimeRancher_Data' / 'Managed' / 'SRML.dll').is_file()
-    return (root / 'version.dll').is_file() and (root / 'MelonLoader' / 'net6' / 'MelonLoader.dll').is_file()
+    from apps.launcher import loaders
+    return loaders.present(realm, game_root)
 
 
 def _sha(path):

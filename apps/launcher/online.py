@@ -107,12 +107,14 @@ def sr2_status(game_root, cache=CACHE):
                       'cached': cached(c, cache, download=False) is not None})
     states = {part['state'] for part in parts}
     overall = 'current' if states == {'current'} else ('missing' if states == {'missing'} else 'outdated')
-    return {'state': overall, 'loader': p['loader'].is_file(), 'components': parts, 'port': SR2_PORT}
+    from apps.launcher import loaders
+    return {'state': overall, 'loader': loaders.present('SR2', game_root), 'components': parts, 'port': SR2_PORT}
 
 
 def sr2_install(game_root, cache=CACHE, opener=urllib.request.urlopen):
     p = _sr2_paths(game_root)
-    if not p['loader'].is_file():
+    from apps.launcher import loaders
+    if not loaders.present('SR2', game_root):
         raise OnlineError('LOADER_MISSING', 'MelonLoader')
     for part in (Path(game_root), p['mods'], p['record'].parent):
         if part.exists() and _reparse(part):

@@ -94,6 +94,11 @@ def prepare(realm, game_root, repo_root=REPO_ROOT, installs=None):
             step('species-spec', 'SEEDED', ', '.join(seeded['seeded']))
     except (OSError, ValueError) as exc:
         warnings.append(f'species spec: {exc}')
+    from apps.launcher import loaders
+    loader = loaders.ensure(realm, game_root)
+    step('loader', loader['status'], loader.get('detail', ''))
+    if loader['status'] == 'FAILED':
+        warnings.append(f"mod loader: {loader.get('detail', '')}")
     try:
         state = plugins.status(realm, game_root, repo_root)
         if state['state'] in ('missing', 'outdated') and state['loader']:

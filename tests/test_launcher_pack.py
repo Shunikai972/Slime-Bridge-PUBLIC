@@ -29,6 +29,9 @@ def make_repo(root, with_spec=True, cache_for=()):
 class PackTests(unittest.TestCase):
     def setUp(self):
         # Online components are their own module (tests/test_launcher_online.py); here they are already current.
+        loader = patch('apps.launcher.loaders.ensure', return_value={'step': 'loader', 'status': 'CURRENT'})
+        loader.start()
+        self.addCleanup(loader.stop)
         patcher = patch('apps.launcher.online.ensure', return_value={'step': 'online', 'status': 'CURRENT'})
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -79,7 +82,7 @@ class PackTests(unittest.TestCase):
             install.assert_called_once()
             island.assert_called_once_with(layout['path'], root)
             status = {s['step']: s['status'] for s in result['steps']}
-            self.assertEqual(status, {'plugin': 'INSTALLED', 'online': 'CURRENT', 'island': 'INSTALLED', 'species': 'CACHES_MISSING', 'largos': 'NO_CACHES'})
+            self.assertEqual(status, {'loader': 'CURRENT', 'plugin': 'INSTALLED', 'online': 'CURRENT', 'island': 'INSTALLED', 'species': 'CACHES_MISSING', 'largos': 'NO_CACHES'})
             self.assertTrue(result['ok'])
             self.assertTrue(any('slime.cotton' in w for w in result['warnings']))
 
@@ -98,7 +101,7 @@ class PackTests(unittest.TestCase):
             install.assert_not_called()
             island.assert_not_called()
             self.assertEqual({s['step']: s['status'] for s in result['steps']},
-                             {'plugin': 'CURRENT', 'online': 'CURRENT', 'island': 'CURRENT', 'species': 'READY', 'largos': 'NO_CACHES'})
+                             {'loader': 'CURRENT', 'plugin': 'CURRENT', 'online': 'CURRENT', 'island': 'CURRENT', 'species': 'READY', 'largos': 'NO_CACHES'})
             real_steps = {s['step']: s['status'] for s in real['steps']}
             self.assertEqual(real_steps['species'], 'READY')
             # A normal install gets the pointer file only when a spec exists; the plugin validates every path again.

@@ -36,6 +36,7 @@ def make_sr2(root: Path) -> Path:
     game = root / 'SR2'
     (game / 'MelonLoader' / 'net6').mkdir(parents=True)
     (game / 'MelonLoader' / 'net6' / 'MelonLoader.dll').write_bytes(b'ml')
+    (game / 'version.dll').write_bytes(b'proxy')     # a real MelonLoader install always has its proxy
     return game
 
 

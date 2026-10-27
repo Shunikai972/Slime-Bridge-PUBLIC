@@ -128,12 +128,11 @@ class LauncherAPI:
     @staticmethod
     def _installation_info(item, role: str = 'source') -> dict:
         root = item.root
+        from apps.launcher import loaders
+        loader = loaders.describe(item.game, root)
         if item.game == 'SR1':
-            loader = 'SRML' if (root / 'SlimeRancher_Data' / 'Managed' / 'SRML.dll').is_file() else 'Not configured'
             bridge = (root / 'SRML' / 'Mods' / 'SlimeBridge' / 'SlimeBridge.SR1.dll').is_file()
         else:
-            loader = ('MelonLoader' if (root / 'version.dll').is_file() and
-                      (root / 'MelonLoader' / 'net6' / 'MelonLoader.dll').is_file() else 'Not configured')
             bridge = (root / 'Mods' / 'SlimeBridge.SR2.dll').is_file()
         return {'game': item.game, 'root': str(root), 'store': item.store, 'runtime': item.unity_runtime,
                 'loader': loader, 'bridge_plugin': bridge, 'plugin_state': plugins.status(item.game, root)['state'],
@@ -366,7 +365,7 @@ class LauncherAPI:
         return {'ok': True, 'was_linked_to': self._travel._links.unlink(realm, save_group)}
 
     def plugin_install(self, realm: str) -> dict:
-        """Put (or update) the SlimeBridge plugin in the chosen installation's mod folder. The mod loader must already be there."""
+        """Put (or update) the SlimeBridge plugin in the chosen installation's mod folder; installs the mod loader first if needed."""
         if realm not in ('SR1', 'SR2'):
             raise ValueError('realm must be SR1 or SR2')
         primary = self._primary(realm)
@@ -374,12 +373,32 @@ class LauncherAPI:
             return {'ok': False, 'error': 'GAME_NOT_FOUND'}
         if self._launcher.running(realm):
             return {'ok': False, 'error': 'GAME_RUNNING'}
+        from apps.launcher import loaders
+        try:
+            loaders.install(realm, primary['root'])
+        except loaders.LoaderError as exc:
+            return {'ok': False, 'error': 'LOADER_' + exc.code, 'detail': exc.detail}
         try:
             result = plugins.install(realm, primary['root'])
         except plugins.PluginError as exc:
             return {'ok': False, 'error': exc.code, 'detail': exc.detail}
         from apps.launcher import online
         return {**result, 'state': plugins.status(realm, primary['root'])['state'], 'online': online.ensure(realm, primary['root'])}
+
+    def loader_install(self, realm: str) -> dict:
+        """Download (official release, pinned SHA-256) and install the game's mod loader: SRML for SR1, MelonLoader for SR2."""
+        if realm not in ('SR1', 'SR2'):
+            raise ValueError('realm must be SR1 or SR2')
+        primary = self._primary(realm)
+        if primary is None:
+            return {'ok': False, 'error': 'GAME_NOT_FOUND'}
+        if self._launcher.running(realm):
+            return {'ok': False, 'error': 'GAME_RUNNING'}
+        from apps.launcher import loaders
+        try:
+            return loaders.install(realm, primary['root'])
+        except loaders.LoaderError as exc:
+            return {'ok': False, 'error': exc.code, 'detail': exc.detail}
 
     def crossings_poll(self) -> dict:
         """Drive and report portal crossings: a plugin asked BridgeHost to cross, the launcher moves the player between the two games."""

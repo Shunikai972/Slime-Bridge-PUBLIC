@@ -111,6 +111,7 @@
     async travel_links() { return { ok: true, links: [{ sr1: '20261015041707_Ranch', sr2: '20250619134130_1' }] }; },
     async travel_unlink() { return { ok: true }; },
     async plugin_install() { return { ok: true, state: 'current' }; },
+    async loader_install() { return { ok: true, state: 'installed' }; },
     async sanctuary_state() { return sanctState(); },
     async sanctuary_status() { return { ok: true, job: S.sanct.job ? { ...S.sanct.job } : null }; },
     async sanctuary_build() {

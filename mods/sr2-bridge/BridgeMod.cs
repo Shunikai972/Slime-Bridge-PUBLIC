@@ -19,7 +19,7 @@ namespace SlimeBridge.SR2
     /// </summary>
     public sealed class BridgeMod : MelonMod
     {
-        public const string PluginVersion = "0.1.3";
+        public const string PluginVersion = "0.1.4";
         private static readonly int Pid = Environment.ProcessId;
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { UseProxy = false })
         {

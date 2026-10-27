@@ -134,7 +134,9 @@ class LauncherAPI:
             bridge = (root / 'SRML' / 'Mods' / 'SlimeBridge' / 'SlimeBridge.SR1.dll').is_file()
         else:
             bridge = (root / 'Mods' / 'SlimeBridge.SR2.dll').is_file()
+        from apps.launcher import integrity
         return {'game': item.game, 'root': str(root), 'store': item.store, 'runtime': item.unity_runtime,
+                'integrity': integrity.check(item.game, root),
                 'loader': loader, 'bridge_plugin': bridge, 'plugin_state': plugins.status(item.game, root)['state'],
                 'version': 'Not fingerprinted', 'role': role}
 

@@ -3,6 +3,14 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.1.4] - 2026-10-27
+
+### Fixed
+- An incomplete game folder no longer fails deep inside the extraction ("FileNotFoundError ... resources.assets"). The
+  launcher checks the game's core files first: the game card shows "Game folder incomplete" with what is missing, and
+  the extraction stops with a clear reason. A folder named like a Google Drive split download
+  (`...-20261027T155201Z-1-001`) is recognised and the message says to extract ALL the zip parts into the same folder.
+
 ## [0.1.3] - 2026-10-27
 
 ### Added

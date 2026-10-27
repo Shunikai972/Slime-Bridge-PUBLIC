@@ -431,6 +431,15 @@ class BuiltinExtractJob:
         spec_seed.ensure_specs(REPO_ROOT)
         self._set(status='RUNNING', started=time.time())
         try:
+            from apps.launcher import integrity
+            for game, root in (('SR2', self.sr2_root), ('SR1', self.sr1_root)):
+                if root:
+                    try:
+                        integrity.require(game, root)
+                    except integrity.IncompleteGame as exc:
+                        self._log(str(exc))
+                        self._set(status='FAILED', error=str(exc), finished=time.time())
+                        return
             self._set(phase='list', phase_label='Counting species', progress=0.02)
             data_dir = Path(self.sr2_root) / 'SlimeRancher2_Data'
             plan = []                                        # (mode, rows): SR2 -> SR1 first, then SR1 -> SR2

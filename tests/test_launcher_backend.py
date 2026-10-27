@@ -411,6 +411,10 @@ class ApiTests(unittest.TestCase):
         patcher = patch('apps.launcher.main.discover_stores', return_value=[])
         patcher.start()
         self.addCleanup(patcher.stop)
+        # these tests drive extraction on synthetic game folders; the completeness check has its own tests
+        integ = patch('apps.launcher.integrity.require', return_value={'complete': True})
+        integ.start()
+        self.addCleanup(integ.stop)
         self.started = []
         self.api = LauncherAPI(config_path=self.root / 'Lab' / 'Launcher' / 'installations.json', known_paths=(self.sr1, self.sr2),
                                lab_games=self.root / 'nolab',

@@ -102,7 +102,7 @@ namespace SlimeBridge.SR1
             }
             var statues = new GameObject("Statues").transform;
             statues.SetParent(Extension.transform, false);
-            foreach (var spec in _layout.Statues) Statues[spec.Slime] = BuildStatue(spec, statues, _reference);
+            foreach (var spec in _layout.Statues) { Statues[spec.Slime] = BuildStatue(spec, statues, _reference); BuildBadge(Statues[spec.Slime]); }
             BuildPortal();
             if (_sea != null) IslandRegion = RegisterRegion(_sea);
             else _log.Add("no SEA zone director: island actors will not be simulated");
@@ -322,19 +322,115 @@ namespace SlimeBridge.SR1
         {
             try
             {
-                var id = (Identifiable.Id)Enum.Parse(typeof(Identifiable.Id), spec.Slime + "_SLIME");
+                var root = NativeSlimeModel(spec.Slime, parent, depositor.Root.transform.position, depositor.Root.transform.rotation, out var parts);
+                if (root == null) return;
+                // size and stand it on the pad: a slime is about 1 m wide; the statue is a little over twice that
+                var scale = FitWidth(root, 2.2f * spec.Scale);
+                StandOn(root, depositor.Root.transform.position.y + spec.Lift);
+                // hide the stone statue and its stone eyes
+                foreach (var t in depositor.Root.GetComponentsInChildren<Transform>(true))
+                    if (t != depositor.Root.transform && (t.name == "Statue" || t.name == "Eyes")) t.gameObject.SetActive(false);
+                _log.Add($"figure: native {spec.Slime} slime statue ({parts} parts, scale {scale:F2})");
+            }
+            catch (Exception ex) { _log.Add("figure failed: " + ex.GetType().Name); }
+        }
+
+        /// <summary>
+        /// Which slime a statue wants, at a glance: a small copy of the game's own slime in front of the pedestal and its name,
+        /// in the game's language, above it (several stone statues only differ by a tint). Child of the statue, so a hidden
+        /// statue hides its badge too. Fail-open: a slime the game does not have just gets its name.
+        /// </summary>
+        private void BuildBadge(BuiltStatue statue)
+        {
+            try
+            {
+                var anchor = statue.Root.transform;
+                var front = anchor.rotation * Vector3.forward;
+                var spot = anchor.position + front * 2.1f;
+                var badge = new GameObject("badge." + statue.Slime.ToLowerInvariant());
+                badge.transform.SetParent(anchor, true);
+                badge.transform.position = spot;
+                badge.transform.rotation = anchor.rotation;
+                var model = NativeSlimeModel(statue.Slime, badge.transform, spot, anchor.rotation, out _);
+                if (model != null)
+                {
+                    FitWidth(model, 0.8f);
+                    StandOn(model, anchor.position.y);
+                }
+                // the name floats above the statue: readable from afar, never in front of it
+                var statueTop = anchor.position.y + 3.2f;
+                foreach (var r in anchor.GetComponentsInChildren<MeshRenderer>())
+                    if (!r.transform.IsChildOf(badge.transform)) statueTop = Mathf.Max(statueTop, r.bounds.max.y);
+                var label = new GameObject("name");
+                label.transform.SetParent(badge.transform, false);
+                label.transform.position = new Vector3(anchor.position.x, statueTop + 0.55f, anchor.position.z) + front * 0.3f;
+                label.transform.rotation = anchor.rotation * Quaternion.Euler(0f, 180f, 0f);   // read from the front
+                var text = label.AddComponent<TextMesh>();
+                var font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                text.font = font; text.text = SlimeName(statue.Slime); text.characterSize = 0.045f; text.fontSize = 64; text.fontStyle = FontStyle.Bold;
+                text.anchor = TextAnchor.MiddleCenter; text.alignment = TextAlignment.Center;
+                var light = statue.Spec.LightColor;
+                text.color = light != null && light.Length >= 3 ? Color.Lerp(new Color(light[0], light[1], light[2]), Color.white, 0.45f) : Color.white;
+                var renderer = label.GetComponent<MeshRenderer>();
+                if (font != null) renderer.sharedMaterial = font.material;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+            catch (Exception ex) { _log.Add("badge failed for " + statue.Slime + ": " + ex.GetType().Name); }
+        }
+
+        /// <summary>The slime's name as the game shows it (Slimepedia), else a readable fallback.</summary>
+        private static string SlimeName(string slime)
+        {
+            try
+            {
+                var name = GameContext.Instance.MessageDirector.GetBundle("actor").Get("l." + slime.ToLowerInvariant() + "_slime");
+                if (!string.IsNullOrEmpty(name) && !name.StartsWith("l.", StringComparison.Ordinal)) return name;
+            }
+            catch (Exception) { }
+            var lower = slime.ToLowerInvariant();
+            return char.ToUpperInvariant(lower[0]) + lower.Substring(1);
+        }
+
+        private static Bounds Bounds(GameObject root)
+        {
+            var bounds = new Bounds(root.transform.position, Vector3.zero);
+            foreach (var r in root.GetComponentsInChildren<MeshRenderer>()) bounds.Encapsulate(r.bounds);
+            return bounds;
+        }
+
+        private static float FitWidth(GameObject root, float width)
+        {
+            var scale = width / Mathf.Max(0.2f, Bounds(root).size.x);
+            root.transform.localScale = Vector3.one * scale;
+            return scale;
+        }
+
+        private static void StandOn(GameObject root, float groundY)
+        {
+            root.transform.position += Vector3.up * (groundY - Bounds(root).min.y);
+        }
+
+        /// <summary>A frozen copy of the game's own slime (appearance meshes, native materials, species palette, happy face).</summary>
+        private GameObject? NativeSlimeModel(string slime, Transform parent, Vector3 position, Quaternion rotation, out int parts)
+        {
+            parts = 0;
+            {
+                Identifiable.Id id;
+                try { id = (Identifiable.Id)Enum.Parse(typeof(Identifiable.Id), slime + "_SLIME"); }
+                catch (Exception) { _log.Add("figure: the game has no " + slime + " slime"); return null; }
                 var definition = GameContext.Instance.SlimeDefinitions.GetSlimeByIdentifiableId(id);
                 var appearance = definition != null && definition.AppearancesDefault != null && definition.AppearancesDefault.Length > 0 ? definition.AppearancesDefault[0] : null;
-                if (appearance == null || appearance.Structures == null) { _log.Add("figure: no appearance for " + spec.Slime); return; }
-                var root = new GameObject("figure." + spec.Slime.ToLowerInvariant());
+                if (appearance == null || appearance.Structures == null) { _log.Add("figure: no appearance for " + slime); return null; }
+                var root = new GameObject("figure." + slime.ToLowerInvariant());
                 root.transform.SetParent(parent, false);
-                root.transform.position = depositor.Root.transform.position;
-                root.transform.rotation = depositor.Root.transform.rotation;
+                root.transform.position = position;
+                root.transform.rotation = rotation;
                 var palette = appearance.ColorPalette;
                 SlimeExpressionFace face = default;
                 var hasFace = false;
                 try { face = appearance.Face.GetExpressionFace(SlimeFace.SlimeExpression.Happy); hasFace = true; } catch (Exception) { }
-                var parts = 0;
+
                 foreach (var structure in appearance.Structures)
                 {
                     if (structure == null || structure.Element == null || structure.Element.Prefabs == null || structure.Element.Prefabs.Length == 0) continue;
@@ -368,21 +464,9 @@ namespace SlimeBridge.SR1
                     renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     parts++;
                 }
-                if (parts == 0) { UnityEngine.Object.Destroy(root); _log.Add("figure: " + spec.Slime + " has no renderable part"); return; }
-                // size and stand it on the pad: a slime is about 1 m wide; the statue is a little over twice that
-                var bounds = new Bounds(root.transform.position, Vector3.zero);
-                foreach (var r in root.GetComponentsInChildren<MeshRenderer>()) bounds.Encapsulate(r.bounds);
-                var scale = 2.2f * spec.Scale / Mathf.Max(0.2f, bounds.size.x);
-                root.transform.localScale = Vector3.one * scale;
-                bounds = new Bounds(root.transform.position, Vector3.zero);
-                foreach (var r in root.GetComponentsInChildren<MeshRenderer>()) bounds.Encapsulate(r.bounds);
-                root.transform.position += Vector3.up * (depositor.Root.transform.position.y + spec.Lift - bounds.min.y);
-                // hide the stone statue and its stone eyes
-                foreach (var t in depositor.Root.GetComponentsInChildren<Transform>(true))
-                    if (t != depositor.Root.transform && (t.name == "Statue" || t.name == "Eyes")) t.gameObject.SetActive(false);
-                _log.Add($"figure: native {spec.Slime} slime statue ({parts} parts, scale {scale:F2})");
+                if (parts == 0) { UnityEngine.Object.Destroy(root); _log.Add("figure: " + slime + " has no renderable part"); return null; }
+                return root;
             }
-            catch (Exception ex) { _log.Add("figure failed: " + ex.GetType().Name); }
         }
 
         /// <summary>A stone tablet carrying the "H" message, readable from the walkway side.</summary>

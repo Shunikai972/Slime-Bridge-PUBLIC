@@ -106,6 +106,7 @@ class Flow : SyntheticMod {
         if (AutoloadContinue) { MaybeSkipStartScreen(); Events.Add("world-autoload"); }
     }
     void LogSaveServicesOnce() { }
+    void MaybeEndNewGameIntro() { }
     void LogDiagnosticsOnce() { }
     GameStatus? SnapshotOnMainThread() => null;
     static bool OracleExecutableMatches() => true;

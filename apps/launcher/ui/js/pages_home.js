@@ -54,8 +54,26 @@
     return `<button class="promo ${cls}" data-act="go" data-arg="${go}"><span class="pimg" ${art.bg ? `data-bg="${esc(art.bg)}" data-w="480" data-h="300"` : ''}>${art.html || ''}</span><span class="pt">${title}<small>${sub}</small></span><span class="pgo">${glyph('chevR')}</span></button>`;
   }
 
+  /** Pick the game to start, and "continue where you were" when the launcher knows the last game + save. */
+  function playChoice(S) {
+    const last = S.last_session, card = (realm, sp) => {
+      const g = S.games[realm], ok = !!(g && g.primary), run = g && g.running;
+      return `<article class="play-card ${realm === 'SR1' ? 'sr1' : 'sr2'}">
+        <span class="pc-art">${slime(sp, { size: 64, cls: 'idle' })}</span>
+        <span class="pc-body"><b>${NAMES[realm]}</b><small>${run ? t('home.running') : ok ? t('home.ready') : t('home.not_found')}</small></span>
+        ${ok ? `<button class="btn ${realm === 'SR1' ? 'btn--sr1' : 'btn--sr2'}" data-act="launch" data-arg="${realm}" ${run ? 'disabled' : ''}>${icon('play')} ${t('home.play_game')}</button>`
+             : `<button class="btn btn--ghost" data-act="go" data-arg="games">${t('home.find')}</button>`}
+      </article>`;
+    };
+    const resume = last && S.games[last.realm] && S.games[last.realm].primary && !S.games[last.realm].running
+      ? `<div class="resume-bar"><span>${t('home.resume_t', { game: NAMES[last.realm] })}${last.save ? `<small class="mono">${esc(last.save)}</small>` : ''}</span>
+          <button class="btn btn--bridge" data-act="resume" data-arg="${last.realm}">${icon('play')} ${t('home.resume')}</button></div>` : '';
+    return `<section class="play-choice">${resume}<div class="play-cards">${card('SR1', 'pink')}${card('SR2', 'tabby')}</div></section>`;
+  }
+
   function home(S) {
     return `<div class="page home">
+  ${playChoice(S)}
   <div class="home-top">${carousel()}${newsBox()}</div>
   <div class="promos">
     ${promo('', 'assets', t('promo.p1'), t('promo.p1s'), { html: cutout(/pink/i, 'pink', 80) })}

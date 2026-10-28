@@ -20,7 +20,11 @@ namespace SlimeBridge.SR2
         // A value type behind an Il2CppSystem.Nullable: every read is a fresh copy, so identity is name + slot, never a pointer.
         internal static GameMetadata? CurrentGame(this AutoSaveDirector director)
         {
-            var current = director._currentGameMetadata;
+            // On the main menu (no game yet) the interop getter of this empty Nullable throws a NullReferenceException
+            // instead of returning "no value" (seen on 1.3.0): that simply means there is no current game.
+            Il2CppSystem.Nullable<GameMetadata>? current;
+            try { current = director._currentGameMetadata; }
+            catch (System.NullReferenceException) { return null; }
             return current == null || !current.HasValue ? null : current.Value;
         }
 

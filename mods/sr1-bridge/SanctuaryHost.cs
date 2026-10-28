@@ -87,6 +87,15 @@ namespace SlimeBridge.SR1
                     else if (!string.IsNullOrEmpty(rawOps)) Debug.Log("[SlimeBridge] sanctuary ops ignored: output folder must be under Lab/RuntimeArtifacts");
                 }
                 var dev = labExecutable || string.Equals(Environment.GetEnvironmentVariable("SLIMEBRIDGE_DEV"), "1", StringComparison.Ordinal);
+                if (!labExecutable && dev)
+                {
+                    // Developer mode on a real install: the same commands the console allows there ("sanctuary unlock",
+                    // "sanctuary tp portal_in", ...), queued from SLIMEBRIDGE_DEV_OPS; nothing else (no shots, no materials).
+                    var rawDevOps = Environment.GetEnvironmentVariable("SLIMEBRIDGE_DEV_OPS");
+                    if (!string.IsNullOrEmpty(rawDevOps))
+                        foreach (var item in (List<object?>)MiniJson.Parse(rawDevOps!)!)
+                            if (item is string op && DevOpAllowed(op)) ops.Add(op);
+                }
                 var host = new SanctuaryHost(layout, labExecutable, dev, stateDir!, outDir, ops);
                 Instance = host;
                 Debug.Log($"[SlimeBridge] sanctuary armed: {layout.Pieces.Count} pieces, {layout.Statues.Count} statues, {ops.Count} oracle ops");
@@ -98,6 +107,10 @@ namespace SlimeBridge.SR1
                 return null;
             }
         }
+
+        private static bool DevOpAllowed(string op) =>
+            op == "status" || op == "wait" || op == "unlock" || op.StartsWith("wait:", StringComparison.Ordinal) || op.StartsWith("tp:", StringComparison.Ordinal) ||
+            op == "vac" || op.StartsWith("give:", StringComparison.Ordinal) || op.StartsWith("gold:", StringComparison.Ordinal) || op.StartsWith("fill:", StringComparison.Ordinal);
 
         private static bool IsReparse(string path)
         {
@@ -307,6 +320,11 @@ namespace SlimeBridge.SR1
             if (!PortalOpen)
             {
                 Debug.Log($"[SlimeBridge] the portal is dormant: {_progress.FilledRequiredCount()}/{_progress.RequiredManifest.Count} statues filled");
+                if (Time.realtimeSinceStartup - _lastDormantHint > 6f)
+                {
+                    _lastDormantHint = Time.realtimeSinceStartup;
+                    TravelNotice.Post(TravelText.Dormant(_progress.FilledRequiredCount(), _progress.RequiredManifest.Count));
+                }
                 return;
             }
             if (Time.realtimeSinceStartup - _lastCrossRequest < 8f) return;
@@ -317,6 +335,8 @@ namespace SlimeBridge.SR1
             PostCrossing();
         }
 
+        private float _lastDormantHint = -100f;
+
         private void PostCrossing()
         {
             var url = Environment.GetEnvironmentVariable("SLIMEBRIDGE_URL");
@@ -324,8 +344,10 @@ namespace SlimeBridge.SR1
             if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(token))
             {
                 Debug.Log("[SlimeBridge] portal crossing needs the Bridge launcher (no BridgeHost URL/token)");
+                TravelNotice.Post(TravelText.Failure("NO_LAUNCHER", "SR2"));
                 return;
             }
+            TravelNotice.Post(TravelText.Opening("SR2"));            // instant feedback; the launcher's answer follows within a second
             var body = "{\"protocol_version\":1,\"message_type\":\"portal_cross\",\"realm\":\"SR1\",\"portal_id\":\"" +
                        BridgeEntry.JsonEscape(_layout.Portal.PortalId) + "\",\"save_id\":\"" + BridgeEntry.JsonEscape(_saveId) +
                        "\",\"request_id\":\"" + Guid.NewGuid().ToString("N") + "\"}";
@@ -343,7 +365,12 @@ namespace SlimeBridge.SR1
                     using (var stream = request.GetRequestStream()) stream.Write(payload, 0, payload.Length);
                     using (var response = (HttpWebResponse)request.GetResponse()) { }
                 }
-                catch (Exception) { /* BridgeHost absent or too old: the player simply stays in SR1 */ }
+                catch (Exception ex)
+                {
+                    // BridgeHost absent or too old: the player stays in SR1 and is told why
+                    Debug.Log("[SlimeBridge] portal crossing request failed: " + ex.GetType().Name + ": " + ex.Message);
+                    TravelNotice.Post(TravelText.Failure("HOST_UNREACHABLE", "SR2"));
+                }
             });
         }
 
@@ -391,6 +418,7 @@ namespace SlimeBridge.SR1
             var verb = args.Length > 0 ? args[0].ToLowerInvariant() : "";
             switch (verb)
             {
+                case "vac": return "vac: " + Sr1Carry.Describe();
                 case "give":
                 {
                     if (args.Length < 3 || !int.TryParse(args[2], out var amount)) return "usage: give <IDENTIFIABLE_ID> <count>";
@@ -473,14 +501,22 @@ namespace SlimeBridge.SR1
             if (op.StartsWith("tp_check:", StringComparison.Ordinal)) { TeleportAndCheck(op.Substring(9)); return; }
             if (op.StartsWith("shot:", StringComparison.Ordinal)) { StartShot(op.Substring(5)); return; }
             if (op == "shots") { PushFront(_layout.Shots.Select(shot => "shot:" + shot.Name)); return; }
-            if (op.StartsWith("tp:", StringComparison.Ordinal)) { _events.Add(Teleport(op.Substring(3)) ? "teleported" : "teleport target unknown"); _waitUntil = Time.realtimeSinceStartup + 2f; return; }
+            if (op.StartsWith("tp:", StringComparison.Ordinal))
+            {
+                var moved = Teleport(op.Substring(3));
+                _events.Add(moved ? "teleported" : "teleport target unknown");
+                if (_outDirectory == null) Debug.Log("[SlimeBridge] dev op " + op + " -> " + (moved ? "teleported" : "unknown target"));
+                _waitUntil = Time.realtimeSinceStartup + 2f; return;
+            }
             if (op.StartsWith("tp_report:", StringComparison.Ordinal)) { ReportPlayer(op.Substring(10)); return; }
             if (op.StartsWith("plort:", StringComparison.Ordinal)) { SpawnPlort(op.Substring(6)); return; }
             if (op.StartsWith("perf:", StringComparison.Ordinal)) { StartPerf(op.Substring(5)); return; }
             if (op.StartsWith("materials:", StringComparison.Ordinal)) { ListMaterials(op.Substring(10)); return; }
             if (op.StartsWith("toggle:", StringComparison.Ordinal)) { _events.Add(Toggle(op.Substring(7))); return; }
             var parts = op.Split(':');
-            _events.Add(DevCommand(parts));
+            var outcome = DevCommand(parts);
+            _events.Add(outcome);
+            if (_outDirectory == null) Debug.Log("[SlimeBridge] dev op " + op + " -> " + outcome);   // developer mode: no receipt, so the log says it
         }
 
         /// <summary>LAB only: list the native materials whose name contains the text (name | shader | main texture).</summary>

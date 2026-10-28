@@ -3,6 +3,30 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.1.7] - 2026-10-28
+
+### Fixed
+- Travelling through the portal did nothing:
+  - the crossing only advanced while the launcher window ran its timers, which Windows slows to about once a minute when
+    the window is hidden behind a game. It now runs on its own thread, several times a second;
+  - Slime Rancher 2 1.x, started as the destination, crashed on its main menu while checking for a current game
+    (an empty value the game's interop cannot read), so it never loaded the save;
+  - the first trip of a save waited for a choice in the hidden launcher window.
+- A trip that cannot happen now says why in the game (for example "start the game from SlimeBridge" or "Slime Rancher 2 is
+  open on another game"), and walking into the portal answers at once ("The portal opens…", or how many statues are filled).
+- The portal back to Slime Rancher is open for a player who arrived through it (it no longer asks for 250,000 newbucks first).
+
+### Added
+- No Slime Rancher 2 save for this ranch: one is created automatically (the game's own New Game, default settings, first
+  free slot), its opening story is played through by itself once the world is loaded, the player comes out at the
+  portal, and the two saves stay linked. The other game is minimized, muted and slowed down while you are away.
+  Setting "First trip with a save": AUTO (default) or ASK (the old dialog).
+- Launcher home: pick the game to start (Slime Rancher or Slime Rancher 2), and "Continue where you were" starts the game
+  you were last in, straight on the save you were playing.
+- Island statues: a small copy of the slime each statue wants stands in front of it, with its name in the game's language.
+- Launcher layout: nothing hidden or cut at the default and minimum window sizes (the bottom bar no longer covers the page,
+  the side menu fits, the Fan Content notice is shown in full).
+
 ## [0.1.6] - 2026-10-27
 
 ### Fixed

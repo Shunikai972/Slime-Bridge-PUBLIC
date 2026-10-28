@@ -16,7 +16,7 @@ namespace SlimeBridge.SR1
     public sealed class BridgeEntry : ModEntryPoint
     {
         // Must stay a plain X.Y[.Z] integer string: SRML's ModVersion.Parse rejects suffixes like "-dev".
-        internal const string PluginVersion = "0.1.6";
+        internal const string PluginVersion = "0.1.7";
         private static readonly int Pid = Process.GetCurrentProcess().Id;
 
         private DateTime _nextHeartbeat = DateTime.MinValue;
@@ -222,7 +222,9 @@ namespace SlimeBridge.SR1
         private static readonly string? RequestedSaveGroup = AutoloadContinue ?
             Environment.GetEnvironmentVariable("SLIMEBRIDGE_LAB_SAVE_ID") : null;
         // The launcher started this game as the other side of a portal crossing: load the linked save (or Continue) by itself.
-        private static readonly bool TravelAutoload = string.Equals(Environment.GetEnvironmentVariable("SLIMEBRIDGE_TRAVEL_MODE"), "DESTINATION", StringComparison.Ordinal) &&
+        // RESUME: the player pressed "Continue where you were" in the launcher: the same save is loaded, without a crossing.
+        private static readonly bool TravelAutoload = (string.Equals(Environment.GetEnvironmentVariable("SLIMEBRIDGE_TRAVEL_MODE"), "DESTINATION", StringComparison.Ordinal) ||
+                                                       string.Equals(Environment.GetEnvironmentVariable("SLIMEBRIDGE_TRAVEL_MODE"), "RESUME", StringComparison.Ordinal)) &&
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLIMEBRIDGE_URL"));
         private static readonly string? TravelSave = TravelAutoload ? Environment.GetEnvironmentVariable("SLIMEBRIDGE_TRAVEL_SAVE") : null;
         // Asked by the launcher when the player chose "new save" for this crossing: a brand new native game, never an existing one.
@@ -398,7 +400,7 @@ namespace SlimeBridge.SR1
             if (!_unloaded) FrameWatch.Tick();
             if (!_unloaded) SlimeBridge.Shared.PerformanceTuner.Tick(UnityEngine.Time.realtimeSinceStartup, PerfLog);
             if (!_unloaded) _registryCollector?.Tick();
-            if (!_unloaded) { _speciesRegistrar?.Tick(); _importedOps?.Tick(); _sanctuary?.Tick(); _travel?.Tick(); }
+            if (!_unloaded) { _speciesRegistrar?.Tick(); _importedOps?.Tick(); _sanctuary?.Tick(); _travel?.Tick(); TravelGui.Pump(); }
             if (!NativeRegistryCollector.Requested) MaybeAutoload();
 
             if (!NativeRegistryCollector.Requested && !_unloaded && _inventory != null)

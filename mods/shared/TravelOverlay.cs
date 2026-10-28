@@ -267,5 +267,44 @@ namespace SlimeBridge.Shared
         {
             return Application.systemLanguage == SystemLanguage.French ? "Arrivée en cours" : "Arriving";
         }
+
+        internal static string Opening(string destinationRealm)
+        {
+            var french = Application.systemLanguage == SystemLanguage.French;
+            return (french ? "Le portail s’ouvre vers " : "The portal opens to ") + Game(destinationRealm) + "…";
+        }
+
+        internal static string Dormant(int filled, int total)
+        {
+            var french = Application.systemLanguage == SystemLanguage.French;
+            return french ? $"Le portail dort : {filled}/{total} statues remplies" : $"The portal sleeps: {filled}/{total} statues filled";
+        }
+
+        /// <summary>Why a crossing did not happen, in words the player can act on (codes come from the launcher).</summary>
+        internal static string Failure(string code, string otherRealm)
+        {
+            var fr = Application.systemLanguage == SystemLanguage.French;
+            var other = Game(otherRealm);
+            switch (code)
+            {
+                case "NO_LAUNCHER": return fr ? "Pour voyager, lance le jeu depuis SlimeBridge (bouton Jouer)." : "To travel, start the game from SlimeBridge (Play button).";
+                case "HOST_UNREACHABLE": case "host_lost": return fr ? "SlimeBridge ne répond pas : rouvre le launcher." : "SlimeBridge is not answering: reopen the launcher.";
+                case "DESTINATION_WRONG_SAVE": case "DESTINATION_BUSY":
+                    return fr ? other + " est ouvert sur une autre partie : ferme-le, le portail le relancera sur la bonne." : other + " is open on another game: close it, the portal will start it on the right one.";
+                case "DESTINATION_UNAVAILABLE": return fr ? other + " est introuvable : choisis son dossier dans SlimeBridge." : other + " was not found: pick its folder in SlimeBridge.";
+                case "NEEDS_BACKUP_CONFIRMATION": return fr ? "Confirme une fois le rappel de sauvegarde dans SlimeBridge, puis réessaie." : "Confirm the backup reminder once in SlimeBridge, then try again.";
+                case "ANOTHER_CROSSING_ACTIVE": return fr ? "Un voyage est déjà en cours." : "A trip is already under way.";
+                case "TIMEOUT_PREPARING": return fr ? other + " n’a pas fini de charger à temps : réessaie." : other + " did not finish loading in time: try again.";
+                default: return (fr ? "Le voyage n’a pas pu se faire (" : "The trip could not happen (") + code + ")";
+            }
+        }
+    }
+
+    /// <summary>Messages for the player raised from any thread (network callbacks), shown on the next frame.</summary>
+    internal static class TravelNotice
+    {
+        private static string? _pending;
+        internal static void Post(string text) => System.Threading.Volatile.Write(ref _pending, text);
+        internal static string? Take() => System.Threading.Interlocked.Exchange(ref _pending, null);
     }
 }

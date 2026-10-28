@@ -9,7 +9,25 @@ namespace SlimeBridge.SR1
     internal sealed class TravelGui : MonoBehaviour
     {
         internal static TravelOverlay? Overlay;
+        private static GameObject? _host;
         public void OnGUI() { Overlay?.Draw(); }
+
+        /// <summary>Shows pending player messages; works without travel too (a game started outside SlimeBridge).</summary>
+        internal static void Pump()
+        {
+            var text = TravelNotice.Take();
+            if (text == null) return;
+            if (Overlay == null) Overlay = new TravelOverlay();
+            if (_host == null)
+            {
+                _host = new GameObject("SlimeBridge_TravelGui");
+                UnityEngine.Object.DontDestroyOnLoad(_host);
+                _host.AddComponent<TravelGui>();
+            }
+            Overlay.ShowHint(text, 6f);
+        }
+
+        internal static void Adopt(TravelOverlay overlay, GameObject host) { Overlay = overlay; _host = host; }
     }
 
     /// <summary>
@@ -61,10 +79,10 @@ namespace SlimeBridge.SR1
         private void EnsureGui()
         {
             if (_gui != null) return;
-            TravelGui.Overlay = _overlay;
             _gui = new GameObject("SlimeBridge_TravelGui");
             UnityEngine.Object.DontDestroyOnLoad(_gui);
             _gui.AddComponent<TravelGui>();
+            TravelGui.Adopt(_overlay, _gui);
         }
 
         internal void Tick()
@@ -176,6 +194,8 @@ namespace SlimeBridge.SR1
 
         private void Resume(string? reason, TravelDone? done)
         {
+            // a crossing that could not happen: say why (a return by hand or a normal resume has no reason)
+            if (!string.IsNullOrEmpty(reason)) TravelNotice.Post(TravelText.Failure(reason!, "SR2"));
             _throttle.Restore();
             var report = HeldReport();
             _held = false;

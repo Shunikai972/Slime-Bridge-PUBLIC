@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using SlimeBridge.Shared;
 using UnityEngine;
 
@@ -29,6 +30,21 @@ namespace SlimeBridge.SR1
         {
             var state = SceneContext.Instance?.PlayerState;
             return state?.GetAmmo(PlayerState.AmmoMode.DEFAULT);
+        }
+
+        /// <summary>What the vac holds right now, for logs ("PINK_PLORT x2, NONE x0, ...").</summary>
+        internal static string Describe()
+        {
+            var ammo = Vac();
+            if (ammo == null) return "unavailable";
+            var held = new List<string>();
+            for (var i = 0; i < ammo.GetUsableSlotCount(); i++) held.Add(ammo.GetSlotName(i) + " x" + ammo.GetSlotCount(i));
+            var state = SceneContext.Instance.PlayerState;
+            var current = state.Ammo;
+            var cur = new List<string>();
+            if (current != null) for (var i = 0; i < current.GetUsableSlotCount(); i++) cur.Add(current.GetSlotName(i) + " x" + current.GetSlotCount(i));
+            return string.Join(", ", held.ToArray()) + " | mode " + state.GetAmmoMode() + " current: " + string.Join(", ", cur.ToArray()) +
+                   " | health " + state.GetCurrHealth() + " | at " + SceneContext.Instance.Player.transform.position;
         }
 
         internal static Dictionary<string, int> Snapshot(string mode)
@@ -110,6 +126,19 @@ namespace SlimeBridge.SR1
                 }
             }
             catch (Exception ex) { Debug.Log("[SlimeBridge] carry remove failed: " + ex.GetType().Name + ": " + ex.Message); }
+            if (removed.Count != items.Count)
+            {
+                try
+                {
+                    var ammo = Vac();
+                    var held = new List<string>();
+                    if (ammo != null)
+                        for (var i = 0; i < ammo.GetUsableSlotCount(); i++) held.Add(ammo.GetSlotName(i) + " x" + ammo.GetSlotCount(i));
+                    Debug.Log("[SlimeBridge] carry remove: asked " + string.Join(", ", items.Select(kv => kv.Key + " x" + kv.Value).ToArray()) +
+                              "; removed " + removed.Count + " kinds; vac now: " + (ammo == null ? "unavailable" : string.Join(", ", held.ToArray())));
+                }
+                catch (Exception) { }
+            }
             return removed;
         }
     }

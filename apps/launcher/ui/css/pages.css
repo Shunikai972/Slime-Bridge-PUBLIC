@@ -148,5 +148,35 @@ ul.clean { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; } 
 
 
 @media (max-width: 1250px) { .news-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .home-top { grid-template-columns: minmax(0, 1fr) 300px; } .play { min-width: 230px; } .play .go { font-size: 30px; } }
-@media (max-width: 1100px) { .cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cols-3 { grid-template-columns: 1fr; } .dock-row { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cols-3 { grid-template-columns: 1fr; } } /* the dock stays one row (stacked, it covered half the page) */
 @media (max-width: 860px) { .cols-2 { grid-template-columns: 1fr; } }
+
+/* Home: pick the game to start + "continue where you were" */
+.play-choice { display: grid; gap: 10px; }
+.play-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.play-card { display: flex; align-items: center; gap: 14px; min-width: 0; padding: 10px 16px 10px 10px; border-radius: 22px; background: var(--panel); border: 3px solid var(--panel-edge); box-shadow: 0 6px 0 var(--panel-edge), 0 12px 24px var(--panel-shadow); }
+.play-card.sr1 { border-color: #9be8c6; box-shadow: 0 6px 0 #9be8c6, 0 12px 24px var(--panel-shadow); }
+.play-card.sr2 { border-color: #c8c3ff; box-shadow: 0 6px 0 #c8c3ff, 0 12px 24px var(--panel-shadow); }
+.play-card .pc-art { flex: none; width: 64px; height: 64px; display: grid; place-items: center; }
+.play-card .pc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.play-card .pc-body b { font: 600 20px var(--font-display); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.play-card .pc-body small { font-weight: 700; color: var(--ink-soft); }
+.play-card .btn { flex: none; }
+.resume-bar { display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 18px; border-radius: 18px; background: linear-gradient(90deg, var(--sun-l), #fff6d8); border: 3px solid var(--sun); font: 600 17px var(--font-display); color: var(--ink); }
+.resume-bar > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.resume-bar small { font: 600 12px var(--font-body); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home .home-top { height: clamp(220px, calc(100vh - 560px), 440px); }
+@media (max-width: 900px) { .play-cards { grid-template-columns: minmax(0, 1fr); } }
+
+/* Layout fixes: nothing hidden or cut at the launcher's real sizes (1320x840 default, 1040x680 minimum) */
+#side .nav { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; align-content: start; padding-bottom: 6px; }
+#side .nav::-webkit-scrollbar { display: none; }
+@media (max-height: 940px) { .nav { gap: 7px; } .nav-item { padding: 9px 16px; font-size: 17px; } .nav-item svg { width: 24px; height: 24px; } #side .peek { height: 120px; opacity: .9; } #side { padding-bottom: 96px; } }
+@media (max-height: 780px) { .nav { gap: 5px; } .nav-item { padding: 7px 14px; font-size: 16px; } #side .peek { display: none; } #side { padding-bottom: 14px; } }
+.play-card .pc-body b { white-space: normal; line-height: 1.08; overflow: visible; }
+.dock-status > .ok { flex: 1 1 auto; }
+@media (max-width: 1250px) { .dock-status .tag { display: none; } }
+@media (max-width: 1100px) { .dock-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; } .play { min-width: 200px; } .play .go { font-size: 24px; } .dock-card { padding: 6px 10px 7px; } }
+.page .card > .muted { margin-top: 12px; }
+@media (max-height: 760px) { .home .promos { display: none; } .home .home-top { height: clamp(220px, calc(100vh - 400px), 440px); } }
+@media (max-width: 1250px) { #ribbon { font-size: 10px; gap: 6px; } } /* the Fan Content notice must stay readable in full */

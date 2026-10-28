@@ -34,10 +34,10 @@ def prepare(work):
         'private static GameStatus? SnapshotOnMainThread()', 'public override void OnDeinitializeMelon()')]
     for marker in ('internal const string PinkSlimeRef', 'internal const string PinkPlortRef',
                    'private static readonly DateTime ProcessStartUtc', 'internal static string Since()',
-                   'private static string _snapshotReason', 'private static string? _pendingReason'):
+                   'private static string _snapshotReason', 'private static string? _pendingReason', 'private static bool _storyBlocking = false;'):
         index = bridge.index(marker)
         pieces.append(bridge[bridge.rfind('\n', 0, index) + 1:bridge.index('\n', index)].rstrip('\r'))
-    (work / 'Snapshot.cs').write_text('using System; using System.Diagnostics;\n'
+    (work / 'Snapshot.cs').write_text('using System; using System.Diagnostics; using System.Threading;\n'
         'namespace SlimeBridge.SR2 { internal sealed class LabFocusDiagnostics { internal void Stop(string reason) {} } internal class MelonStub { public virtual void OnDeinitializeMelon() {} } internal class TravelStub { public void Unload() { } public void Tick() { } public void Gui() { } } internal class BridgeMod : MelonStub { TravelStub? _travel = null; System.Threading.CancellationTokenSource? _stop = null; InventoryAgent? _inventory = null; LabFocusDiagnostics? _focusDiagnostics = null; internal bool _focusDiagnosticAllowed = false; int _focusEpoch = 0;\n' + '\n'.join(pieces) + '\n}}', encoding='utf-8')
     (work / 'extraction.json').write_text(json.dumps({
         'source_sha256': hashlib.sha256((ROOT / 'mods/sr2-bridge/BridgeMod.cs').read_bytes()).hexdigest(),

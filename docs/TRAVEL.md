@@ -36,6 +36,10 @@ portal facing away, light flash, iris opens: the player *comes out of the portal
 
 * States of a crossing: `PREPARING → SWITCHING → HOLDING → COMPLETE`, or `ROLLED_BACK` / `FAILED`. Each step has a deadline; on any
   failure the source is told to `resume` (its overlay opens, input and quality come back) and its window is restored and focused.
+* The coordinator runs on a launcher thread every 0.3 s, whether the launcher window is shown or not (the window's own timers are
+  slowed to about once a minute when it is hidden behind a game, which used to freeze the crossing: "nothing happens").
+* A crossing that cannot start or fails tells the player in the game why (`resume` with a reason -> message at the top of the screen);
+  walking into the portal shows *"The portal opens…"* at once, a sleeping portal shows how many statues are filled.
 * Messages are at-least-once through a per-realm mailbox in BridgeHost (`/v1/travel/send|next|event|events`). A message stays at the
   head until its event is acknowledged; `resume`/`abort` jump the queue so a stuck instruction can never block the way back.
 * Safety nets in the plugin: a held game resumes by itself if BridgeHost stays silent for 45 s, or if the player returns to its
@@ -48,14 +52,16 @@ portal facing away, light flash, iris opens: the player *comes out of the portal
 A save of one game is **linked** to one save of the other game (`travel-links.json`, next to the launcher settings). The launcher
 never creates, edits or deletes a save; it only remembers the pairing.
 
-* First crossing with a save that has no link: the source game keeps playing, the launcher comes to the front and asks
-  *"Which Slime Rancher 2 save belongs to this ranch?"* (list read from the other game's save folder, newest first; a save already
-  linked to another ranch is greyed out; the save that is open right now is marked). Cancel = nothing happens.
+* First crossing with a save that has no link (`travel_link_mode = AUTO`, the default): nothing is asked. If the other game is
+  open on a save that belongs to no ranch yet, that save is linked; otherwise the other game is started and creates a **new save**
+  for this ranch by itself (SR1: `LoadNewGame`; SR2 1.x: `AutoSaveDirector.StartNewGame` with the New Game screen's default
+  settings in the first free slot, see `mods/sr2-bridge/Sr2NewGame.cs`), and the link is recorded as soon as it reports its name.
+  `travel_link_mode = ASK` keeps the old dialog (*"Which Slime Rancher 2 save belongs to this ranch?"*).
 * Linked: the other game is started on exactly that save (`SLIMEBRIDGE_TRAVEL_MODE=DESTINATION` + `SLIMEBRIDGE_TRAVEL_SAVE`, existing saves
   only), loads it by itself and waits behind the portal card until the player arrives.
 * The other game is already running on a **different** save than the linked one: the crossing is refused (`DESTINATION_WRONG_SAVE`);
   a running game is never switched behind the player's back. A link whose save no longer exists is dropped and the question is asked again.
-* **New save**: when SR1 is the destination, is not running and the player has no save to link, the dialog also offers *"Create a new Slime Rancher save for this ranch"*. The launcher starts SR1 with `SLIMEBRIDGE_TRAVEL_NEW=<name>`; the plugin creates it with the game's own `LoadNewGame` (never an existing save) and the link is recorded when the new save reports its name. Proven in the protected LAB run `travel_oracle --scenario create` (SR2 save -> new SR1 save, hens carried). A new **SR2** save cannot be created this way yet (SR2's native creation needs the reviewed LAB-only counterpart creator), so for SR2 the player links an existing save.
+* **New save** (ASK mode): when SR1 is the destination, is not running and the player has no save to link, the dialog also offers *"Create a new Slime Rancher save for this ranch"*. The launcher starts SR1 with `SLIMEBRIDGE_TRAVEL_NEW=<name>`; the plugin creates it with the game's own `LoadNewGame` (never an existing save) and the link is recorded when the new save reports its name. Proven in the protected LAB run `travel_oracle --scenario create` (SR2 save -> new SR1 save, hens carried). In AUTO mode SR2 creates its new save itself (above).
 * `travel_save_mode = CONTINUE` skips linking and uses the other game's latest save (old behaviour).
 
 ## What you carry

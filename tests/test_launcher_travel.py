@@ -96,7 +96,7 @@ class CoordinatorTests(unittest.TestCase):
         self.launcher = FakeLauncher(self.proc)
         self.windows, self.clock = FakeWindows(), Clock()
         self.links = travel.TravelLinks(Path(self.tmp.name) / 'links.json')
-        self.settings = {}
+        self.settings = {'travel_link_mode': 'ASK'}      # the dialog flow; AutoLinkTests cover the default
         self.installs = {'SR1': {'game': 'SR1'}, 'SR2': {'game': 'SR2'}}
         self.ack = True
         self.saves = {'SR1': [], 'SR2': [{'group': 'sr2-save', 'label': 'S'}, {'group': 'sr2-linked', 'label': 'L'}, {'group': 'sr2-solo', 'label': 'solo'}]}
@@ -281,7 +281,8 @@ class CoordinatorTests(unittest.TestCase):
         done = self.coord.poll()[-1]
         self.assertEqual((done['state'], done['code']), ('FAILED', 'DESTINATION_WRONG_SAVE'))
         self.assertEqual(done['detail'], {'running': 'sr2-solo', 'linked': 'sr2-linked'})
-        self.assertIsNone(self.host.travel_peek('SR1'))
+        told = self.host.travel_peek('SR1')                 # the player, still in SR1, is told why instead of nothing happening
+        self.assertEqual((told['kind'], told['reason']), ('resume', 'DESTINATION_WRONG_SAVE'))
 
     def test_a_running_unlinked_destination_is_offered_first(self):
         self.proc.alive('SR1', 'sr1-save', 111)
@@ -383,3 +384,89 @@ class CoordinatorTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class AutoLinkTests(unittest.TestCase):
+    """Default travel_link_mode AUTO: the first crossing of a save never waits for a dialog."""
+    state = CoordinatorTests.state
+
+    def setUp(self):
+        CoordinatorTests.setUp(self)
+        self.settings.clear()
+
+    def test_no_partner_and_nothing_running_creates_a_new_save_over_there(self):
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.launcher._running.add('SR1')
+        cross(self.host)
+        shown = self.coord.poll()[-1]
+        self.assertEqual(shown['state'], 'PREPARING')
+        game, env = self.launcher.started[0]
+        self.assertEqual((game, env['SLIMEBRIDGE_TRAVEL_NEW'], env['SLIMEBRIDGE_TRAVEL_MODE']), ('SR2', 'SlimeBridge sr1-save', 'DESTINATION'))
+        self.assertNotIn('SLIMEBRIDGE_TRAVEL_SAVE', env)
+        self.assertEqual(self.host.travel_peek('SR1')['kind'], 'prepare_departure')
+        plugin_reply(self.host, 'SR1', 'departure_ready')
+        self.proc.alive('SR2', 'sb-new-sr2', 222)
+        self.launcher._running.add('SR2')
+        self.coord.poll()
+        self.assertEqual(self.links.lookup('SR1', 'sr1-save'), 'sb-new-sr2')
+        self.assertEqual(self.state(), 'SWITCHING')
+
+    def test_the_open_save_over_there_is_linked_without_asking(self):
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.proc.alive('SR2', 'sr2-solo', 222)
+        self.launcher._running |= {'SR1', 'SR2'}
+        cross(self.host)
+        self.coord.poll()
+        self.assertEqual(self.links.lookup('SR1', 'sr1-save'), 'sr2-solo')
+        self.assertEqual(self.launcher.started, [])
+        plugin_reply(self.host, 'SR1', 'departure_ready')
+        self.assertEqual(self.state(), 'SWITCHING')
+
+    def test_a_save_of_another_ranch_open_over_there_is_not_taken(self):
+        self.links.remember('other-ranch', 'sr2-solo')
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.proc.alive('SR2', 'sr2-solo', 222)
+        self.launcher._running |= {'SR1', 'SR2'}
+        cross(self.host)
+        done = self.coord.poll()[-1]
+        self.assertEqual((done['state'], done['code']), ('FAILED', 'DESTINATION_BUSY'))
+        self.assertEqual(self.host.travel_peek('SR1')['reason'], 'DESTINATION_BUSY')
+        self.assertEqual(self.links.lookup('SR2', 'sr2-solo'), 'other-ranch')
+
+
+class LastSessionTests(unittest.TestCase):
+    def test_remembers_the_game_and_save_and_keeps_the_save_when_only_the_game_is_known(self):
+        import tempfile
+        from apps.launcher.travel import LastSession
+        with tempfile.TemporaryDirectory() as tmp:
+            session = LastSession(Path(tmp) / 'last-session.json')
+            self.assertIsNone(session.get())
+            session.set('SR2', 'sr2-save')
+            self.assertEqual((session.get()['realm'], session.get()['save']), ('SR2', 'sr2-save'))
+            session.set('SR2', None)                       # a launch without a known save keeps the save it had
+            self.assertEqual(session.get()['save'], 'sr2-save')
+            session.set('SR1', None)
+            self.assertEqual((session.get()['realm'], session.get()['save']), ('SR1', None))
+            session.set('XX', 'nope')
+            self.assertEqual(session.get()['realm'], 'SR1')
+
+    def test_a_completed_crossing_marks_the_destination_as_where_the_player_is(self):
+        case = CoordinatorTests('test_one_world_per_save_when_linking_again')
+        case.setUp()
+        import tempfile
+        from apps.launcher.travel import LastSession
+        with tempfile.TemporaryDirectory() as tmp:
+            session = LastSession(Path(tmp) / 's.json')
+            case.coord._session = session
+            case.links.remember('sr1-save', 'sr2-save')
+            case.proc.alive('SR1', 'sr1-save', 111)
+            case.proc.alive('SR2', 'sr2-save', 222)
+            case.launcher._running |= {'SR1', 'SR2'}
+            cross(case.host)
+            case.coord.poll()
+            for realm, event in (('SR1', 'departure_ready'), ('SR2', 'arrived'), ('SR1', 'held')):
+                plugin_reply(case.host, realm, event)
+                case.coord.poll()
+            self.assertEqual(case.coord.poll()[-1]['state'], 'COMPLETE')
+            self.assertEqual(session.get()['realm'], 'SR2')
+            self.assertEqual(session.get()['save'], 'sr2-save')

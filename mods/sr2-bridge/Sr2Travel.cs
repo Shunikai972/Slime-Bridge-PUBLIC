@@ -91,6 +91,8 @@ namespace SlimeBridge.SR2
                     break;
                 case "resume":
                 case "abort":
+                    // a crossing that could not happen: say why (a return by hand has no reason)
+                    if (!string.IsNullOrEmpty(message.Reason)) _overlay.ShowHint(TravelText.Failure(message.Reason, "SR1"), 6f);
                     Resume(done);
                     break;
                 case "arrive":

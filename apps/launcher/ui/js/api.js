@@ -81,7 +81,7 @@
     async choose_install() { return { ok: true }; },
     async acknowledge_legal() { S.legal = true; return { understood: true }; },
     async set_preference(k, v) { if (k === 'extract_ram_gb') S.ram = v; if (k === 'play_target') S.target = v; if (k === 'language') S.lang = v; if (k === 'theme') S.theme = v; if (k === 'reduce_motion') S.reduce = v; if (k === 'backup_ack') S.ack = v; if (k === 'largo_manifest_url') { S.manifestUrl = v || null; S.models = null; } return { ok: true, key: k, value: v }; },
-    async launch(target, confirmed, remember) {
+    async launch(target, confirmed, remember, resume) {
       if (!S.ack && !confirmed) return { ok: false, needs_confirmation: true };
       if (confirmed && remember) S.ack = true;
       if (target === 'BOTH') S.host = { state: 'RUNNING', url: 'http://127.0.0.1:41873', pid: 4242, heartbeats: {} };

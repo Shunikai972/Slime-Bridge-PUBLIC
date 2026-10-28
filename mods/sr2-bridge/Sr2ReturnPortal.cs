@@ -372,6 +372,8 @@ namespace SlimeBridge.SR2
                 if (teleport == null || sceneGroup == null) return false;
                 teleport.TeleportTo(position, sceneGroup, new Il2CppSystem.Nullable<Vector3>(new Vector3(0f, _yaw, 0f)), false);
                 _lastCross = Time.realtimeSinceStartup;
+                // the player came through this portal: it is open for this save (never stranded behind the newbucks price)
+                if (!_paid) { _paid = true; SaveState(); }
                 Note("player emerged from the portal");
                 return true;
             }

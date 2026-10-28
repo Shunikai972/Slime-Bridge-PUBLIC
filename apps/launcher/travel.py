@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -24,6 +25,9 @@ KEEP = 20
 NEW_SAVE = '__NEW__'
 NEW_NAME = re.compile(r'[^A-Za-z0-9 _-]+')
 SAVE_MODES = ('LINKED', 'CONTINUE')
+# AUTO: a save with no partner gets one without asking (the open save of the other game, else a new save made for it);
+# ASK: the launcher asks the player which save to link (the old dialog)
+LINK_MODES = ('AUTO', 'ASK')
 
 
 def bridge_env(bridge_settings, realm):
@@ -84,9 +88,37 @@ class TravelLinks:
         self._write(data)
 
 
+class LastSession:
+    """Where the player was last (game + save), so the launcher can offer "Continue where you were"."""
+
+    def __init__(self, path):
+        self.path = Path(path)
+
+    def get(self):
+        try:
+            data = json.loads(self.path.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            return None
+        if not isinstance(data, dict) or data.get('realm') not in ('SR1', 'SR2'):
+            return None
+        return {'realm': data['realm'], 'save': data.get('save') if isinstance(data.get('save'), str) else None, 'at': data.get('at')}
+
+    def set(self, realm, save, at=None):
+        if realm not in ('SR1', 'SR2'):
+            return
+        current = self.get()
+        if current and current['realm'] == realm and current['save'] == (save or current['save']):
+            return                                                    # unchanged: no disk write every tick
+        data = {'realm': realm, 'save': save or (current['save'] if current and current['realm'] == realm else None), 'at': at or time.time()}
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temp = self.path.with_suffix('.tmp')
+        temp.write_text(json.dumps(data), encoding='utf-8')
+        temp.replace(self.path)
+
+
 class TravelCoordinator:
     def __init__(self, host, launcher, install_for, backup_acknowledged, windows, links, *, settings=None, opener=urlopen,
-                 clock=time.time, list_saves=None, notify=None):
+                 clock=time.time, list_saves=None, notify=None, session=None):
         """``settings()`` -> dict with ``travel_save_mode`` and ``background_policy`` (optional)."""
         self._host, self._launcher, self._install_for = host, launcher, install_for
         self._acknowledged, self._windows, self._links = backup_acknowledged, windows, links
@@ -96,6 +128,8 @@ class TravelCoordinator:
         self._events = {}
         self._list_saves_fn = list_saves or (lambda realm: [])
         self._notify_fn = notify
+        self._lock = threading.RLock()                 # polled by a background thread and by the window
+        self._session = session
         self.transitions = []
 
     # ---- host relay -------------------------------------------------------------------------------------------------
@@ -211,9 +245,9 @@ class TravelCoordinator:
         self.transitions.append(transition)
         del self.transitions[:-KEEP]
         if destination is None or destination == transition['from']:
-            return self._finish(transition, 'FAILED', 'UNKNOWN_PORTAL')
+            return self._refuse(transition, 'UNKNOWN_PORTAL')
         if any(t['state'] in ACTIVE and t is not transition for t in self.transitions):
-            return self._finish(transition, 'FAILED', 'ANOTHER_CROSSING_ACTIVE')
+            return self._refuse(transition, 'ANOTHER_CROSSING_ACTIVE')
         mode = (self._settings().get('travel_save_mode') or 'LINKED').upper()
         running = self._launcher.running(destination)
         running_save = (self._heartbeat(destination).get('status') or {}).get('save_id') if running else None
@@ -222,15 +256,41 @@ class TravelCoordinator:
             if linked and running and running_save and running_save != linked:
                 # Never switch a running game to another save behind the player's back.
                 transition['detail'] = {'running': running_save, 'linked': linked}
-                return self._finish(transition, 'FAILED', 'DESTINATION_WRONG_SAVE', transition['detail'])
+                return self._refuse(transition, 'DESTINATION_WRONG_SAVE', transition['detail'])
             if linked and not running and linked not in {c['group'] for c in self._list_saves(destination)}:
                 self._links.unlink(transition['from'], transition['source_save'] or '')
                 self._log(transition, f'the linked {destination} save {linked} no longer exists: link dropped')
                 linked = None
             if not linked:
-                return self._ask_for_link(transition, running_save)
+                if (self._settings().get('travel_link_mode') or 'AUTO').upper() == 'ASK':
+                    return self._ask_for_link(transition, running_save)
+                return self._auto_link(transition, running_save)
         transition['dest_save'] = linked
         return self._start_destination(transition)
+
+    def _auto_link(self, transition, running_save):
+        """No partner yet: the other game's open save if it runs one, else a new save made for this ranch. Never asks."""
+        source = transition['source_save'] or ''
+        used = {key.split(':', 1)[1] for key in self._links.all()} if transition['to'] == 'SR1' else set(self._links.all().values())
+        if running_save and running_save not in used:
+            sr1, sr2 = (source, running_save) if transition['from'] == 'SR1' else (running_save, source)
+            self._links.remember(sr1, sr2)
+            transition['dest_save'] = running_save
+            self._log(transition, f"linked {transition['from']} {source} <-> {transition['to']} {running_save} (the save open over there)")
+            return self._start_destination(transition)
+        if self._launcher.running(transition['to']):
+            # it runs another ranch's save (or is still on its menu): never switch it behind the player's back
+            return self._refuse(transition, 'DESTINATION_BUSY', {'running': running_save})
+        transition['create_new'] = NEW_NAME.sub('', f"SlimeBridge {source}"[:48]).strip() or 'SlimeBridge'
+        transition['dest_save'] = None
+        self._log(transition, f"no {transition['to']} save for this ranch yet: a new one is created ({transition['create_new']})")
+        return self._start_destination(transition)
+
+    def _refuse(self, transition, code, detail=None):
+        """A crossing that cannot start: the player, still in the source game, is told why (instead of nothing happening)."""
+        if transition.get('from') in ('SR1', 'SR2'):
+            self._send(transition['from'], 'resume', transition, reason=code[:60])
+        return self._finish(transition, 'FAILED', code, detail)
 
     def _ask_for_link(self, transition, running_save):
         dest = transition['to']
@@ -252,6 +312,10 @@ class TravelCoordinator:
 
     def choose_link(self, transition_id, save_group):
         """The player picked the destination save (or ``None`` to cancel the crossing)."""
+        with self._lock:
+            return self._choose_link(transition_id, save_group)
+
+    def _choose_link(self, transition_id, save_group):
         transition = next((t for t in self.transitions if t['id'] == transition_id), None)
         if transition is None or transition['state'] != 'NEEDS_LINK':
             return {'ok': False, 'error': 'NOT_WAITING'}
@@ -279,9 +343,9 @@ class TravelCoordinator:
         if self._launcher.running(destination):
             self._log(transition, f'{destination} is already running')
         elif not installation:
-            return self._finish(transition, 'FAILED', 'DESTINATION_UNAVAILABLE')
+            return self._refuse(transition, 'DESTINATION_UNAVAILABLE')
         elif not self._acknowledged():
-            return self._finish(transition, 'FAILED', 'NEEDS_BACKUP_CONFIRMATION')
+            return self._refuse(transition, 'NEEDS_BACKUP_CONFIRMATION')
         else:
             try:
                 self._launcher.launch(installation, extra_env=self._destination_env(transition))
@@ -289,7 +353,7 @@ class TravelCoordinator:
                 transition['deadline'] = DEADLINES['PREPARING_COLD']
                 self._log(transition, f'starting {destination}')
             except Exception as exc:                                  # noqa: BLE001
-                return self._finish(transition, 'FAILED', 'LAUNCH_FAILED', type(exc).__name__)
+                return self._refuse(transition, 'LAUNCH_FAILED', type(exc).__name__)
         # The source starts its portal animation at once and waits, covered, while the destination loads.
         self._send(transition['from'], 'prepare_departure', transition, destination=destination, portal_id=transition['portal_id'],
                    carry_mode=self._carry_mode())
@@ -360,8 +424,14 @@ class TravelCoordinator:
         elif state == 'HOLDING':
             if self._saw(transition, src, 'held'):
                 self._finish(transition, 'COMPLETE', 'ARRIVED')
+                if self._session is not None:
+                    self._session.set(dst, transition.get('dest_save') or (self._heartbeat(dst).get('status') or {}).get('save_id'))
 
     def poll(self):
+        with self._lock:
+            return self._poll()
+
+    def _poll(self):
         status = self._host.state()
         if status.get('state') != 'RUNNING':
             return [self.public(t) for t in self.transitions]
@@ -375,7 +445,16 @@ class TravelCoordinator:
         for transition in list(self.transitions):
             if transition['state'] in ACTIVE:
                 self._advance(transition)
+        self._note_session()
         return [self.public(t) for t in self.transitions]
+
+    def _note_session(self):
+        """Outside a crossing, the one game that is running with a loaded save is where the player is."""
+        if self._session is None or any(t['state'] in ACTIVE for t in self.transitions):
+            return
+        playing = [realm for realm in ('SR1', 'SR2') if self._launcher.running(realm) and self._world_ready(realm)]
+        if len(playing) == 1:
+            self._session.set(playing[0], (self._heartbeat(playing[0]).get('status') or {}).get('save_id'))
 
     def public(self, transition):
         keys = ('id', 'request_id', 'portal_id', 'from', 'to', 'state', 'code', 'detail', 'started', 'since', 'launched', 'source_save', 'dest_save', 'candidates')

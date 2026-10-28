@@ -48,6 +48,7 @@ _VALIDATORS = {
 }
 
 
+TRAVEL_TICK = 0.3                                              # seconds between two crossing steps
 GUI = 'edgechromium' if sys.platform == 'win32' else 'gtk'      # pywebview backend per platform
 
 class LauncherAPI:
@@ -64,13 +65,16 @@ class LauncherAPI:
         self._maximized = False
         self._extract = None
         self._sanctuary = None
+        self._session = travel.LastSession(Path(config_path).parent / 'last-session.json')
         self._travel = travel.TravelCoordinator(self._host, self._launcher, self._primary, lambda: bool(self._load()['backup_ack']),
                                                 self._window_control(), travel.TravelLinks(Path(config_path).parent / 'travel-links.json'),
                                                 settings=lambda: self._settings()[1]['bridge'], list_saves=savelist.list_groups,
-                                                notify=lambda _transition: self._raise_window())
+                                                notify=lambda _transition: self._raise_window(), session=self._session)
         self._downloads = None
         self._manifest = {'doc': None, 'error': None}
         self._lock = threading.Lock()
+        self._travel_stop = threading.Event()
+        self._travel_thread = None
 
     # ---- configuration (installations.json: game folders, legal notice, preferences) -----------------------------
     def _load(self) -> dict:
@@ -354,11 +358,13 @@ class LauncherAPI:
                 'host': self._host.state(), 'tool': self._tool(data),
                 'paths': {'models': str(self._models_dir(data)), 'output': str(self._output_dir(data)),
                           'cache': str(self._cache_dir(data))},
-                'lab_isolation': 'Not configured — game launch disabled', 'platform': sys.platform}
+                'lab_isolation': 'Not configured — game launch disabled', 'platform': sys.platform,
+                'last_session': self._session.get()}
 
     # ---- launching -------------------------------------------------------------------------------------------------
-    def launch(self, target: str, confirmed: bool = False, remember: bool = False) -> dict:
-        """``target``: SR1, SR2 or BOTH. Needs the backup reminder to be confirmed once."""
+    def launch(self, target: str, confirmed: bool = False, remember: bool = False, resume: bool = False) -> dict:
+        """``target``: SR1, SR2 or BOTH. Needs the backup reminder to be confirmed once. ``resume``: load the save the player
+        was last in (that game only), straight from the game's menu."""
         if target not in ('SR1', 'SR2', 'BOTH'):
             raise ValueError('target must be SR1, SR2 or BOTH')
         data = self._load()
@@ -372,6 +378,7 @@ class LauncherAPI:
         # The bridge (portals, travel, shared inventory) needs BridgeHost whichever game is started first.
         try:
             self._host.start()
+            self._ensure_travel_loop()
         except RuntimeErrorWithCode as exc:
             warnings.append(f'BridgeHost not started ({exc.code}): the games will start without the bridge link')
         for realm in realms:
@@ -388,7 +395,12 @@ class LauncherAPI:
                 warnings += [f'{realm}: {w}' for w in prepared['warnings']]
                 lab_env = pack.lab_env(realm, primary['root'])
             try:
-                launched.append(self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(self._settings()[1]['bridge'], realm), **self._perf_env(), **lab_env}))
+                resume_env = {}
+                last = self._session.get() if resume else None
+                if last and last['realm'] == realm and last['save']:
+                    resume_env = {'SLIMEBRIDGE_TRAVEL_MODE': 'RESUME', 'SLIMEBRIDGE_TRAVEL_SAVE': last['save']}
+                launched.append(self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(self._settings()[1]['bridge'], realm), **self._perf_env(), **lab_env, **resume_env}))
+                self._session.set(realm, last['save'] if resume_env else None)
             except RuntimeErrorWithCode as exc:
                 errors.append({'realm': realm, 'error': exc.code, 'detail': exc.detail})
         return {'ok': bool(launched) and not errors, 'launched': launched, 'errors': errors, 'warnings': warnings,
@@ -498,13 +510,32 @@ class LauncherAPI:
 
     def crossings_poll(self) -> dict:
         """Drive and report portal crossings: a plugin asked BridgeHost to cross, the launcher moves the player between the two games."""
+        self._ensure_travel_loop()
         return {'ok': True, 'crossings': self._travel.poll()}
+
+    def _ensure_travel_loop(self):
+        """Crossings advance on this thread, several times a second, whether the launcher window is shown, hidden or minimized
+        (a hidden WebView2 page has its timers slowed to about once a minute, which froze the crossing)."""
+        if self._travel_thread is not None and self._travel_thread.is_alive():
+            return
+
+        def _loop():
+            while not self._travel_stop.wait(TRAVEL_TICK):
+                try:
+                    if self._host.state().get('state') == 'RUNNING':
+                        self._travel.poll()
+                except Exception:  # noqa: BLE001 - one bad tick must not stop travel
+                    pass
+        self._travel_stop.clear()
+        self._travel_thread = threading.Thread(target=_loop, name='slimebridge-travel', daemon=True)
+        self._travel_thread.start()
 
     def host_state(self) -> dict:
         return self._host.state()
 
     def shutdown(self) -> None:
         """Called when the window closes: stop the child processes this launcher started (never the games)."""
+        self._travel_stop.set()
         try:
             if self._extract is not None:
                 self._extract.cancel()

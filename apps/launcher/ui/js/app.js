@@ -93,7 +93,7 @@
       <div class="dock-card"><label>${t('dock.install')}</label><div class="dock-path"><span class="mono" title="${esc(pathTitle)}">${esc(path)}</span><button data-act="dock-folder" aria-label="${esc(t('games.open'))}">${glyph('folder')}</button></div></div>
       <div class="play ${ready ? '' : 'off'}"><button class="go" data-act="play" aria-label="Play">${glyph('play')}<span>${t('dock.play')}</span></button><button class="more" data-act="play-menu" aria-label="More" aria-haspopup="true">${glyph('chevD')}</button>
         ${menu === 'play' ? `<div class="menu" role="menu"><button data-act="launch" data-arg="BOTH">${glyph('play', 'gl mi')} ${t('dock.both')}</button><button data-act="launch" data-arg="SR1">${glyph('play', 'gl mi')} ${NAMES.SR1}</button><button data-act="launch" data-arg="SR2">${glyph('play', 'gl mi')} ${NAMES.SR2}</button><hr><button data-act="go" data-arg="games">${glyph('folder', 'gl mi')} ${t('nav.games')}</button></div>` : ''}</div></div>
-      <div class="dock-status"><span class="ok"><i class="tick ${st.tone === 'good' ? '' : st.tone}">${glyph(st.tone === 'good' ? 'check' : 'close')}</i><span class="t">${esc(st.text)}</span></span>
+      <div class="dock-status"><span class="ok"><i class="tick ${st.tone === 'good' ? '' : st.tone}">${glyph(st.tone === 'good' ? 'check' : 'close')}</i><span class="t" title="${esc(st.text)}">${esc(st.text)}</span></span>
         <div class="bar" style="--p:${(Math.max(0, Math.min(1, prog || 0)) * 100).toFixed(1)}%"><i></i></div><span>SlimeBridge ${esc(S.version)}</span><span>${work}</span>
         <span class="tag">${slime('pink', { size: 30, cls: 'idle' })}${t('dock.tag')} <span style="color:var(--pink)">♥</span></span></div>`;
   }
@@ -243,7 +243,8 @@
       if (realms.some(r => !S.games[r].primary)) { toast(dockStatus().text, 'warn'); return go('games'); }
       return A.launch(tg, el);
     },
-    launch: async (a, el) => {
+    resume: (a, el) => A.launch(a, el, true),
+    launch: async (a, el, resume) => {
       menu = null; renderDock();
       if (busy.has(a)) return; busy.add(a);
       let screen = null;
@@ -258,7 +259,7 @@
         screen = SB.loading.open({ compact: true, title: t('launch.t', { game }), sub: t('launch.sub'), steps: [t('launch.s1')] });
         SB.net.hydrate(screen.el); screen.progress(12, t('launch.s1'));
         const steps = [setTimeout(() => screen.progress(40, a === 'SR1' || a === 'SR2' ? t('launch.s3', { game }) : t('launch.s2')), 600), setTimeout(() => screen.progress(68, t('launch.s3', { game })), 1400)];
-        const r = await safe(() => api.launch(a, true, remember)); steps.forEach(clearTimeout);
+        const r = await safe(() => api.launch(a, true, remember, !!resume)); steps.forEach(clearTimeout);
         const close = () => screen.actions(`<button class="btn btn--ghost" data-close>${t('launch.close')}</button>`).onclick = () => screen.close();
         if (!r) { screen.fail(t('launch.fail')); close(); return; }
         const errs = (r.errors || []).map(e => `${NAMES[e.realm] || e.realm}: ${t('err.' + e.error) !== 'err.' + e.error ? t('err.' + e.error) : e.error}`);

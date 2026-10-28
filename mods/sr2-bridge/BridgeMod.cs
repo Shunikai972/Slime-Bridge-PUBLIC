@@ -19,7 +19,7 @@ namespace SlimeBridge.SR2
     /// </summary>
     public sealed class BridgeMod : MelonMod
     {
-        public const string PluginVersion = "0.1.6";
+        public const string PluginVersion = "0.1.7";
         private static readonly int Pid = Environment.ProcessId;
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { UseProxy = false })
         {
@@ -60,9 +60,14 @@ namespace SlimeBridge.SR2
         private static readonly string? RequestedSaveGroup = AutoloadContinue ?
             Environment.GetEnvironmentVariable("SLIMEBRIDGE_LAB_SAVE_ID") : null;
         // The launcher started this game as the other side of a portal crossing: load the linked save (or Continue) by itself.
-        private static readonly bool TravelAutoload = string.Equals(Environment.GetEnvironmentVariable("SLIMEBRIDGE_TRAVEL_MODE"), "DESTINATION", StringComparison.Ordinal) &&
+        // RESUME: the player pressed "Continue where you were" in the launcher: the same save is loaded, without a crossing.
+        private static readonly bool TravelAutoload = (string.Equals(Environment.GetEnvironmentVariable("SLIMEBRIDGE_TRAVEL_MODE"), "DESTINATION", StringComparison.Ordinal) ||
+                                                       string.Equals(Environment.GetEnvironmentVariable("SLIMEBRIDGE_TRAVEL_MODE"), "RESUME", StringComparison.Ordinal)) &&
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLIMEBRIDGE_URL"));
         private static readonly string? TravelSave = TravelAutoload ? Environment.GetEnvironmentVariable("SLIMEBRIDGE_TRAVEL_SAVE") : null;
+        // ...or, for a ranch with no SR2 save yet, start a new native game for it (the launcher links it once it exists)
+        private static readonly bool TravelNewGame = TravelAutoload && string.IsNullOrEmpty(TravelSave) &&
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLIMEBRIDGE_TRAVEL_NEW"));
         private static readonly bool LabCreationAllowed =
             string.Equals(Environment.GetEnvironmentVariable("SLIMEBRIDGE_LAB_CREATE"), "1", StringComparison.Ordinal) && OracleExecutableMatches();
 
@@ -198,13 +203,35 @@ namespace SlimeBridge.SR2
                     : !menuSettled ? "main menu scene group not settled (group '" + groupName + "', busy=" + (sceneLoader != null && sceneLoader.IsSceneLoadInProgress) + ")"
                     : wanted != null && (director.Storage() == null || !director.Storage().IsInitialized())
                         ? "native storage not initialized"
-                    : wanted == null && !director.HasContinue() ? "no continue save" : null;
+                    : (wanted != null || TravelNewGame) && (director.Storage() == null || !director.Storage().IsInitialized() || !director.ProfileLoaded())
+                        ? "native storage not initialized"
+                    : wanted == null && !TravelNewGame && !director.HasContinue() ? "no continue save" : null;
                 if (reason != null)
                 {
                     if (reason != _autoloadReason) { _autoloadReason = reason; LoggerInstance.Msg("lab autoload waiting: " + reason + " t+" + Since()); }
                     return;
                 }
                 if (director == null) return; // The readiness reason implies this, but the compiler cannot infer it.
+                if (!AutoloadContinue && TravelNewGame)
+                {
+                    // a few attempts: right after the menu settles some option services can still be warming up
+                    if (UnityEngine.Time.realtimeSinceStartup < _nextNewGameTry) return;
+                    try
+                    {
+                        Volatile.Write(ref _storyBlocking, true);
+                        var slot = Sr2NewGame.Start(director, m => LoggerInstance.Msg(m));
+                        _autoloadRequested = true;
+                        LoggerInstance.Msg("travel: started a new native game in save slot " + slot + " t+" + Since());
+                    }
+                    catch (Exception ex)
+                    {
+                        _newGameTries++;
+                        _nextNewGameTry = UnityEngine.Time.realtimeSinceStartup + 3f;
+                        LoggerInstance.Msg("travel: " + ex.Message + (_newGameTries >= 5 ? " (giving up)" : " (retrying)"));
+                        if (_newGameTries >= 5) _autoloadRequested = true;
+                    }
+                    return;
+                }
                 // Only the lab oracle can request a particular existing native save group.
                 // Never turn a missing/invalid target into a load of the user's Continue game.
                 if (wanted != null)
@@ -252,10 +279,63 @@ namespace SlimeBridge.SR2
             catch (Exception ex)
             {
                 _autoloadRequested = true;
-                LoggerInstance.Msg("lab autoload error: " + ex.GetType().Name + ": " + ex.Message);
+                LoggerInstance.Msg("lab autoload error: " + ex);
             }
         }
 
+        private bool _introEnded;
+        private int _introPresses;
+        private float _nextIntroPress;
+        private float _newGameStartedAt = -1f;
+        private int _introIndex = -1, _introIndexPresses;
+        private static bool _storyBlocking = false;  // written on the main thread, read by the heartbeat
+
+        /// <summary>
+        /// A game created for a portal crossing opens on the new-game story cards, which wait for key presses. The player is
+        /// coming through a portal: advance the cards exactly like a key press does (TryToIterateFrame on the current card
+        /// whenever the screen accepts input), so the story ends and fades into gameplay the normal way.
+        /// </summary>
+        private void MaybeEndNewGameIntro()
+        {
+            if (_introEnded || !TravelNewGame || !_autoloadRequested) { Volatile.Write(ref _storyBlocking, false); return; }
+            if (_newGameStartedAt < 0f) _newGameStartedAt = UnityEngine.Time.realtimeSinceStartup;
+            try
+            {
+                var intro = UnityEngine.Object.FindObjectOfType<Il2CppMonomiPark.SlimeRancher.UI.IntroSequence.IntroSequenceUIRoot>();
+                if (intro == null)
+                {
+                    if (_introPresses > 0) { _introEnded = true; LoggerInstance.Msg("travel: new-game story done (" + _introPresses + " cards) t+" + Since()); }
+                    // no story ever showed up: do not hold the arrival forever
+                    else if (UnityEngine.Time.realtimeSinceStartup - _newGameStartedAt > 90f) { _introEnded = true; LoggerInstance.Msg("travel: no new-game story seen"); }
+                    Volatile.Write(ref _storyBlocking, !_introEnded);
+                    return;
+                }
+                Volatile.Write(ref _storyBlocking, true);
+                if (UnityEngine.Time.realtimeSinceStartup < _nextIntroPress || !intro._isInputEnabled) return;
+                // the story ends with a fade into the gameplay scene: never get there before that scene has finished loading
+                // (ending it during the load left the game on a black screen for good)
+                if (!CounterpartCreator.TryReadWorld(out _)) return;
+                // like a patient player: at most two presses per card (the first may only finish the text), a second apart,
+                // so the last card is never "ended" twice (that froze the load when the game ran slowly in the background)
+                var index = intro._frameIndex;
+                if (index != _introIndex) { _introIndex = index; _introIndexPresses = 0; }
+                if (_introIndexPresses >= 2) return;
+                _introIndexPresses++;
+                _nextIntroPress = UnityEngine.Time.realtimeSinceStartup + 1.0f;
+                intro.TryToIterateFrame(index);
+                if (_introPresses++ == 0) LoggerInstance.Msg("travel: advancing the new-game story (the player arrives through the portal) t+" + Since());
+                if (_introPresses > 200) { _introEnded = true; Volatile.Write(ref _storyBlocking, false); LoggerInstance.Msg("travel: new-game story did not end after 200 presses"); }
+            }
+            catch (Exception ex)
+            {
+                _introEnded = true;
+                Volatile.Write(ref _storyBlocking, false);
+                LoggerInstance.Msg("travel: could not advance the new-game story: " + ex.GetType().Name + ": " + ex.Message);
+            }
+        }
+
+        private int _newGameTries;
+        private float _nextNewGameTry;
         private bool _startScreenSkipped;
         private string? _bootState;
 
@@ -363,7 +443,8 @@ namespace SlimeBridge.SR2
                 }
                 return new GameStatus
                 {
-                    player_alive = state.GetCurrHealth() > 0, save_id = saveId,
+                    // a game made for a crossing is not "ready" while its new-game story still runs: the player must arrive in the world
+                    player_alive = state.GetCurrHealth() > 0 && !Volatile.Read(ref _storyBlocking), save_id = saveId,
                     pink_slime_count = pinkSlimes, pink_plort_count = pinkPlorts,
                 };
             }
@@ -420,6 +501,7 @@ namespace SlimeBridge.SR2
             _worldProbe?.Tick(text => LoggerInstance.Msg(text));
             _travel?.Tick();
             _returnPortal?.Tick();
+            MaybeEndNewGameIntro();
             // Imported-species registration runs BEFORE any save autoload: saved imported ids must
             // re-resolve at every startup. The mode is exclusive until registration completes.
             if (Sr2SpeciesRegistrar.Requested)

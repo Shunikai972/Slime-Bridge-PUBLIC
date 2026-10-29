@@ -919,7 +919,12 @@ def main():
         try:
             while True:
                 if args.status_file is not None:
-                    _write_status_file(args.status_file, {'url': host.url, 'heartbeats': host.heartbeats()})
+                    try:
+                        _write_status_file(args.status_file, {'url': host.url, 'heartbeats': host.heartbeats()})
+                    except OSError:
+                        # the launcher was reading the file (Windows refuses the replace): try again next second.
+                        # Letting this escape stopped BridgeHost and every game lost it ("SlimeBridge is not answering").
+                        pass
                 time.sleep(1)
         except KeyboardInterrupt:
             pass

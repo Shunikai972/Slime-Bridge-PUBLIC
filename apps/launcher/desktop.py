@@ -10,6 +10,7 @@ import os
 import sqlite3
 import sys
 import threading
+import time
 import webbrowser
 from pathlib import Path
 from urllib.parse import urlparse
@@ -37,7 +38,7 @@ _VALIDATORS = {
     'backup_ack': lambda v: isinstance(v, bool),
     'prefer_lab': lambda v: isinstance(v, bool),
     'native_frame': lambda v: isinstance(v, bool),
-    'play_target': lambda v: v in ('SR1', 'SR2', 'BOTH'),
+    'play_target': lambda v: v in ('SR1', 'SR2', 'BOTH', 'BOTH_SR1', 'BOTH_SR2'),
     'performance': lambda v: v is None or v in ('off', 'balanced', 'fast'),
     'converter_path': lambda v: v is None or (isinstance(v, str) and 0 < len(v) <= 1024),
     'converter_output': lambda v: v is None or (isinstance(v, str) and 0 < len(v) <= 1024),
@@ -66,7 +67,8 @@ class LauncherAPI:
         self._extract = None
         self._sanctuary = None
         self._session = travel.LastSession(Path(config_path).parent / 'last-session.json')
-        self._travel = travel.TravelCoordinator(self._host, self._launcher, self._primary, lambda: bool(self._load()['backup_ack']),
+        self._session_ack = False
+        self._travel = travel.TravelCoordinator(self._host, self._launcher, self._primary, lambda: bool(self._load()['backup_ack']) or self._session_ack,
                                                 self._window_control(), travel.TravelLinks(Path(config_path).parent / 'travel-links.json'),
                                                 settings=lambda: self._settings()[1]['bridge'], list_saves=savelist.list_groups,
                                                 notify=lambda _transition: self._raise_window(), session=self._session)
@@ -75,6 +77,8 @@ class LauncherAPI:
         self._lock = threading.Lock()
         self._travel_stop = threading.Event()
         self._travel_thread = None
+        self._hidden_watch = None
+        self._show_request = Path(config_path).parent / 'show.request'
 
     # ---- configuration (installations.json: game folders, legal notice, preferences) -----------------------------
     def _load(self) -> dict:
@@ -234,6 +238,15 @@ class LauncherAPI:
         threading.Thread(target=_quit, daemon=True).start()
         return {'ok': True, 'version': ready['version'], **helper}
 
+    def console_poll(self) -> dict:
+        """New lines of both games' logs and the crossing steps since the previous call (Console page)."""
+        from apps.launcher import console
+        if getattr(self, '_console', None) is None:
+            self._console = console.Console()
+        sr2 = (self._primary('SR2') or {}).get('root')
+        transitions = [self._travel.public(t) for t in self._travel.transitions]
+        return {'ok': True, 'lines': self._console.poll(sr2, transitions)}
+
     def diagnostics(self) -> dict:
         """Plain-text report of everything that matters (Debug page, 'Copy' button). Read-only."""
         from apps.launcher import diagnostics
@@ -314,6 +327,7 @@ class LauncherAPI:
     def acknowledge_legal(self) -> dict:
         data = self._load()
         data['legal_understood'] = True
+        data['backup_ack'] = True              # the welcome card says to keep copies of the saves: no second reminder on Play
         self._save(data)
         return {'understood': True}
 
@@ -325,13 +339,8 @@ class LauncherAPI:
         wanted_role = 'lab' if data['prefer_lab'] else 'source'
         manual_roots = {str(Path(p).resolve()).casefold() for p in data['manual_paths']}
         role_rows = [r for r in rows if r['role'] == wanted_role] or rows
-        role_rows = sorted(
-            role_rows,
-            key=lambda r: (
-                0 if str(r['root']).casefold() in manual_roots else 1,
-                0 if (realm != 'SR2' or (Path(r['root']) / 'SlimeRancher2_Data' / 'StreamingAssets' / 'aa' / 'catalog.bin').is_file()) else 1,
-            ),
-        )
+        # with several copies and no choice made: the newest game first (an old SR2 0.6 copy never wins over 1.x)
+        role_rows = sorted(role_rows, key=lambda r: (_negated(_unity_version(r['root'])), 0 if str(r['root']).casefold() in manual_roots else 1))
         return next(iter(chosen or role_rows), None)
 
     def choose_install(self, realm: str, root: str) -> dict:
@@ -363,17 +372,22 @@ class LauncherAPI:
 
     # ---- launching -------------------------------------------------------------------------------------------------
     def launch(self, target: str, confirmed: bool = False, remember: bool = False, resume: bool = False) -> dict:
-        """``target``: SR1, SR2 or BOTH. Needs the backup reminder to be confirmed once. ``resume``: load the save the player
-        was last in (that game only), straight from the game's menu."""
-        if target not in ('SR1', 'SR2', 'BOTH'):
-            raise ValueError('target must be SR1, SR2 or BOTH')
+        """``target``: SR1, SR2, BOTH (SR1 in front), BOTH_SR1 or BOTH_SR2 (both games, that one in front, the other waits
+        minimized). ``resume``: load the save the player was last in (that game only), straight from the game's menu."""
+        if target not in ('SR1', 'SR2', 'BOTH', 'BOTH_SR1', 'BOTH_SR2'):
+            raise ValueError('target must be SR1, SR2, BOTH, BOTH_SR1 or BOTH_SR2')
+        front = 'SR2' if target == 'BOTH_SR2' else 'SR1'
+        if target.startswith('BOTH'):
+            target = 'BOTH'
         data = self._load()
         if not data['backup_ack'] and not confirmed:
             return {'ok': False, 'needs_confirmation': True}
+        if confirmed:
+            self._session_ack = True            # a launch the player confirmed: the portal may start the other game too
         if confirmed and remember and not data['backup_ack']:
             data['backup_ack'] = True
             self._save(data)
-        realms = ('SR1', 'SR2') if target == 'BOTH' else (target,)
+        realms = ((front, 'SR2' if front == 'SR1' else 'SR1') if target == 'BOTH' else (target,))
         warnings, errors, launched = [], [], []
         # The bridge (portals, travel, shared inventory) needs BridgeHost whichever game is started first.
         try:
@@ -403,8 +417,38 @@ class LauncherAPI:
                 self._session.set(realm, last['save'] if resume_env else None)
             except RuntimeErrorWithCode as exc:
                 errors.append({'realm': realm, 'error': exc.code, 'detail': exc.detail})
+        if target == 'BOTH' and len(launched) == 2:
+            self._keep_in_front(front)
         return {'ok': bool(launched) and not errors, 'launched': launched, 'errors': errors, 'warnings': warnings,
-                'host': self._host.state()}
+                'host': self._host.state(), 'front': front if target == 'BOTH' else None}
+
+    def _keep_in_front(self, front):
+        """Both games were started: the chosen one stays in front, the other is minimized as soon as its window shows."""
+        back = 'SR2' if front == 'SR1' else 'SR1'
+
+        def _arrange():
+            control = self._window_control()
+            front_pid = (self._launcher._children.get(front) or None)
+            back_pid = (self._launcher._children.get(back) or None)
+            deadline = time.time() + 180
+            minimized = False
+            while time.time() < deadline and not minimized:
+                time.sleep(2.0)
+                try:
+                    if back_pid is None or back_pid.poll() is not None:
+                        return
+                    checked = getattr(control, '_checked', None)
+                    if checked is not None and not list(checked(back_pid.pid)):
+                        continue                                  # its window does not exist yet
+                    for _ in range(2):                            # Unity rebuilds its window when it goes fullscreen
+                        control.minimize(back_pid.pid)
+                        if front_pid is not None and front_pid.poll() is None:
+                            control.focus(front_pid.pid)
+                        time.sleep(6.0)
+                    minimized = True
+                except Exception:  # noqa: BLE001 - its window may not exist yet
+                    minimized = False
+        threading.Thread(target=_arrange, name='slimebridge-front', daemon=True).start()
 
     def host_start(self) -> dict:
         try:
@@ -917,8 +961,59 @@ class LauncherAPI:
 
     def window_close(self) -> dict:
         if self._window is not None:
-            self._window.destroy()
+            if self.on_closing() is not False:
+                self._window.destroy()
         return {'ok': self._window is not None}
+
+    # ---- staying alive behind the games -----------------------------------------------------------------------------
+    def _games_running(self) -> bool:
+        return any(self._launcher.running(realm) for realm in EXECUTABLES)
+
+    def on_closing(self):
+        """Closing the window while a game runs only hides it: BridgeHost and the portal crossings must keep working
+        (closing the launcher used to stop them: "SlimeBridge is not answering", no portal in a game started later)."""
+        if not self._games_running():
+            return True
+        self._hide_until_games_exit()
+        return False
+
+    def _hide_until_games_exit(self):
+        try:
+            if self._window is not None:
+                self._window.hide()
+        except Exception:  # noqa: BLE001
+            pass
+        if self._hidden_watch is not None and self._hidden_watch.is_alive():
+            return
+
+        def _watch():
+            idle = 0
+            while not self._travel_stop.wait(3.0):
+                idle = 0 if self._games_running() else idle + 1
+                if idle >= 2:                                  # both games closed: the launcher closes too
+                    try:
+                        if self._window is not None:
+                            self._window.destroy()
+                    except Exception:  # noqa: BLE001
+                        pass
+                    return
+        self._hidden_watch = threading.Thread(target=_watch, name='slimebridge-hidden', daemon=True)
+        self._hidden_watch.start()
+
+    def watch_show_requests(self):
+        """A second SlimeBridge.exe asks the running one to come back to the front (single launcher, single BridgeHost)."""
+        def _watch():
+            while not self._travel_stop.wait(1.0):
+                try:
+                    if self._show_request.exists():
+                        self._show_request.unlink(missing_ok=True)
+                        if self._window is not None:
+                            self._window.show()
+                            self._window.restore()
+                        self._raise_window()
+                except Exception:  # noqa: BLE001
+                    pass
+        threading.Thread(target=_watch, name='slimebridge-show', daemon=True).start()
 
     # ---- misc ------------------------------------------------------------------------------------------------------
     def open_folder(self, which: str) -> dict:
@@ -975,6 +1070,51 @@ def _choices(section, key):
             ('ui', 'language'): ['en', 'fr'], ('ui', 'theme'): ['auto', 'light', 'dark']}.get((section, key))
 
 
+_INSTANCE_MUTEX = None
+_VERSION_CACHE: dict = {}
+
+
+def _unity_version(root) -> tuple:
+    """The Unity version a game folder was built with (from globalgamemanagers), e.g. (6000, 0, 73); () when unreadable."""
+    key = str(root).casefold()
+    if key not in _VERSION_CACHE:
+        found = ()
+        try:
+            data_dir = next(Path(root).glob('*_Data'), None)
+            if data_dir is not None:
+                head = (data_dir / 'globalgamemanagers').open('rb').read(256)
+                import re as _re
+                match = _re.search(rb'(\d{4})\.(\d+)\.(\d+)[abfp]\d+', head)
+                if match:
+                    found = tuple(int(x) for x in match.groups())
+        except OSError:
+            pass
+        _VERSION_CACHE[key] = found
+    return _VERSION_CACHE[key]
+
+
+def _negated(version: tuple) -> tuple:
+    return tuple(-x for x in version) + (0,) * (3 - len(version))
+
+
+def _first_instance(api) -> bool:
+    """True for the first launcher; a second start only asks the first one to show its window (Windows named mutex)."""
+    global _INSTANCE_MUTEX
+    if sys.platform != 'win32':
+        return True
+    import ctypes
+    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+    _INSTANCE_MUTEX = kernel32.CreateMutexW(None, False, 'Local\\SlimeBridgeLauncher')
+    if ctypes.get_last_error() != 183:                            # ERROR_ALREADY_EXISTS
+        return True
+    try:
+        api._show_request.parent.mkdir(parents=True, exist_ok=True)
+        api._show_request.write_text('show', encoding='utf-8')
+    except OSError:
+        pass
+    return False
+
+
 def main() -> None:
     import argparse
     import webview
@@ -984,12 +1124,16 @@ def main() -> None:
     if not UI.is_file():
         raise FileNotFoundError(UI)
     api = LauncherAPI()
+    if not args.smoke_ui and not _first_instance(api):
+        return                                                    # the running launcher was asked to come to the front
     frameless = not api._load().get('native_frame', False)
     window = webview.create_window('SlimeBridge', url=UI.as_uri(), js_api=api,
                                    width=1320, height=840, min_size=(1040, 680), frameless=frameless, easy_drag=False,
                                    background_color='#12354d', text_select=False)
     api._window = window
+    window.events.closing += api.on_closing
     window.events.closed += api.shutdown
+    api.watch_show_requests()
     if args.smoke_ui:
         import time
         result = {'error': 'WebView did not become ready'}

@@ -19,7 +19,7 @@ namespace SlimeBridge.SR2
     /// </summary>
     public sealed class BridgeMod : MelonMod
     {
-        public const string PluginVersion = "0.1.7";
+        public const string PluginVersion = "0.1.8";
         private static readonly int Pid = Environment.ProcessId;
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { UseProxy = false })
         {
@@ -641,7 +641,7 @@ namespace SlimeBridge.SR2
             _focusDiagnostics?.Stop("scene-unloaded");
         }
 
-        public override void OnGUI() { _travel?.Gui(); }
+        public override void OnGUI() { _travel?.Gui(); _returnPortal?.Gui(); }
 
         public override void OnDeinitializeMelon()
         {

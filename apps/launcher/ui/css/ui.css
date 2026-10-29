@@ -131,3 +131,19 @@
 
 .setting > div:first-child { flex: 1 1 200px; min-width: 0; } .setting .seg, .setting .switch, .setting .input { flex: none; max-width: 100%; }
 .grid > * { min-width: 0; }
+
+/* First start: welcome card (replaces the old translucent "Before you start" dialog) */
+.welcome-back { position: fixed; inset: 0; z-index: 75; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 30%, rgba(70, 184, 255, .55), rgba(12, 66, 98, .88)); animation: fadeIn .35s both; }
+.welcome { width: min(640px, 100%); max-height: calc(100vh - 48px); overflow: auto; padding: 22px 34px 28px; border-radius: 34px; background: linear-gradient(180deg, #ffffff, #f1fbff); border: 4px solid #fff; box-shadow: 0 10px 0 #b9e2f1, 0 28px 60px rgba(8, 40, 70, .45); text-align: center; animation: pop .5s var(--ease-spring) both; }
+.welcome-art { display: block; width: min(300px, 70%); margin: -4px auto 6px; filter: drop-shadow(0 8px 10px rgba(10, 40, 80, .2)); }
+.welcome h1 { font: 600 32px var(--font-display); color: var(--ink); margin: 0; }
+.welcome-sub { margin: 4px 0 16px; font-weight: 700; color: var(--ink-soft); }
+.welcome-points { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 10px; text-align: left; }
+.welcome-points li { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 18px; background: var(--panel-2); border: 2px solid var(--panel-edge); }
+.welcome-points .wi { flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: #fff; border: 2px solid var(--panel-edge); color: var(--sky-d); }
+.welcome-points .wi svg { width: 26px; height: 26px; }
+.welcome-points b { display: block; font: 600 17px var(--font-display); color: var(--ink); }
+.welcome-points small { display: block; font-weight: 700; color: var(--ink-soft); line-height: 1.3; }
+.welcome-legal { margin: 0 0 16px; font-size: 13px; font-weight: 700; color: var(--ink-faint); }
+.welcome-go { font-size: 22px; padding: 14px 34px; }
+@media (max-height: 760px) { .welcome-art { width: 200px; } .welcome-points li { padding: 7px 12px; } .welcome h1 { font-size: 26px; } }

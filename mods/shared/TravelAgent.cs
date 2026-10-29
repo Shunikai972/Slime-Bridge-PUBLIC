@@ -177,6 +177,8 @@ namespace SlimeBridge.Shared
         private double _lastContact;
         private readonly Func<double> _clock;
         internal double PollSeconds = 0.5, SlowPollSeconds = 2.0;
+        /// <summary>Called (from a worker thread) when a crossing request could not reach BridgeHost.</summary>
+        internal Action? CrossingFailed = null;
         internal bool Slow { get; set; }
 
         internal HttpTravelTransport(string baseUrl, string token, string realm, Func<double> clock)
@@ -228,7 +230,7 @@ namespace SlimeBridge.Shared
                     using (var stream = request.GetRequestStream()) stream.Write(payload, 0, payload.Length);
                     using (var response = (HttpWebResponse)request.GetResponse()) { }
                 }
-                catch (Exception) { /* BridgeHost absent: the player simply stays here */ }
+                catch (Exception) { CrossingFailed?.Invoke(); }       // the realm tells the player (BridgeHost unreachable)
             });
         }
 

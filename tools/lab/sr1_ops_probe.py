@@ -30,6 +30,8 @@ def run(sr1_root, ops, seconds, shots):
     directory.mkdir(parents=True)
     result = {'passed': False}
     snap = save_guard.snapshot(['SR1'], 'sr1-ops-pre')
+    from tools.lab import screen_guard
+    screens = screen_guard.snapshot(('SR1',))
     proc = None
     try:
         original = plugins.find_source
@@ -65,6 +67,7 @@ def run(sr1_root, ops, seconds, shots):
                 proc.kill()
         time.sleep(2)
         oracle._finalize_current_user(result, snap, [], directory)
+        result['display_settings_restored'] = screen_guard.restore(screens)
         (directory / 'sr1-ops.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
         print(f'evidence: {directory}', flush=True)
     return result

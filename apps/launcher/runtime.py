@@ -42,10 +42,16 @@ class HostProcess:
         return self.root / 'host.status.json'
 
     def _read_status(self):
+        # the host replaces this file every second: a read can land on the replace (sharing violation, half file);
+        # keep the last good reading instead of flickering to "no address"
         try:
-            return json.loads(self.status_file.read_text(encoding='utf-8'))
+            status = json.loads(self.status_file.read_text(encoding='utf-8'))
+            if isinstance(status, dict):
+                self._last_status = status
+                return status
         except (OSError, ValueError):
-            return {}
+            pass
+        return dict(getattr(self, '_last_status', None) or {}) if self.running() else {}
 
     def running(self):
         return self._child is not None and self._child.poll() is None
@@ -88,6 +94,7 @@ class HostProcess:
         self.root.mkdir(parents=True, exist_ok=True)
         for stale in (self.status_file, self.token_file):
             stale.unlink(missing_ok=True)
+        self._last_status = None
         command = [self._python, '-m', 'bridge.host.server', '--token-file', str(self.token_file),
                    '--status-file', str(self.status_file)]
         kwargs = {'cwd': str(REPO_ROOT), 'stdout': subprocess.DEVNULL, 'stderr': subprocess.DEVNULL}

@@ -55,13 +55,15 @@
   }
 
   /** Pick the game to start, and "continue where you were" when the launcher knows the last game + save. */
+  const other = realm => (realm === 'SR1' ? 'SR2' : 'SR1');
   function playChoice(S) {
     const last = S.last_session, card = (realm, sp) => {
       const g = S.games[realm], ok = !!(g && g.primary), run = g && g.running;
       return `<article class="play-card ${realm === 'SR1' ? 'sr1' : 'sr2'}">
         <span class="pc-art">${slime(sp, { size: 64, cls: 'idle' })}</span>
         <span class="pc-body"><b>${NAMES[realm]}</b><small>${run ? t('home.running') : ok ? t('home.ready') : t('home.not_found')}</small></span>
-        ${ok ? `<button class="btn ${realm === 'SR1' ? 'btn--sr1' : 'btn--sr2'}" data-act="launch" data-arg="${realm}" ${run ? 'disabled' : ''}>${icon('play')} ${t('home.play_game')}</button>`
+        ${ok ? `<span class="pc-actions"><button class="btn ${realm === 'SR1' ? 'btn--sr1' : 'btn--sr2'}" data-act="launch" data-arg="${realm}" ${run ? 'disabled' : ''}>${icon('play')} ${t('home.play_game')}</button>
+             ${S.games[other(realm)] && S.games[other(realm)].primary && !run ? `<button class="pc-both" data-act="launch" data-arg="BOTH_${realm}">${t('home.with_other', { game: other(realm) })}</button>` : ''}</span>`
              : `<button class="btn btn--ghost" data-act="go" data-arg="games">${t('home.find')}</button>`}
       </article>`;
     };
@@ -75,11 +77,7 @@
     return `<div class="page home">
   ${playChoice(S)}
   <div class="home-top">${carousel()}${newsBox()}</div>
-  <div class="promos">
-    ${promo('', 'assets', t('promo.p1'), t('promo.p1s'), { html: cutout(/pink/i, 'pink', 80) })}
-    ${promo('orange', 'models', t('promo.p2'), t('promo.p2s'), scene(2) ? { bg: scene(2) } : { html: largo('rad', 'cotton', { cls: 'idle' }) })}
-    ${promo('blue', 'multiplayer', t('promo.p3'), t('promo.p3s'), scene(3) ? { bg: scene(3) } : { html: slime('tabby', { size: 70 }) })}
-  </div></div>`;
+</div>`;
   }
 
   function news(S) {

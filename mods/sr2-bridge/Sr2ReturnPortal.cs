@@ -21,7 +21,10 @@ namespace SlimeBridge.SR2
         private const float PadRadius = 2.3f, HintRadius = 14f, SettleSeconds = 5f;
         private static readonly string[] NativeParts = { "labyPortal_bricksOuter_01_trim", "labyPortal_bricksSunken_01", "PortalLightPillar_Short" };
 
-        private readonly Sr2TravelRealm _travel;
+        private readonly Sr2TravelRealm? _travel;          // null when SR2 was not started by the launcher
+        private readonly TravelOverlay _ownOverlay = new TravelOverlay();
+        private TravelOverlay Overlay => _travel != null ? _travel.Overlay : _ownOverlay;
+        internal void Gui() { if (_travel == null) _ownOverlay.Draw(); }
         private readonly string _stateDir;
         private readonly int _cost;
         private readonly string? _labOut;
@@ -45,7 +48,7 @@ namespace SlimeBridge.SR2
 
         internal static Sr2ReturnPortal? Instance { get; private set; }
 
-        private Sr2ReturnPortal(Sr2TravelRealm travel, string stateDir, int cost, string? labOut)
+        private Sr2ReturnPortal(Sr2TravelRealm? travel, string stateDir, int cost, string? labOut)
         {
             _travel = travel; _stateDir = stateDir; _cost = cost; _labOut = labOut;
         }
@@ -54,7 +57,7 @@ namespace SlimeBridge.SR2
         {
             try
             {
-                if (travel == null) return null;
+                // the portal exists in every game with the plugin; without the launcher it explains how to travel
                 if (Environment.GetEnvironmentVariable("SLIMEBRIDGE_SR2_PORTAL") == "0") return null;
                 var cost = 250000;
                 if (int.TryParse(Environment.GetEnvironmentVariable("SLIMEBRIDGE_SR2_GATE_COST"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var configured))
@@ -319,7 +322,7 @@ namespace SlimeBridge.SR2
 
         private void Interact()
         {
-            if (_travel.Busy) return;
+            if (_travel != null && _travel.Busy) return;
             var player = PlayerTransform().position;
             var flat = new Vector3(player.x - _anchor.x, 0f, player.z - _anchor.z).magnitude;
             var near = flat < HintRadius && Mathf.Abs(player.y - _anchor.y) < 8f;
@@ -330,7 +333,7 @@ namespace SlimeBridge.SR2
                 _nextHint = Time.realtimeSinceStartup + 3f;
                 var money = Il2Cpp.SceneContext.Instance.PlayerState.Newbucks();
                 var gate = _cost > 0 && !_paid;
-                _travel.Overlay.ShowHint(gate
+                Overlay.ShowHint(gate
                     ? (french ? $"Portail vers Slime Rancher : {_cost:N0} newbucks pour l’ouvrir (tu as {money:N0})" : $"Portal to Slime Rancher: {_cost:N0} newbucks to open it (you have {money:N0})")
                     : (french ? "Entre dans la lumière pour retourner dans Slime Rancher" : "Step into the light to return to Slime Rancher"), 3.4f);
             }
@@ -343,7 +346,7 @@ namespace SlimeBridge.SR2
                 var before = state.Newbucks();
                 if (before < _cost)
                 {
-                    _travel.Overlay.ShowHint(french ? $"Il te manque {_cost - before:N0} newbucks pour ouvrir le portail" : $"You need {_cost - before:N0} more newbucks to open the portal", 4f);
+                    Overlay.ShowHint(french ? $"Il te manque {_cost - before:N0} newbucks pour ouvrir le portail" : $"You need {_cost - before:N0} more newbucks to open the portal", 4f);
                     return;
                 }
                 if (!state.SpendNewbucks(_cost) || state.Newbucks() >= before) { Note("payment refused by the game"); return; }
@@ -351,7 +354,14 @@ namespace SlimeBridge.SR2
                 Note("portal paid: " + _cost);
             }
             _lastCross = Time.realtimeSinceStartup;
+            if (_travel == null)
+            {
+                Note("portal entered without the launcher");
+                Overlay.ShowHint(TravelText.Failure("NO_LAUNCHER", "SR1"), 6f);
+                return;
+            }
             Note("portal entered: crossing requested");
+            Overlay.ShowHint(TravelText.Opening("SR1"), 4f);                 // instant feedback; the launcher answers within a second
             _travel.RequestCrossing(PortalId, _saveId);
         }
 

@@ -34,6 +34,8 @@ def run(sr2_root, plugin_dir, timeout_s):
     directory.mkdir(parents=True)
     result = {'root': str(root), 'lines': [], 'passed': False}
     snap = save_guard.snapshot(['SR2'], 'sr2-newgame-pre')
+    from tools.lab import screen_guard
+    screens = screen_guard.snapshot(('SR2',))
     proc = None
     try:
         original = plugins.find_source
@@ -70,6 +72,7 @@ def run(sr2_root, plugin_dir, timeout_s):
                 proc.kill()
         time.sleep(2)
         oracle._finalize_current_user(result, snap, [], directory)
+        result['display_settings_restored'] = screen_guard.restore(screens)
         (directory / 'sr2-newgame.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
         print(f'evidence: {directory}', flush=True)
     return result

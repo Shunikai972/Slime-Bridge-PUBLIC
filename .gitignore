@@ -48,6 +48,7 @@
 *.blend
 *.dds
 *.png
+!apps/launcher/ui/img/*.png
 *.jpg
 *.tga
 *.wav

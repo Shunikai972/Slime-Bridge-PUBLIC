@@ -7,6 +7,19 @@ using UnityEngine;
 
 namespace SlimeBridge.SR1
 {
+    /// <summary>Keeps a floating name turned towards the player (yaw only), readable from any side of the island.</summary>
+    internal sealed class FaceCamera : MonoBehaviour
+    {
+        public void LateUpdate()
+        {
+            var cam = Camera.main;
+            if (cam == null) return;
+            var away = transform.position - cam.transform.position;
+            away.y = 0f;
+            if (away.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(away);
+        }
+    }
+
     internal sealed class BuiltStatue
     {
         public string Slime = "";
@@ -365,18 +378,98 @@ namespace SlimeBridge.SR1
                 label.transform.SetParent(badge.transform, false);
                 label.transform.position = new Vector3(anchor.position.x, statueTop + 0.55f, anchor.position.z) + front * 0.3f;
                 label.transform.rotation = anchor.rotation * Quaternion.Euler(0f, 180f, 0f);   // read from the front
-                var text = label.AddComponent<TextMesh>();
-                var font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                text.font = font; text.text = SlimeName(statue.Slime); text.characterSize = 0.045f; text.fontSize = 64; text.fontStyle = FontStyle.Bold;
-                text.anchor = TextAnchor.MiddleCenter; text.alignment = TextAlignment.Center;
                 var light = statue.Spec.LightColor;
-                text.color = light != null && light.Length >= 3 ? Color.Lerp(new Color(light[0], light[1], light[2]), Color.white, 0.45f) : Color.white;
-                var renderer = label.GetComponent<MeshRenderer>();
-                if (font != null) renderer.sharedMaterial = font.material;
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
+                var tint = light != null && light.Length >= 3 ? new Color(light[0], light[1], light[2]) : Color.white;
+                if (!GameStyleLabel(label, SlimeName(statue.Slime), tint)) PlainLabel(label, SlimeName(statue.Slime), tint);
+                label.AddComponent<FaceCamera>();
             }
-            catch (Exception ex) { _log.Add("badge failed for " + statue.Slime + ": " + ex.GetType().Name); }
+            catch (Exception ex) { _log.Add("badge failed for " + statue.Slime + ": " + ex.GetType().Name); Debug.Log("[SlimeBridge] statue badge failed for " + statue.Slime + ": " + ex); }
+        }
+
+        private static TMPro.TMP_FontAsset? _gameFont;
+        private static bool _labelLogged;
+
+        /// <summary>The font the game's own interface uses (read from a HUD text), so the names look like Slime Rancher.</summary>
+        private static TMPro.TMP_FontAsset? GameFont()
+        {
+            if (_gameFont != null) return _gameFont;
+            foreach (var text in Resources.FindObjectsOfTypeAll<TMPro.TextMeshProUGUI>())
+                if (text != null && text.font != null && text.font.name.IndexOf("Fallback", StringComparison.OrdinalIgnoreCase) < 0) return _gameFont = text.font;
+            foreach (var font in Resources.FindObjectsOfTypeAll<TMPro.TMP_FontAsset>())
+                if (font != null) return _gameFont = font;
+            return null;
+        }
+
+        /// <summary>
+        /// The name in the game's own font, crisp, white-to-tint with a dark outline: a small world-space canvas with a
+        /// TextMeshProUGUI (the 3D TextMeshPro component cannot load fonts in SR1, the UI one is what the game's HUD uses).
+        /// </summary>
+        private static bool GameStyleLabel(GameObject label, string name, Color tint)
+        {
+            GameObject? canvasObject = null;
+            try
+            {
+                var font = GameFont();
+                if (font == null) return false;
+                canvasObject = new GameObject("canvas", typeof(RectTransform));
+                canvasObject.transform.SetParent(label.transform, false);
+                var canvas = canvasObject.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.WorldSpace;
+                var rect = (RectTransform)canvasObject.transform;
+                rect.sizeDelta = new Vector2(700f, 140f);
+                rect.localScale = Vector3.one * 0.0048f;               // 700 px -> about 3.4 m wide
+                var textObject = new GameObject("text", typeof(RectTransform));
+                textObject.transform.SetParent(canvasObject.transform, false);
+                var textRect = (RectTransform)textObject.transform;
+                textRect.anchorMin = Vector2.zero; textRect.anchorMax = Vector2.one; textRect.offsetMin = Vector2.zero; textRect.offsetMax = Vector2.zero;
+                var text = textObject.AddComponent<TMPro.TextMeshProUGUI>();
+                text.font = font;
+                text.text = name;
+                text.fontSize = 86f;
+                text.fontStyle = TMPro.FontStyles.Bold;
+                text.alignment = TMPro.TextAlignmentOptions.Center;
+                text.enableWordWrapping = false;
+                text.overflowMode = TMPro.TextOverflowModes.Overflow;
+                var bottom = Color.Lerp(tint, Color.white, 0.3f);
+                text.enableVertexGradient = true;
+                text.colorGradient = new TMPro.VertexGradient(Color.white, Color.white, bottom, bottom);
+                // outline through a copy of the font material (the outline setters need a rendered component)
+                var material = new Material(font.material) { name = font.material.name + " (SlimeBridge statue name)" };
+                material.EnableKeyword("OUTLINE_ON");
+                if (material.HasProperty("_OutlineWidth")) material.SetFloat("_OutlineWidth", 0.3f);
+                if (material.HasProperty("_OutlineColor")) material.SetColor("_OutlineColor", new Color32(23, 40, 60, 255));
+                if (material.HasProperty("_FaceDilate")) material.SetFloat("_FaceDilate", 0.15f);
+                text.fontSharedMaterial = material;
+                text.raycastTarget = false;
+                if (!_labelLogged)
+                {
+                    _labelLogged = true;
+                    Debug.Log("[SlimeBridge] statue labels use the game font " + font.name);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.Log("[SlimeBridge] statue label (game font) failed: " + ex);
+                if (canvasObject != null) UnityEngine.Object.Destroy(canvasObject);
+                return false;
+            }
+        }
+
+        private static void PlainLabel(GameObject parent, string name, Color tint)
+        {
+            var label = new GameObject("plain");
+            label.transform.SetParent(parent.transform, false);
+            label.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            var text = label.AddComponent<TextMesh>();
+            var font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = font; text.text = name; text.characterSize = 0.045f; text.fontSize = 64; text.fontStyle = FontStyle.Bold;
+            text.anchor = TextAnchor.MiddleCenter; text.alignment = TextAlignment.Center;
+            text.color = Color.Lerp(tint, Color.white, 0.45f);
+            var renderer = label.GetComponent<MeshRenderer>();
+            if (font != null) renderer.sharedMaterial = font.material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
         }
 
         /// <summary>The slime's name as the game shows it (Slimepedia), else a readable fallback.</summary>

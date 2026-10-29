@@ -86,7 +86,9 @@ def recovery_state(installations, settings_diagnostics=()):
     found = diagnostics(installations, settings_diagnostics)
     grouped = {}
     for issue in found:
-        grouped.setdefault(issue['category'], []).append({k: issue[k] for k in ('id', 'severity', 'minor', 'title', 'summary', 'subject', 'realm')})
+        row = {k: issue[k] for k in ('id', 'severity', 'minor', 'title', 'summary', 'subject', 'realm')}
+        row['code'] = (issue.get('details') or {}).get('code')        # lets the launcher show the text in the player's language
+        grouped.setdefault(issue['category'], []).append(row)
     return {'summary': summary(found), 'groups': [{'category': c, 'issues': v} for c, v in sorted(grouped.items())], 'count': len(found)}
 
 

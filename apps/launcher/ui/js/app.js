@@ -6,7 +6,7 @@
   SB.errors = [];
   window.addEventListener('error', e => SB.errors.push(String(e.message)));
   window.addEventListener('unhandledrejection', e => SB.errors.push(String(e.reason && e.reason.message || e.reason)));
-  const NAV = ['home', 'news', 'games', 'assets', 'models', 'multiplayer', 'profiles', 'recovery', 'debug', 'options'];
+  const NAV = ['home', 'news', 'games', 'assets', 'models', 'multiplayer', 'profiles', 'debug', 'options'];   // 'recovery' lives in 'debug' now
   const NAMES = { SR1: 'Slime Rancher', SR2: 'Slime Rancher 2' }, LOADERS = { SR1: 'SRML', SR2: 'MelonLoader' };
   const FAN_POLICY = 'https://www.slimerancher.com/fan-content-policy';
   let S = null, page = 'home', pollTimer = 0, busy = new Set(), menu = null;
@@ -63,17 +63,20 @@
   function renderChars() {
     const N = SB.NEWS || {}, pick = re => (N.slimes || []).find(u => re.test(u));
     const spot = (cls, style, re, fallback) => `<div class="ch ${cls}" style="${style}">${pick(re) ? `<img data-src="${esc(pick(re))}" data-w="480" data-h="480" data-fit="1" alt="">` : slime(fallback, { cls: 'idle' })}</div>`;
-    $('#chars').innerHTML = spot('c1', 'left:14px;bottom:38px;width:150px', /pink/i, 'pink') + spot('c2', 'left:120px;bottom:36px;width:118px', /cotton/i, 'cotton');
+    // the pink + cotton pair is an artist's drawing that ships with the launcher (no generated art)
+    $('#chars').innerHTML = `<div class="ch c1 artist" style="left:12px;bottom:34px;width:236px"><img src="img/pink-cotton-artist.png" alt=""></div>`;
     $('#chars-back').innerHTML = spot('c3', 'right:22px;top:46px;width:92px', /batty|flutter/i, 'batty');
     SB.net.hydrate($('#chars')); SB.net.hydrate($('#chars-back'));
   }
+  // BOTH_SR1 / BOTH_SR2: both games, that one in front (the other waits minimized); old 'BOTH' means SR1 in front
+  const isBoth = tg => String(tg).startsWith('BOTH');
   function target() {
-    const g = S.games, pref = S.preferences.play_target;
-    if (pref && (pref === 'BOTH' || g[pref].primary || true)) return pref;
-    return 'BOTH';
+    const pref = S.preferences.play_target;
+    if (pref === 'BOTH') return 'BOTH_SR1';
+    return pref || 'BOTH_SR1';
   }
   function dockStatus() {
-    const tg = target(), realms = tg === 'BOTH' ? ['SR1', 'SR2'] : [tg], missing = realms.filter(r => !S.games[r].primary);
+    const tg = target(), realms = isBoth(tg) ? ['SR1', 'SR2'] : [tg], missing = realms.filter(r => !S.games[r].primary);
     if (missing.length) return { tone: 'bad', text: t('dock.need_game', { game: missing.map(r => NAMES[r]).join(' + ') }) };
     const noLoader = realms.filter(r => S.games[r].primary.loader === 'Not configured');
     if (noLoader.length) return { tone: 'warn', text: t('dock.no_loader', { loader: noLoader.map(r => LOADERS[r]).join(' + ') }) };
@@ -85,14 +88,14 @@
     const running = job && ['RUNNING', 'QUEUED'].includes(job.status), dling = dl && ['RUNNING', 'QUEUED'].includes(dl.status);
     const prog = running ? job.progress : dling ? dl.progress : 1;
     const work = running ? `${t('job.' + job.phase) !== 'job.' + job.phase ? t('job.' + job.phase) : t('job.RUNNING')} ${job.done || 0}/${job.total || '…'}` : dling ? t('models.downloading', { id: esc(dl.current || '') }) : t('dock.no_dl');
-    const path = tg === 'BOTH' ? t('dock.two') : (g[tg].primary ? g[tg].primary.root : '—');
-    const pathTitle = tg === 'BOTH' ? ['SR1', 'SR2'].map(r => `${NAMES[r]}: ${g[r].primary ? g[r].primary.root : '—'}`).join('\n') : path;
+    const path = isBoth(tg) ? t('dock.two') : (g[tg].primary ? g[tg].primary.root : '—');
+    const pathTitle = isBoth(tg) ? ['SR1', 'SR2'].map(r => `${NAMES[r]}: ${g[r].primary ? g[r].primary.root : '—'}`).join('\n') : path;
     const ready = st.tone !== 'bad';
     $('#dock').innerHTML = `<div class="dock-row">
-      <div class="dock-card"><label for="dock-game">${t('dock.game')}</label><select id="dock-game" class="dock-select" data-change="play-target"><option value="BOTH" ${tg === 'BOTH' ? 'selected' : ''}>${t('dock.both')}</option><option value="SR1" ${tg === 'SR1' ? 'selected' : ''}>${NAMES.SR1}</option><option value="SR2" ${tg === 'SR2' ? 'selected' : ''}>${NAMES.SR2}</option></select></div>
-      <div class="dock-card"><label>${t('dock.install')}</label><div class="dock-path"><span class="mono" title="${esc(pathTitle)}">${esc(path)}</span><button data-act="dock-folder" aria-label="${esc(t('games.open'))}">${glyph('folder')}</button></div></div>
+      <div class="dock-card"><label for="dock-game">${t('dock.game')}</label><select id="dock-game" class="dock-select" data-change="play-target">${[['SR1', NAMES.SR1], ['SR2', NAMES.SR2], ['BOTH_SR1', t('dock.both_sr1')], ['BOTH_SR2', t('dock.both_sr2')]].map(([v, label]) => `<option value="${v}" ${tg === v ? 'selected' : ''}>${label}</option>`).join('')}</select></div>
+
       <div class="play ${ready ? '' : 'off'}"><button class="go" data-act="play" aria-label="Play">${glyph('play')}<span>${t('dock.play')}</span></button><button class="more" data-act="play-menu" aria-label="More" aria-haspopup="true">${glyph('chevD')}</button>
-        ${menu === 'play' ? `<div class="menu" role="menu"><button data-act="launch" data-arg="BOTH">${glyph('play', 'gl mi')} ${t('dock.both')}</button><button data-act="launch" data-arg="SR1">${glyph('play', 'gl mi')} ${NAMES.SR1}</button><button data-act="launch" data-arg="SR2">${glyph('play', 'gl mi')} ${NAMES.SR2}</button><hr><button data-act="go" data-arg="games">${glyph('folder', 'gl mi')} ${t('nav.games')}</button></div>` : ''}</div></div>
+        ${menu === 'play' ? `<div class="menu" role="menu"><button data-act="launch" data-arg="BOTH_SR1">${glyph('play', 'gl mi')} ${t('dock.both_sr1')}</button><button data-act="launch" data-arg="BOTH_SR2">${glyph('play', 'gl mi')} ${t('dock.both_sr2')}</button><button data-act="launch" data-arg="SR1">${glyph('play', 'gl mi')} ${NAMES.SR1}</button><button data-act="launch" data-arg="SR2">${glyph('play', 'gl mi')} ${NAMES.SR2}</button><hr><button data-act="go" data-arg="games">${glyph('folder', 'gl mi')} ${t('nav.games')}</button></div>` : ''}</div></div>
       <div class="dock-status"><span class="ok"><i class="tick ${st.tone === 'good' ? '' : st.tone}">${glyph(st.tone === 'good' ? 'check' : 'close')}</i><span class="t" title="${esc(st.text)}">${esc(st.text)}</span></span>
         <div class="bar" style="--p:${(Math.max(0, Math.min(1, prog || 0)) * 100).toFixed(1)}%"><i></i></div><span>SlimeBridge ${esc(S.version)}</span><span>${work}</span>
         <span class="tag">${slime('pink', { size: 30, cls: 'idle' })}${t('dock.tag')} <span style="color:var(--pink)">♥</span></span></div>`;
@@ -117,7 +120,7 @@
     if (page === 'options' && !L.links) loadLinks();
     if (page === 'models' && !L.models) loadModels();
     if (page === 'profiles' && !L.profiles) loadProfiles();
-    if (page === 'recovery' && !L.recovery) loadRecovery();
+    if ((page === 'recovery' || page === 'debug') && !L.recovery) loadRecovery();
     if (page === 'multiplayer' && !L.mp) loadMp();
     if (page === 'assets' && !L.assets.job) pollJob(true);
     if (page === 'assets' && !L.sanct) loadSanct();
@@ -131,7 +134,7 @@
   async function loadLinks() { const r = await safe(() => api.travel_links()); L.links = r && r.ok ? r.links : []; if (page === 'options') renderView(true); }
   async function loadSettings() { const r = await safe(() => api.get_settings()); if (r) { L.settings = r; if (page === 'options') renderView(true); } }
   async function loadProfiles() { const r = await safe(() => api.profiles_state()); if (r) { L.profiles = r; if (page === 'profiles') renderView(true); } }
-  async function loadRecovery() { const r = await safe(() => api.recovery_state()); if (r) { L.recovery = r; if (page === 'recovery') renderView(true); } }
+  async function loadRecovery() { const r = await safe(() => api.recovery_state()); if (r) { L.recovery = r; if (page === 'recovery' || page === 'debug') renderView(true); } }
   async function loadModels() { const r = await safe(() => api.models_state()); if (r) { L.models = r; if (page === 'models') renderView(true); } }
   async function loadSanct() { const r = await safe(() => api.sanctuary_state()); if (r) { L.sanct = r; if (page === 'assets') renderView(true); } }
   async function loadMp() { const r = await safe(() => api.mp_state()); if (r) { L.mp = r; if (page === 'multiplayer') renderView(true); } }
@@ -233,13 +236,13 @@
     forget: async a => { await safe(() => api.forget_game(a)); await refresh(); },
     folder: async a => { const r = await safe(() => api.open_folder(a)); if (r && !r.ok) toast(t('err.folder'), 'warn'); },
     'dock-folder': async () => {
-      const tg = target(), realm = tg === 'BOTH' ? ['SR1', 'SR2'].find(r => !S.games[r].primary) : tg;
-      if (!realm || (tg === 'BOTH' && S.games.SR1.primary && S.games.SR2.primary)) return go('games');
+      const tg = target(), realm = isBoth(tg) ? ['SR1', 'SR2'].find(r => !S.games[r].primary) : tg;
+      if (!realm || (isBoth(tg) && S.games.SR1.primary && S.games.SR2.primary)) return go('games');
       if (!S.games[realm].primary) return A.pick('folder'); A.folder(realm);
     },
     store: a => api.open_store_page(a),
     play: async (a, el) => {
-      const tg = target(), realms = tg === 'BOTH' ? ['SR1', 'SR2'] : [tg];
+      const tg = target(), realms = isBoth(tg) ? ['SR1', 'SR2'] : [tg];
       if (realms.some(r => !S.games[r].primary)) { toast(dockStatus().text, 'warn'); return go('games'); }
       return A.launch(tg, el);
     },
@@ -249,13 +252,8 @@
       if (busy.has(a)) return; busy.add(a);
       let screen = null;
       try {
-        let remember = false;
-        if (!S.preferences.backup_ack) {            // one-time backup reminder
-          const res = await modal({ title: t('launch.confirm_t'), art: `<div class="art-real">${SB.cutout(/pink/i, 'pink', 92, { cls: 'hop' })}</div>`, body: `<p class="muted">${t('launch.confirm_b')}</p><label class="row" style="gap:10px;cursor:pointer"><input type="checkbox" id="remember" style="width:20px;height:20px"> <span>${t('launch.remember')}</span></label>`, buttons: [{ label: t('common.cancel'), cls: 'btn--ghost', value: false }, { label: t('launch.go'), cls: 'btn--bridge', value: true }], collect: root => !!root.querySelector('#remember').checked });
-          if (!res || !res.value) return;
-          remember = res.data;
-        }
-        const game = a === 'BOTH' ? t('launch.both') : NAMES[a];
+        const remember = true;                       // the welcome card already said to keep copies: Play is one click
+        const game = isBoth(a) ? t('launch.both') : NAMES[a];
         screen = SB.loading.open({ compact: true, title: t('launch.t', { game }), sub: t('launch.sub'), steps: [t('launch.s1')] });
         SB.net.hydrate(screen.el); screen.progress(12, t('launch.s1'));
         const steps = [setTimeout(() => screen.progress(40, a === 'SR1' || a === 'SR2' ? t('launch.s3', { game }) : t('launch.s2')), 600), setTimeout(() => screen.progress(68, t('launch.s3', { game })), 1400)];
@@ -307,6 +305,11 @@
     'pref-bool-inv': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') === 'true')); await refresh(); },
     'update-check': async () => { L.update = await safe(() => api.update_check()); renderView(true); if (L.update && L.update.ok && !L.update.update) toast(t('upd.uptodate'), 'good'); },
     'update-apply': async () => { if (L.update && L.update.frozen === false) { toast(t('upd.source'), 'warn'); return; } toast(t('upd.busy'), 'info'); const r = await safe(() => api.update_apply()); if (r && r.ok) toast(t('upd.restarting', { v: r.version }), 'good'); else toast(t('upd.err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
+    'console-set': a => { const [k, v] = a.split(':'); SB.console.state[k] = v; renderView(true); },
+    'console-src': a => { SB.console.state.sources[a] = !SB.console.state.sources[a]; renderView(true); },
+    'console-pause': () => { SB.console.state.paused = !SB.console.state.paused; renderView(true); },
+    'console-clear': () => { SB.console.lines.length = 0; renderView(true); },
+    'console-copy': async () => { const text = SB.console.visible().map(l => `[${l.source}] ${l.text}`).join('\n'); try { await navigator.clipboard.writeText(text); } catch (e) { /* clipboard refused */ } toast(t('diag.copied'), 'good'); },
     'diag-run': async () => { L.diag = { busy: true, text: '' }; renderView(true); const r = await safe(() => api.diagnostics()); L.diag = { busy: false, text: r && r.text ? r.text : t('diag.failed') }; renderView(true); },
     'diag-copy': async () => { const text = (L.diag && L.diag.text) || ''; try { await navigator.clipboard.writeText(text); toast(t('diag.copied'), 'good'); } catch (e) { const ta = $('#diag-text'); if (ta) { ta.select(); document.execCommand('copy'); toast(t('diag.copied'), 'good'); } } },
     'game-repair': async a => { toast(t('games.repair_busy'), 'info'); const r = await safe(() => api.game_repair(a)); if (r && r.ok) { toast(t('games.repair_done'), 'good'); await refresh(); } else toast(t('games.repair_err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
@@ -367,7 +370,7 @@
     if (SHOT) splash.el.remove(); else splash.close();
     const openParam = new URLSearchParams(location.search).get('open');
     if (SHOT && openParam === 'legal') SB.showLegal();
-    if (SHOT && openParam === 'launch') A.launch('BOTH');
+    if (SHOT && openParam === 'launch') A.launch('BOTH_SR1');
     if (SHOT && openParam === 'launching') { const sc = SB.loading.open({ compact: true, title: t('launch.t', { game: NAMES.SR2 }), sub: t('launch.sub') }); sc.progress(68, t('launch.s3', { game: NAMES.SR2 })); sc.el.querySelector('.ld-tip').textContent = SB.tips()[1]; }
     if (SHOT && openParam === 'menu') { menu = 'profile'; renderHead(); }
     if (SHOT && openParam === 'playmenu') { menu = 'play'; renderDock(); }
@@ -398,6 +401,25 @@
     }
   }
   setInterval(watchCrossings, 2500);
+
+  /* ----- live console of both games (Console page) ----- */
+  SB.console = {
+    lines: [], state: { filter: 'all', paused: false, sources: { SR1: true, SR2: true, LAUNCHER: true } },
+    visible() { const s = this.state; return this.lines.filter(l => s.sources[l.source] && (s.filter === 'all' || (s.filter === 'error' ? l.kind === 'error' : l.kind !== 'game'))); },
+    row(l) { return `<div class="cl ${l.kind} src-${l.source.toLowerCase()}"><b>${l.source}</b>${esc(l.text)}</div>`; },
+    html() { const v = this.visible(); return v.length ? v.slice(-1500).map(l => this.row(l)).join('') : `<p class="muted console-empty">${t('console.empty')}</p>`; },
+  };
+  async function pollConsole() {
+    if (page !== 'debug' || SB.console.state.paused) return;
+    const r = await api.console_poll().catch(() => null);
+    if (!r || !r.ok || !r.lines.length) return;
+    SB.console.lines.push(...r.lines); if (SB.console.lines.length > 4000) SB.console.lines.splice(0, SB.console.lines.length - 4000);
+    const box = $('#console-log'); if (!box) return;
+    const atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
+    box.innerHTML = SB.console.html();
+    if (atEnd) box.scrollTop = box.scrollHeight;
+  }
+  setInterval(pollConsole, 1000);
   document.addEventListener('DOMContentLoaded', boot);
   SB.app = { refresh, go, get state() { return S; } };
 })(window.SB = window.SB || {});

@@ -84,9 +84,9 @@
     async launch(target, confirmed, remember, resume) {
       if (!S.ack && !confirmed) return { ok: false, needs_confirmation: true };
       if (confirmed && remember) S.ack = true;
-      if (target === 'BOTH') S.host = { state: 'RUNNING', url: 'http://127.0.0.1:41873', pid: 4242, heartbeats: {} };
+      if (String(target).startsWith('BOTH')) S.host = { state: 'RUNNING', url: 'http://127.0.0.1:41873', pid: 4242, heartbeats: {} };
       await wait(500);
-      return { ok: true, launched: (target === 'BOTH' ? ['SR1', 'SR2'] : [target]).map(r => ({ realm: r, pid: 1000, already_running: false })), errors: [], warnings: [], host: S.host };
+      return { ok: true, launched: (String(target).startsWith('BOTH') ? ['SR1', 'SR2'] : [target]).map(r => ({ realm: r, pid: 1000, already_running: false })), errors: [], warnings: [], host: S.host };
     },
     async host_start() { await wait(400); S.host = { state: 'RUNNING', url: 'http://127.0.0.1:41873', pid: 4242, heartbeats: {} }; return { ok: true, host: S.host }; },
     async host_stop() { S.host = { state: 'STOPPED', url: null, pid: null, heartbeats: {} }; return { ok: true, host: S.host }; },
@@ -114,6 +114,7 @@
     async loader_install() { return { ok: true, state: 'installed' }; },
     async game_repair() { return { ok: true }; },
     async diagnostics() { return { ok: true, text: 'SlimeBridge diagnostic (demo)' }; },
+    async console_poll() { return { ok: true, lines: [{ source: 'SR1', text: '[SlimeBridge] sanctuary built (demo)', kind: 'bridge' }, { source: 'SR2', text: '[SlimeBridge SR2 Core] return portal built (demo)', kind: 'bridge' }] }; },
     async update_check() { return { ok: true, current: '0.1.5', latest: '0.1.5', update: false, frozen: true }; },
     async update_apply() { return { ok: true, version: '0.1.5' }; },
     async sanctuary_state() { return sanctState(); },
@@ -159,7 +160,7 @@
     async open_url() { return { ok: true }; },
     async window_minimize() { return { ok: true }; }, async window_toggle_maximize() { return { ok: true }; }, async window_close() { return { ok: true }; },
     async profiles_state() { return { ok: true, pairs: [{ profile_id: 'demo', label: 'Sunny Meadow Ranch', status: 'LINKED', status_text: 'Both saves are linked and verified.', endpoints: { SR1: { save: 'ranch-1', compatibility: 'VALID' }, SR2: { save: 'ranch-2', compatibility: 'VALID' } } }] }; },
-    async recovery_state() { return { ok: true, count: 2, summary: { status: 'warning', by_category: {} }, groups: [{ category: 'LOADERS', issues: [{ id: 'a', severity: 'warning', minor: false, title: 'A mod loader is missing', summary: 'Slime Rancher has no mod loader yet (SRML): install it from the Games page' }, { id: 'b', severity: 'info', minor: true, title: 'Something needs attention', summary: 'process adapter is not connected yet (local integration step)' }] }] }; },
+    async recovery_state() { return { ok: true, count: 2, summary: { status: 'warning', by_category: {} }, groups: [{ category: 'LOADERS', issues: [{ id: 'a', severity: 'warning', minor: false, title: 'A mod loader is missing', summary: 'Slime Rancher has no mod loader yet (SRML): install it from the Games page', code: 'MOD_LOADER_MISSING', realm: 'SR1' }, { id: 'b', severity: 'info', minor: true, title: 'Something needs attention', summary: 'process adapter is not connected yet (local integration step)' }] }] }; },
     async recovery_export() { return { ok: true, name: 'slimebridge-diagnostics.json' }; },
     async about() { return { ok: true, version: 'demo', python: '3.13', repo: 'demo', config: 'demo' }; },
   };

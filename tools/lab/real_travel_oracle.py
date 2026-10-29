@@ -120,6 +120,8 @@ def run(sr1_root, sr2_root, timeout_s, current_user_authorized):
     (directory / 'state').mkdir(parents=True)
     result = {'run_id': run_id, 'started_utc': datetime.now(timezone.utc).isoformat(), 'roots': roots, 'passed': False, 'timeline': []}
     snap = save_guard.snapshot(['SR1', 'SR2'], 'real-travel-pre')
+    from tools.lab import screen_guard
+    screens = screen_guard.snapshot(('SR1', 'SR2'))
     result['save_snapshot'] = str(snap)
     print(f'[real-travel] saves backed up to {snap}', flush=True)
     started, host = {}, None
@@ -198,6 +200,7 @@ def run(sr1_root, sr2_root, timeout_s, current_user_authorized):
             result['sr1_log'] = log_lines(sanctuary_oracle.SR1_LOG, ('travel', 'sanctuary', 'SlimeBridge'))
             result['sr2_log'] = log_lines(Path(roots['SR2']) / 'MelonLoader' / 'Latest.log', ('travel', 'SlimeBridge', 'autoload', 'boot'))
             oracle._finalize_current_user(result, snap, [], directory)
+            result['display_settings_restored'] = screen_guard.restore(screens)
             # the verdict is the two crossings + saves restored; registry leftovers of the new SR2 game are reported, not fatal
             result['passed'] = bool(not result.get('error') and (result.get('outbound') or {}).get('state') == 'COMPLETE'
                                     and (result.get('back') or {}).get('state') == 'COMPLETE' and result.get('saves_match_backup_after_restore')

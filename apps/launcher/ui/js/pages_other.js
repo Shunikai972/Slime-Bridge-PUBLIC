@@ -119,18 +119,61 @@
     <p class="faint small">${t('about.version')}: ${esc(S.version)} · ${esc(S.platform)}</p></section></div>`;
   }
 
+  /** First start: a welcome card in the launcher's own look (artist picture, three short points, one button). */
   async function showLegal() {
-    return SB.ui.modal({
-      title: t('legal.modal_title'), art: slime('pink', { size: 84, cls: 'hop', dur: 1.8 }),
-      body: `<p><b>${t('legal.notaff')}</b></p><p class="muted">${t('legal.body1')}</p><p class="muted">${t('legal.body2')}</p>`,
-      buttons: [{ label: t('legal.accept'), cls: 'btn--bridge', value: true }],
+    return new Promise(resolve => {
+      const back = document.createElement('div');
+      back.className = 'welcome-back';
+      const point = (glyphName, title, body) => `<li><span class="wi">${icon(glyphName)}</span><span><b>${title}</b><small>${body}</small></span></li>`;
+      back.innerHTML = `<section class="welcome" role="dialog" aria-modal="true" aria-label="${esc(t('welcome.title'))}">
+        <img class="welcome-art" src="img/pink-cotton-artist.png" alt="">
+        <h1>${t('welcome.title')}</h1>
+        <p class="welcome-sub">${t('welcome.sub')}</p>
+        <ul class="welcome-points">
+          ${point('games', t('welcome.p1_t'), t('welcome.p1'))}
+          ${point('folder', t('welcome.p2_t'), t('welcome.p2'))}
+          ${point('profiles', t('welcome.p3_t'), t('welcome.p3'))}
+        </ul>
+        <p class="welcome-legal">${t('legal.notaff')}</p>
+        <button class="btn btn--sr1 welcome-go" data-go>${SB.Art.icon('play')} ${t('welcome.go')}</button>
+      </section>`;
+      back.querySelector('[data-go]').addEventListener('click', () => { back.remove(); resolve(true); });
+      document.getElementById('modal-root').appendChild(back);
+      back.querySelector('[data-go]').focus();
     });
   }
 
+  /** What needs attention (the former Recovery page), short: one line per issue. */
+  function health() {
+    const R = SB.local.recovery;
+    if (!R) return '';
+    const sev = { error: 'bad', warning: 'warn', info: 'info' };
+    const issues = R.groups.flatMap(g => g.issues).filter(i => !i.minor);
+    const games = { SR1: 'Slime Rancher', SR2: 'Slime Rancher 2' }, loaders = { SR1: 'SRML', SR2: 'MelonLoader' };
+    const text = (i, part, fallback) => { const key = `rec.code.${i.code}_${part}`; return SB.has(key) ? t(key, { game: games[i.realm] || i.subject || '', loader: loaders[i.realm] || '' }) : fallback; };
+    return `<section class="panel stack health"><h2>${t('rec.' + R.summary.status)}</h2>${issues.map(i => `<div class="row between health-row"><span><b>${esc(text(i, 't', i.title))}</b><small class="muted"> — ${esc(text(i, 's', i.summary))}</small></span><span class="pill ${sev[i.severity] || 'info'}">${esc(t('rec.sev_' + i.severity))}</span></div>`).join('')}</section>`;
+  }
+
   function debug(S) {
-    const D = SB.local.diag || {};
+    const D = SB.local.diag || {}, C = SB.console.state;
+    const seg = (key, value, label) => `<button class="seg ${C[key] === value ? 'on' : ''}" data-act="console-set" data-arg="${key}:${value}">${label}</button>`;
+    const src = (name, label) => `<button class="seg src-${name.toLowerCase()} ${C.sources[name] ? 'on' : ''}" data-act="console-src" data-arg="${name}">${label}</button>`;
     return `<section class="page">
-  <div class="page-title"><h1>${t('nav.debug')}</h1><p>${t('diag.sub')}</p></div>
+  <div class="page-title"><h1>${t('debug.title')}</h1><p>${t('console.sub')}</p></div>
+  ${health()}
+  <div class="card console-card">
+    <div class="console-bar">
+      <span class="segs">${src('SR1', 'SR1')}${src('SR2', 'SR2')}${src('LAUNCHER', 'Launcher')}</span>
+      <span class="segs">${seg('filter', 'all', t('console.all'))}${seg('filter', 'bridge', 'SlimeBridge')}${seg('filter', 'error', t('console.errors'))}</span>
+      <span style="flex:1"></span>
+      <button class="btn btn--sm ${C.paused ? 'btn--bridge' : 'btn--ghost'}" data-act="console-pause">${C.paused ? t('console.resume') : t('console.pause')}</button>
+      <button class="btn btn--sm btn--ghost" data-act="console-copy">${t('console.copy')}</button>
+      <button class="btn btn--sm btn--ghost" data-act="console-clear">${t('console.clear')}</button>
+    </div>
+    <div id="console-log" class="console-log" role="log" aria-live="off">${SB.console.html()}</div>
+  </div>
+  <h2 class="console-h2">${t('diag.run')}</h2>
+  <p class="muted">${t('diag.sub')}</p>
   <div class="card"><div class="row"><button class="btn btn--bridge" data-act="diag-run" ${D.busy ? 'disabled' : ''}>${D.busy ? t('diag.running') : t('diag.run')}</button>
   ${D.text ? `<button class="btn" data-act="diag-copy">${t('diag.copy')}</button>` : ''}</div>
   ${D.text ? `<textarea id="diag-text" class="diag" readonly spellcheck="false" style="width:100%;min-height:420px;font-family:monospace;font-size:12px;white-space:pre;margin-top:12px">${SB.ui.esc(D.text)}</textarea>` : `<p class="muted">${t('diag.hint')}</p>`}</div>

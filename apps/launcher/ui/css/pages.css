@@ -180,3 +180,28 @@ ul.clean { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; } 
 .page .card > .muted { margin-top: 12px; }
 @media (max-height: 760px) { .home .promos { display: none; } .home .home-top { height: clamp(220px, calc(100vh - 400px), 440px); } }
 @media (max-width: 1250px) { #ribbon { font-size: 10px; gap: 6px; } } /* the Fan Content notice must stay readable in full */
+
+.play-card .pc-actions { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.play-card .pc-both { font: 700 12px var(--font-body); color: var(--ink-soft); text-decoration: underline; text-underline-offset: 2px; padding: 0 4px; }
+.play-card .pc-both:hover { color: var(--ink); }
+
+/* Console page */
+.console-card { display: grid; gap: 10px; }
+.console-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.console-bar .segs { display: inline-flex; gap: 4px; padding: 3px; border-radius: 12px; background: var(--panel-2); border: 2px solid var(--panel-edge); }
+.console-bar .seg { padding: 4px 10px; border-radius: 9px; font: 700 13px var(--font-body); color: var(--ink-soft); }
+.console-bar .seg.on { background: #fff; color: var(--ink); box-shadow: 0 2px 0 var(--panel-edge); }
+.console-bar .seg.src-sr1.on { color: var(--mint-d); } .console-bar .seg.src-sr2.on { color: var(--lav-d); } .console-bar .seg.src-launcher.on { color: var(--sun-d); }
+.console-log { height: clamp(220px, calc(100vh - 470px), 520px); overflow: auto; padding: 10px 12px; border-radius: 14px; background: #102638; color: #d7ecf7; font: 12px/1.45 Consolas, 'Cascadia Mono', monospace; }
+.console-log .cl { white-space: pre-wrap; word-break: break-word; }
+.console-log .cl b { display: inline-block; min-width: 76px; font-weight: 700; }
+.console-log .src-sr1 b { color: #7df0c2; } .console-log .src-sr2 b { color: #b6b0ff; } .console-log .src-launcher b { color: #ffd76a; }
+.console-log .cl.game { color: #8fb3c7; } .console-log .cl.error { color: #ff9aa8; }
+.console-empty { color: #8fb3c7 !important; }
+.console-h2 { margin: 18px 0 2px; font: 600 22px var(--font-display); color: var(--ink); }
+
+.dock-row { grid-template-columns: minmax(0, 1fr) auto; }
+@media (max-width: 1100px) { .dock-row { grid-template-columns: minmax(0, 1fr) auto; } }
+.home .home-top { height: clamp(240px, calc(100vh - 420px), 470px); }
+@media (max-height: 760px) { .home .home-top { height: clamp(220px, calc(100vh - 360px), 440px); } }
+.health { margin-bottom: 14px; } .health h2 { font-size: 20px; } .health-row { gap: 12px; padding: 6px 0; border-top: 2px solid var(--panel-edge); }

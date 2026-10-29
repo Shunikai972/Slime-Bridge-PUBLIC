@@ -27,6 +27,7 @@ namespace SlimeBridge.SR2
         {
             _destinationMode = destinationMode;
             _transport = new HttpTravelTransport(url, token, "SR2", () => (double)Time.realtimeSinceStartup);
+            _transport.CrossingFailed = () => TravelNotice.Post(TravelText.Failure("HOST_UNREACHABLE", "SR1"));
             _agent = new TravelAgent(_transport, this, text => MelonLoader.MelonLogger.Msg(text));
         }
 
@@ -54,6 +55,8 @@ namespace SlimeBridge.SR2
 
         internal void Tick()
         {
+            var notice = TravelNotice.Take();
+            if (notice != null) _overlay.ShowHint(notice, 6f);
             if (_destinationMode && !_arrived && WorldReady() && !_overlay.IsCovering && !_held)
                 _overlay.CoverNow(TravelText.Arriving(), TravelText.Waiting("SR2"));
             if (_held)

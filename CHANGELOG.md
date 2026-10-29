@@ -3,6 +3,32 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.1.8] - 2026-10-29
+
+### Fixed
+- The portal said "SlimeBridge is not answering" and no portal appeared in Slime Rancher 2 when the launcher window had
+  been closed after pressing Play: closing it stopped BridgeHost. While a game runs, closing the window now only hides it
+  (the launcher closes by itself when the games are closed), and starting SlimeBridge again brings that window back.
+- The Slime Rancher 2 portal is built in every game with the plugin (it explains how to travel when SR2 was not started
+  from SlimeBridge), and a failed crossing request from SR2 now says so instead of nothing.
+- A portal crossing was refused ("confirm the backup reminder") when that reminder had not been ticked: accepting the
+  welcome card counts, and Play no longer shows a second reminder.
+- With several copies of a game and none chosen, the newest version is used (an old Slime Rancher 2 0.6 copy no longer
+  wins over 1.x).
+
+### Added
+- Launch both games with the one you want in front (the other waits minimized): "Both · SR1 in front" / "Both · SR2 in
+  front" in the Play choice, and "+ SR2 in the background" under each game on the home page.
+- Help & console page: what needs attention, a live console of both games and the launcher (filters, pause, copy), and
+  the full check to copy. It replaces the Recovery and Debug pages.
+- New welcome screen on first start (artist drawing, three short points, one button); the sidebar art is now an artist's
+  drawing of the pink and cotton slimes.
+- Island statue names use the game's own font with an outline and turn towards the player.
+
+### Changed
+- Simpler launcher: the home page no longer repeats the side menu, the bottom bar keeps only the game choice and Play,
+  recovery messages are translated.
+
 ## [0.1.7] - 2026-10-28
 
 ### Fixed

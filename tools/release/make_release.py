@@ -29,6 +29,7 @@ EXCLUDED_FILES = {'requirements-dev.txt'}
 # Never in a release: game data, Unity serialized files, extracted/converted assets, models, textures, audio, saves.
 FORBIDDEN = re.compile(r'\.(assets|bundle|resS|resource|unity3d|assetbundle|sav|save|glb|gltf|fbx|obj|blend|dds|png|jpe?g|tga|'
                        r'psd|exr|wav|ogg|mp3|bank|sbmesh|exe|zip|7z|rar)$', re.IGNORECASE)
+ALLOWED_ART = {'apps/launcher/ui/img/pink-cotton-artist.png'}   # original artwork drawn for SlimeBridge (see sync_public)
 ALLOWED_BINARIES = {'plugins/SR1/SlimeBridge.SR1.dll', 'plugins/SR2/SlimeBridge.SR2.dll', 'plugins/SRMP/SRMP.dll',
                     'plugins/SR1/SlimeBridge.SR1.pdb', 'plugins/SR2/SlimeBridge.SR2.pdb'}
 PLUGINS = {
@@ -154,7 +155,7 @@ def scan(stage):
         if not path.is_file():
             continue
         rel = path.relative_to(stage).as_posix()
-        if rel in ALLOWED_BINARIES:
+        if rel in ALLOWED_BINARIES or rel.split('/', 1)[-1] in ALLOWED_ART or rel in ALLOWED_ART:
             continue
         if FORBIDDEN.search(rel) or rel.lower().endswith(('.dll', '.pdb')):
             problems.append(rel)

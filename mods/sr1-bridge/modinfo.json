@@ -1,7 +1,7 @@
 {
   "id": "slimebridge_sr1_core",
   "name": "SlimeBridge SR1 Core",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "author": "SlimeBridge contributors",
   "dependencies": []
 }

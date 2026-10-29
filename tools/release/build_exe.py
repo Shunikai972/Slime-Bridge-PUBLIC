@@ -31,6 +31,7 @@ WINDOWS = sys.platform == 'win32'
 PLATFORM = 'win64' if WINDOWS else 'linux-x64'
 COLLECT_ALL = ('webview', 'UnityPy', 'TypeTreeGeneratorAPI', 'fmod_toolkit', 'texture2ddecoder', 'etcpak', 'astc_encoder',
                'pygltflib', 'dnfile', 'lz4', 'brotli', 'archspec', 'tpk_ar') + (('clr_loader', 'pythonnet') if WINDOWS else ())
+ICON = ROOT / 'apps' / 'launcher' / 'ui' / 'img' / 'app-icon.ico'   # the artist's pink + cotton slimes (exe, window, taskbar)
 TOP_FILES = ('README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'LICENSES.md', 'CHANGELOG.md', 'VERSION')
 
 
@@ -47,7 +48,7 @@ a = Analysis([{entry}], pathex={paths}, binaries=binaries, datas=datas, hiddenim
              noarchive=False)
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name='SlimeBridge', debug=False, strip=False, upx=False,
-          console={console})
+          console={console}, icon={icon})
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name='SlimeBridge')
 """
 
@@ -121,7 +122,8 @@ def main():
     spec.write_text(SPEC.format(entry=repr(str(ROOT / 'apps' / 'launcher' / 'exe_main.py')),
                                 paths=repr([str(ROOT), str(ROOT / 'tools' / 'SlimeBridge-AssetConverter')]),
                                 datas=repr(datas), hidden=repr(hidden), collect=repr(list(COLLECT_ALL)),
-                                console=repr(bool(args.console))), encoding='utf-8')
+                                console=repr(bool(args.console)),
+                                icon=repr(str(ICON)) if ICON.is_file() and WINDOWS else 'None'), encoding='utf-8')
     print(f'== PyInstaller ({len(datas)} data files, {len(hidden)} modules)')
     proc = subprocess.run([sys.executable, '-m', 'PyInstaller', str(spec), '--noconfirm', '--clean',
                            '--distpath', str(out), '--workpath', str(WORK / 'work')], cwd=ROOT)

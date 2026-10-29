@@ -3,6 +3,12 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.1.9] - 2026-10-29
+
+### Changed
+- SlimeBridge.exe, its window and its taskbar button now use the artist's drawing of the pink and cotton slimes as
+  their icon (the pink slime alone at the smallest sizes, so it stays readable).
+
 ## [0.1.8] - 2026-10-29
 
 ### Fixed

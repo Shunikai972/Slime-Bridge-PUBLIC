@@ -1,0 +1,366 @@
+{
+ "schema": "slimebridge-largo-sources",
+ "schema_version": 1,
+ "models": [
+  {
+   "id": "mosaic_angler",
+   "canonical": "largo.angler.mosaic",
+   "parents": [
+    "angler",
+    "mosaic"
+   ],
+   "display_name": "Mosaic Angler Largo",
+   "family": "mosaic",
+   "partner": "angler",
+   "file": "models/mosaic_angler/mosaic_angler.glb",
+   "size": 50209684,
+   "sha256": "27e863ff0078a47f420cbb5894d1cfe5330d66d0d3b2eaa10c6aacf8a66d52ca",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "mosaic_batty",
+   "canonical": "largo.batty.mosaic",
+   "parents": [
+    "batty",
+    "mosaic"
+   ],
+   "display_name": "Mosaic Batty Largo",
+   "family": "mosaic",
+   "partner": "batty",
+   "file": "models/mosaic_batty/mosaic_batty.glb",
+   "size": 23298496,
+   "sha256": "830741ce7da72a8363a4bfbae053e551730aa9e8142b6d36fe7e9f2043e954a4",
+   "metadata_scrubbed": 1
+  },
+  {
+   "id": "mosaic_cotton",
+   "canonical": "largo.cotton.mosaic",
+   "parents": [
+    "cotton",
+    "mosaic"
+   ],
+   "display_name": "Mosaic Cotton Largo",
+   "family": "mosaic",
+   "partner": "cotton",
+   "file": "models/mosaic_cotton/mosaic_cotton.glb",
+   "size": 81487716,
+   "sha256": "d60dca62d2777c2eea7844fe995d198ad2fbfd5b6551735ccc7c52324874358d",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "mosaic_flutter",
+   "canonical": "largo.flutter.mosaic",
+   "parents": [
+    "flutter",
+    "mosaic"
+   ],
+   "display_name": "Mosaic Flutter Largo",
+   "family": "mosaic",
+   "partner": "flutter",
+   "file": "models/mosaic_flutter/mosaic_flutter.glb",
+   "size": 71872112,
+   "sha256": "1397b62140920dbd0b0ccde28663c56980ab689cb5c951bcfbe0b73e3f3dafe4",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "mosaic_hyper",
+   "canonical": "largo.hyper.mosaic",
+   "parents": [
+    "hyper",
+    "mosaic"
+   ],
+   "display_name": "Mosaic Hyper Largo",
+   "family": "mosaic",
+   "partner": "hyper",
+   "file": "models/mosaic_hyper/mosaic_hyper.glb",
+   "size": 12715348,
+   "sha256": "af57fa915742b12d50ac2c44a85e3fdd9ab395c415b791b4404da32d9ec8c08c",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "mosaic_ringtail",
+   "canonical": "largo.mosaic.ringtail",
+   "parents": [
+    "mosaic",
+    "ringtail"
+   ],
+   "display_name": "Mosaic Ringtail Largo",
+   "family": "mosaic",
+   "partner": "ringtail",
+   "file": "models/mosaic_ringtail/mosaic_ringtail.glb",
+   "size": 30810720,
+   "sha256": "51c360aa830b11babab0b400393d92958b571d7a7f73343779834dfe1547841a",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "mosaic_slumber",
+   "canonical": "largo.mosaic.sloomber",
+   "parents": [
+    "mosaic",
+    "sloomber"
+   ],
+   "display_name": "Mosaic Sloomber Largo",
+   "family": "mosaic",
+   "partner": "slumber",
+   "file": "models/mosaic_slumber/mosaic_slumber.glb",
+   "size": 30749192,
+   "sha256": "d2bfc20023495b9091e79dfbfb46b8e49632464e8d67f652271d82d5fe4da1ce",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "mosaic_twin",
+   "canonical": "largo.mosaic.twin",
+   "parents": [
+    "mosaic",
+    "twin"
+   ],
+   "display_name": "Mosaic Twin Largo",
+   "family": "mosaic",
+   "partner": "twin",
+   "file": "models/mosaic_twin/mosaic_twin.glb",
+   "size": 72660796,
+   "sha256": "570f27bdc60b08b4a9051f8455a43442abc0ad108f1e447fb9d5d72013e19685",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "quantum_angler",
+   "canonical": "largo.angler.quantum",
+   "parents": [
+    "angler",
+    "quantum"
+   ],
+   "display_name": "Quantum Angler Largo",
+   "family": "quantum",
+   "partner": "angler",
+   "file": "models/quantum_angler/quantum_angler.glb",
+   "size": 48775596,
+   "sha256": "00a60ae417b38866018c2143bcd6484822c22582e4a934c517bc9a093bd49de5",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "quantum_batty",
+   "canonical": "largo.batty.quantum",
+   "parents": [
+    "batty",
+    "quantum"
+   ],
+   "display_name": "Quantum Batty Largo",
+   "family": "quantum",
+   "partner": "batty",
+   "file": "models/quantum_batty/quantum_batty.glb",
+   "size": 39731672,
+   "sha256": "621eb6235ca8206aa4eb20272db4482f7b972bf3baffea2f3fabc1462fc2d61b",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "quantum_cotton",
+   "canonical": "largo.cotton.quantum",
+   "parents": [
+    "cotton",
+    "quantum"
+   ],
+   "display_name": "Quantum Cotton Largo",
+   "family": "quantum",
+   "partner": "cotton",
+   "file": "models/quantum_cotton/quantum_cotton.glb",
+   "size": 34275052,
+   "sha256": "b2de17281c0f3113480b0b3e1da9b51788a3fbc3c02f254902fd6fb0f866da99",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "quantum_flutter",
+   "canonical": "largo.flutter.quantum",
+   "parents": [
+    "flutter",
+    "quantum"
+   ],
+   "display_name": "Quantum Flutter Largo",
+   "family": "quantum",
+   "partner": "flutter",
+   "file": "models/quantum_flutter/quantum_flutter.glb",
+   "size": 38373068,
+   "sha256": "15c283756947bd3927dc673b786735b81138411790156ab6de6036bc233a2b15",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "quantum_hyper",
+   "canonical": "largo.hyper.quantum",
+   "parents": [
+    "hyper",
+    "quantum"
+   ],
+   "display_name": "Quantum Hyper Largo",
+   "family": "quantum",
+   "partner": "hyper",
+   "file": "models/quantum_hyper/quantum_hyper.glb",
+   "size": 14882168,
+   "sha256": "49b956852a70f68a5013b746b491ea0bb4539aa1547504d5800c7d24de46ffed",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "quantum_ringtail",
+   "canonical": "largo.quantum.ringtail",
+   "parents": [
+    "quantum",
+    "ringtail"
+   ],
+   "display_name": "Quantum Ringtail Largo",
+   "family": "quantum",
+   "partner": "ringtail",
+   "file": "models/quantum_ringtail/quantum_ringtail.glb",
+   "size": 41949224,
+   "sha256": "6084ab416aa010b1112291f3eb49eb8379f3fc948090bbe39230aba92dafbd32",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "quantum_slumber",
+   "canonical": "largo.quantum.sloomber",
+   "parents": [
+    "quantum",
+    "sloomber"
+   ],
+   "display_name": "Quantum Sloomber Largo",
+   "family": "quantum",
+   "partner": "slumber",
+   "file": "models/quantum_slumber/quantum_slumber.glb",
+   "size": 29480872,
+   "sha256": "335f206b32c92b698b52519f0792692e880d5eb5f31fe902584c81e363651c43",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "quantum_twin",
+   "canonical": "largo.quantum.twin",
+   "parents": [
+    "quantum",
+    "twin"
+   ],
+   "display_name": "Quantum Twin Largo",
+   "family": "quantum",
+   "partner": "twin",
+   "file": "models/quantum_twin/quantum_twin.glb",
+   "size": 8010604,
+   "sha256": "f15b16e3268e825000691709c44ecdf4e966252f04c679cba5f87f812e2dae37",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "rad_angler",
+   "canonical": "largo.angler.rad",
+   "parents": [
+    "angler",
+    "rad"
+   ],
+   "display_name": "Rad Angler Largo",
+   "family": "rad",
+   "partner": "angler",
+   "file": "models/rad_angler/rad_angler.glb",
+   "size": 54787036,
+   "sha256": "a5b38ba404ff565fbc5eaf64395fcec4c628c63d6205445595dc212a25a3538c",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "rad_batty",
+   "canonical": "largo.batty.rad",
+   "parents": [
+    "batty",
+    "rad"
+   ],
+   "display_name": "Rad Batty Largo",
+   "family": "rad",
+   "partner": "batty",
+   "file": "models/rad_batty/rad_batty.glb",
+   "size": 59852448,
+   "sha256": "fee5146c681b7f7746ca8fbc7d429ec878d40ca8f34163810dbd7bab3293309a",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "rad_cotton",
+   "canonical": "largo.cotton.rad",
+   "parents": [
+    "cotton",
+    "rad"
+   ],
+   "display_name": "Rad Cotton Largo",
+   "family": "rad",
+   "partner": "cotton",
+   "file": "models/rad_cotton/rad_cotton.glb",
+   "size": 38604948,
+   "sha256": "adc58fa16ec2a75d6c31f3b87b2ede4b2d2af22b7214d5905161bd7a47976c39",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "rad_flutter",
+   "canonical": "largo.flutter.rad",
+   "parents": [
+    "flutter",
+    "rad"
+   ],
+   "display_name": "Rad Flutter Largo",
+   "family": "rad",
+   "partner": "flutter",
+   "file": "models/rad_flutter/rad_flutter.glb",
+   "size": 92974652,
+   "sha256": "46823b4a29137651f290729235b89c49a81a8d666f3f11c7a39c9eb7bcb5a7f6",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "rad_hyper",
+   "canonical": "largo.hyper.rad",
+   "parents": [
+    "hyper",
+    "rad"
+   ],
+   "display_name": "Rad Hyper Largo",
+   "family": "rad",
+   "partner": "hyper",
+   "file": "models/rad_hyper/rad_hyper.glb",
+   "size": 8604168,
+   "sha256": "cf7b8ae98d17a2556cc32cf2428efa5822738d5e6be6468bcdeadf536396d72d",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "rad_ringtail",
+   "canonical": "largo.rad.ringtail",
+   "parents": [
+    "rad",
+    "ringtail"
+   ],
+   "display_name": "Rad Ringtail Largo",
+   "family": "rad",
+   "partner": "ringtail",
+   "file": "models/rad_ringtail/rad_ringtail.glb",
+   "size": 60801856,
+   "sha256": "7a6e194b4823e8f01b167ab14e0f308cdadfeb5256cb75b0723a2ae16f2c7cbb",
+   "metadata_scrubbed": 0
+  },
+  {
+   "id": "rad_slumber",
+   "canonical": "largo.rad.sloomber",
+   "parents": [
+    "rad",
+    "sloomber"
+   ],
+   "display_name": "Rad Sloomber Largo",
+   "family": "rad",
+   "partner": "slumber",
+   "file": "models/rad_slumber/rad_slumber.glb",
+   "size": 15606400,
+   "sha256": "1e2a63a37f577e5b98c2cfe8d9bc4ca6393510739eb96148bb27ac40df38cc6a",
+   "metadata_scrubbed": 2
+  },
+  {
+   "id": "rad_twin",
+   "canonical": "largo.rad.twin",
+   "parents": [
+    "rad",
+    "twin"
+   ],
+   "display_name": "Rad Twin Largo",
+   "family": "rad",
+   "partner": "twin",
+   "file": "models/rad_twin/rad_twin.glb",
+   "size": 3048904,
+   "sha256": "2392b94cde9135f6f6355cf82b7ae8f0faed7279b91f80993362edfed1d2901d",
+   "metadata_scrubbed": 0
+  }
+ ]
+}

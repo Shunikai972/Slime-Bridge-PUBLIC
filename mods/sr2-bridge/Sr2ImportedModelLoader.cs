@@ -116,6 +116,9 @@ namespace SlimeBridge.SR2
                 }
                 if (renderers.Count == 0 || !renderers.Exists(value => value.enabled)) throw new FormatException("source model has no enabled milestone parts");
                 owner.Renderers = renderers.ToArray();
+                // Same layer as the actor (SR1 does the same): on SR2 1.x the camera skips the Default layer for actors, so a
+                // visual left there cast its shadow but was never drawn.
+                SetLayer(root.transform, actor.layer);
                 Sr2ImportedAnimation.Attach(root, model, owner);
                 return owner;
             }
@@ -133,6 +136,18 @@ namespace SlimeBridge.SR2
             transform.localScale = Vector3Of(value.Scale);
         }
         internal static Color Color4(float[] v) => new Color(v[0],v[1],v[2],v[3]);
+        private static void SetLayer(Transform root, int layer)
+        {
+            var stack = new Stack<Transform>();
+            stack.Push(root);
+            var visited = 0;
+            while (stack.Count > 0 && visited++ < 4096)
+            {
+                var current = stack.Pop();
+                current.gameObject.layer = layer;
+                for (var i = 0; i < current.childCount; i++) stack.Push(current.GetChild(i));
+            }
+        }
         private static Vector3 Vector3Of(float[] v) => new Vector3(v[0],v[1],v[2]);
         private static Il2CppStructArray<Vector3> Vectors3(float[][] values)
         {

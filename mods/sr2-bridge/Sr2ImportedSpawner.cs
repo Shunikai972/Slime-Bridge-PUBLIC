@@ -113,7 +113,7 @@ namespace SlimeBridge.SR2
             catch (Exception ex)
             {
                 problem = "cache refused for " + canonical + ": " + ex.GetType().Name + ": " + ex.Message;
-                Debug.Log("[SlimeBridge] " + problem);
+                MelonLoader.MelonLogger.Msg("[SlimeBridge] " + problem);
             }
             RootCaches[canonical] = loaded;
             return loaded;
@@ -212,6 +212,7 @@ namespace SlimeBridge.SR2
                 built = Sr2ImportedModelLoader.Build(actor, binding.Cache,
                     (part, owner) => BindMaterials(part, binding, owner, native, textures));
                 ApplyPaletteBlocks(built);
+                AttachSlimePhysics(built);
                 // No native visibility mutation until all source meshes/materials/clips are built.
                 if (oldRoot != null)
                 {
@@ -238,7 +239,7 @@ namespace SlimeBridge.SR2
                     built.ReleaseOwned(); built.gameObject.SetActive(false); UnityEngine.Object.Destroy(built.gameObject);
                 }
                 problem = "visual refused; placeholder retained: " + ex.GetType().Name + ": " + ex.Message;
-                if (selected == null || selected.LastProblem != problem) Debug.Log("[SlimeBridge] " + problem);
+                if (selected == null || selected.LastProblem != problem) MelonLoader.MelonLogger.Msg("[SlimeBridge] " + problem);
                 if (selected != null) selected.LastProblem = problem;
                 return false;
             }
@@ -357,6 +358,11 @@ namespace SlimeBridge.SR2
             for (var slot = 0; slot < result.Length; slot++)
             {
                 var source = part.Materials[slot];
+                if (source.Shader == BakedShader)
+                {
+                    var baked = BakedMaterial(source, binding, owner, textures);
+                    if (baked != null) { result[slot] = baked; continue; }
+                }
                 var clone = owner.Own(new Material(NativeFor(part, source, native)));
                 clone.name = source.Name + "__SR2Imported";
                 foreach (var property in source.Colors)
@@ -375,6 +381,7 @@ namespace SlimeBridge.SR2
                 }
                 foreach (var texture in source.Textures)
                 {
+                    if (source.Shader == BakedShader) break;          // no lit shader found: the palette measured from the texture paints it
                     string property = texture.Property;
                     if (!clone.HasProperty(property))
                     {
@@ -391,10 +398,7 @@ namespace SlimeBridge.SR2
                     var key = texture.File + (texture.Linear ? "|linear" : "|srgb");
                     if (!textures.TryGetValue(key, out var loaded))
                     {
-                        loaded = owner.Own(new Texture2D(2,2,TextureFormat.RGBA32,false,texture.Linear));
-                        loaded.name = texture.File;
-                        if (!ImageConversion.LoadImage(loaded, new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<byte>(binding.Cache.Textures[texture.File]), false))
-                            throw new FormatException("source texture decode failed: " + texture.File);
+                        loaded = owner.Own(Sr2Png.Load(binding.Cache.Textures[texture.File], texture.File, texture.Linear, false));
                         loaded.filterMode = FilterMode.Bilinear; loaded.wrapMode = TextureWrapMode.Clamp;
                         textures.Add(key, loaded);
                     }
@@ -406,6 +410,135 @@ namespace SlimeBridge.SR2
                 result[slot] = clone;
             }
             return result;
+        }
+        // ----- slime physics for imported rigs that carry the native jiggle bones (user largo models): the game's own
+        // RubberBoneEffect with the Slime preset on the visual root, springing bone_jiggle_* / bone_skin_* (per-bone
+        // intensities of the games' Largo rigs). SR2's own slimes squash through their shader, which a lit material lacks.
+        private static readonly string[] JiggleBones = { "bone_skin_bac", "bone_skin_fro", "bone_skin_lef", "bone_skin_rig" };
+        // the games' Largo rigs spring only the four side skin bones, at full intensity, with the Slime preset
+        internal static float JiggleIntensity = 0f, SkinIntensity = 1f;
+        private static void AttachSlimePhysics(Sr2ImportedVisualMarker owner)
+        {
+            try
+            {
+                var root = owner.transform;
+                var entries = new List<Il2Cpp.RubberBoneEffect.BoneEntry>();
+                foreach (var name in JiggleBones)
+                {
+                    var bone = FindDeep(root, name);
+                    if (bone == null) continue;
+                    entries.Add(new Il2Cpp.RubberBoneEffect.BoneEntry { Trans = bone, Intensity = name.StartsWith("bone_jiggle", StringComparison.Ordinal) ? JiggleIntensity : SkinIntensity });
+                }
+                if (entries.Count == 0) return;
+                SkinnedMeshRenderer? body = null;
+                foreach (var renderer in owner.Renderers)
+                {
+                    var skinned = renderer == null ? null : renderer.TryCast<SkinnedMeshRenderer>();
+                    if (skinned == null) continue;
+                    if (body == null) body = skinned;
+                    if (skinned.sharedMesh != null && skinned.sharedMesh.name == "body") { body = skinned; break; }
+                }
+                var effect = owner.gameObject.AddComponent<Il2Cpp.RubberBoneEffect>();
+                effect.Presets = Il2Cpp.RubberBoneEffect.RubberType.SLIME;
+                effect.EffectIntensity = 1f; effect.Gravity = 0.2f; effect.Mass = 6f; effect.Stiffness = 1f; effect.Damping = 0.75f;
+                effect.Bones = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Il2Cpp.RubberBoneEffect.BoneEntry>(entries.ToArray());
+                effect.SkinRenderer = body;
+            }
+            catch (Exception ex) { MelonLoader.MelonLogger.Msg("[SlimeBridge] slime physics not attached: " + ex.GetType().Name + ": " + ex.Message); }
+        }
+        private static Transform? FindDeep(Transform root, string name)
+        {
+            var stack = new Stack<Transform>();
+            stack.Push(root);
+            var visited = 0;
+            while (stack.Count > 0 && visited++ < 2048)
+            {
+                var current = stack.Pop();
+                if (current != root && current.name == name) return current;
+                for (var i = 0; i < current.childCount; i++) stack.Push(current.GetChild(i));
+            }
+            return null;
+        }
+
+        // ----- finished user largo models (SlimeBridge Largos page): a baked colour texture drawn with the game's own lit shader
+        private const string BakedShader = "SlimeBridge/Baked";
+        private static Material? _litTemplate;
+        private static bool _litSearched;
+        private static readonly string[] LitShaders = { "HDRP/Lit", "Universal Render Pipeline/Lit", "Standard" };
+        private static readonly string[] ClearedMaps = { "_NormalMap", "_MaskMap", "_DetailMap", "_EmissiveColorMap", "_BumpMap", "_MetallicGlossMap",
+            "_OcclusionMap", "_EmissionMap", "_HeightMap", "_BentNormalMap", "_TangentMap", "_SpecularColorMap", "_ThicknessMap", "_AnisotropyMap",
+            "_SubsurfaceMaskMap", "_TransmissionMaskMap", "_IridescenceMaskMap", "_CoatMaskMap" };
+        private static readonly string[] ClearedKeywords = { "_NORMALMAP", "_MASKMAP", "_DETAIL_MAP", "_EMISSIVE_COLOR_MAP", "_EMISSION", "_METALLICGLOSSMAP",
+            "_BENTNORMALMAP", "_HEIGHTMAP", "_TANGENTMAP", "_SPECULARCOLORMAP", "_THICKNESSMAP", "_ANISOTROPYMAP", "_SUBSURFACE_MASK_MAP",
+            "_TRANSMISSION_MASK_MAP", "_IRIDESCENCE_THICKNESSMAP", "_ALPHATEST_ON", "_SURFACE_TYPE_TRANSPARENT", "_BLENDMODE_ALPHA" };
+        /// <summary>An opaque material of the game that uses a standard lit shader (cloned, never edited), or null.</summary>
+        private static Material? LitTemplate()
+        {
+            if (_litSearched) return _litTemplate;
+            _litSearched = true;
+            try
+            {
+                var all = Resources.FindObjectsOfTypeAll<Material>();
+                foreach (var wanted in LitShaders)
+                {
+                    foreach (var material in all)
+                    {
+                        if (material == null || material.shader == null || material.shader.name != wanted) continue;
+                        if (!material.HasProperty("_BaseColorMap") && !material.HasProperty("_MainTex")) continue;
+                        if (material.HasProperty("_SurfaceType") && material.GetFloat("_SurfaceType") != 0f) continue;
+                        _litTemplate = material;
+                        MelonLoader.MelonLogger.Msg("[SlimeBridge] user largo models drawn with " + wanted + " (template " + material.name + ")");
+                        return _litTemplate;
+                    }
+                }
+                foreach (var wanted in LitShaders)
+                {
+                    var shader = Shader.Find(wanted);
+                    if (shader == null) continue;
+                    _litTemplate = new Material(shader) { name = "SlimeBridgeUserLargoLit" };
+                    UnityEngine.Object.DontDestroyOnLoad(_litTemplate);
+                    MelonLoader.MelonLogger.Msg("[SlimeBridge] user largo models drawn with " + wanted + " (new material)");
+                    return _litTemplate;
+                }
+            }
+            catch (Exception ex) { MelonLoader.MelonLogger.Msg("[SlimeBridge] lit shader search failed: " + ex.Message); }
+            MelonLoader.MelonLogger.Msg("[SlimeBridge] no lit shader found: user largo models use their measured palette");
+            return null;
+        }
+        private static Material? BakedMaterial(NativeMeshMaterial source, Binding binding, Sr2ImportedVisualMarker owner, Dictionary<string, Texture2D> textures)
+        {
+            var template = LitTemplate();
+            if (template == null) return null;
+            var clone = owner.Own(new Material(template));
+            clone.name = source.Name + "__SR2UserLargo";
+            foreach (var map in ClearedMaps) if (clone.HasProperty(map)) clone.SetTexture(map, null);
+            foreach (var keyword in ClearedKeywords) clone.DisableKeyword(keyword);
+            var tint = source.Colors.TryGetValue("_Color", out var c) && c.Length == 4 ? Sr2ImportedModelLoader.Color4(c) : Color.white;
+            foreach (var key in new[] { "_Metallic" }) if (clone.HasProperty(key)) clone.SetFloat(key, 0f);
+            foreach (var key in new[] { "_Smoothness", "_Glossiness" }) if (clone.HasProperty(key)) clone.SetFloat(key, 0.35f);
+            if (clone.HasProperty("_EmissiveColor")) clone.SetColor("_EmissiveColor", Color.black);
+            Texture2D? loaded = null, glow = null;
+            foreach (var texture in source.Textures)
+            {
+                if (texture.Property != "_MainTex" && texture.Property != "_EmissionMap") continue;
+                var key = texture.File + "|srgb";
+                if (!textures.TryGetValue(key, out var image))
+                {
+                    image = owner.Own(Sr2Png.Load(binding.Cache.Textures[texture.File], texture.File, false, true));
+                    image.filterMode = FilterMode.Trilinear; image.wrapMode = TextureWrapMode.Repeat;
+                    textures.Add(key, image);
+                }
+                if (texture.Property == "_MainTex") loaded = image; else glow = image;
+            }
+            // The game's HDRP lighting is neutral: the baked colour as the base, lit by the scene. The emissive-map variant of
+            // HDRP/Lit is not compiled into the game (a set emissive colour without its map whitened the whole model).
+            if (clone.HasProperty("_EmissiveColor")) clone.SetColor("_EmissiveColor", Color.black);
+            clone.DisableKeyword("_EMISSIVE_COLOR_MAP");
+            var colour = loaded != null ? Color.white : tint;
+            foreach (var key in new[] { "_BaseColor", "_Color" }) if (clone.HasProperty(key)) clone.SetColor(key, colour);
+            if (loaded != null)
+                foreach (var key in new[] { "_BaseColorMap", "_MainTex" }) if (clone.HasProperty(key)) { clone.SetTexture(key, loaded); clone.SetTextureScale(key, Vector2.one); clone.SetTextureOffset(key, Vector2.zero); }
+            return clone;
         }
         private static void PaletteFallback(Material material, NativeMeshMaterial source, string key, float[] value)
         {

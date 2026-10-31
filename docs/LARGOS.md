@@ -68,3 +68,20 @@ The extractor accepts their shader variants (`Eyes Shadow`, `Mouth Shadow`, a fa
 on the root), and a species with its own `SR2_<name>_body/face_LOD0` meshes. A body with no baked markings is painted on the plain Pink body
 material, so it no longer inherits the placeholder species' (Tabby's) stripes as a hard patch.
 
+
+# Finished largo models (the 24 cross-game Largos, branch MODELS)
+
+The author's finished models of the Largos no game has (Rad, Quantum, Mosaic × the eight Slime Rancher 2 species) reach
+both games through the same cache + spec path as the extracted ones.
+
+| Piece | Where | Does |
+|---|---|---|
+| Adapter | `tools/largo_models/glb_to_cache.py` (Blender, headless), `tools/largo_models/postpass.py`, `tools/largo_models/build.py` | GLB (read only) → bridge model cache: Unity space, the rig and every clip sampled at 30 Hz (Idle → `Idle v4`, Jump → `Pounce v4`, Feed/Chomp → `Bite v4`), mesh decimated to 14k triangles, FX shells (`FX_*`, untextured blended halos) left out. **Colours are baked** (Cycles, DIFFUSE colour + EMIT) from each material's node tree: the finished materials regrade their source textures, so the raw image is not the colour the model shows. **Size**: the body (vertices on the body bone, not rings, wings or ears) is 0.976 wide like the games' slime mesh; each game adds its Largo scale (SR1 `prefab_scale` 1 on a ×2 actor, SR2 `prefab_scale` 2, written by the sync). **Physics**: native `bone_core`/`bone_jiggle_*`/`bone_skin_*` under the model root (the game's RubberBoneEffect simulates in the root frame; a bone that rotates with the animation made it shiver), the body weighted to them, `bone_core` replaying the body bone's authored translation and squash; SR1 copies the Largo template's spring, SR2 adds the same component (Slime preset, the four side skin bones at 1). A palette measured on the body, an icon rendered from the model. Two models face +X and get a -90° yaw. |
+| Packages | `build.py --package --base-url <release>` | one zip per model (`cache/` + `largo.json`) and `largo-models.json` (slimebridge-largo-models v1). |
+| Branch + release | `tools/release/models_branch.py`, `publish\update-public.cmd --models <folder>` | orphan branch `MODELS` (the lightened GLBs, icons, `MODELS.json`, README, LICENSE) on the private and the public repository, glTF metadata scrubbed of local paths; release `largos` (never "latest") with the zips. |
+| Launcher | Largos page → **Download all** | reads `largo-models.json` of the public `largos` release by default, installs each zip in the models folder; the next Play copies the caches to `Lab/AssetCache/sr2-to-sr1` and `sr1-to-sr2` (`bridge/content/user_largos.py`; an extracted cache of the same Largo is kept aside as `<id>-native`). |
+| Specs | `largos.publish_spec` (SR1), `sr1_pipeline.publish_spec` (SR2) | a Largo entry per model: diet, favourites and plorts = both parents' (the registrars compute the union), Slime Rancher template = the family's own Pink Largo (`PINK_RAD_LARGO`, `PINK_QUANTUM_LARGO`, `PINK_MOSAIC_LARGO`) so its gameplay comes along, the measured palette for splats, vac and ammo colours. |
+| Look | SR1: `Standard`, matte and without reflections (the defaults mirrored the cyan sky), baked colour + baked glow (shader name `SlimeBridge/Baked` is outside the slime family, so no palette repaint). SR2: a clone of an opaque `HDRP/Lit` material of the game with the baked colour and glow (`Sr2ImportedSpawner.BakedMaterial`), the measured palette on the native slime material if none is found. |
+
+LAB readback: species op `diet:<largo>` (both games) lists parents, plorts produced, favourites, food groups and which
+parent becomes the Largo when it eats the other's plort; `feed:<largo>` reports every plort kind produced.

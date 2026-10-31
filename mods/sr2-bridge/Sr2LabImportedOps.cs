@@ -282,6 +282,13 @@ namespace SlimeBridge.SR2
                         case "spawn":
                             executed = Spawn(world, canonical, details, problems);
                             break;
+                        case "diet":
+                            // registered gameplay readback: parents, plorts produced, favourite foods, food groups, which parent becomes it
+                            if (!_registrar.TryResolveDefinition(canonical, out var dietDef) || dietDef == null || dietDef.Diet == null)
+                            { problems.Add("no registered definition"); break; }
+                            details.Add("\"diet\": " + DietJson(dietDef, type));
+                            executed = true;
+                            break;
                         case "save_roundtrip":
                         {
                             if (world.Director.CurrentGame() == null) { problems.Add("no loaded native save"); break; }
@@ -520,6 +527,33 @@ namespace SlimeBridge.SR2
                 if (ammo.AddToSlot(type, i, count)) return true;
             }
             return false;
+        }
+
+        private static string Name(Il2Cpp.IdentifiableType? value) => value == null ? "" : (value.name ?? value.referenceId ?? "");
+        private static string DietJson(Il2Cpp.SlimeDefinition def, Il2Cpp.IdentifiableType type)
+        {
+            string Q(string s) => "\"" + (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+            string List(IEnumerable<string> values) => "[" + string.Join(",", values.Select(Q)) + "]";
+            var diet = def.Diet;
+            var parents = new List<string>(); var madeBy = new List<string>();
+            if (def.BaseSlimes != null)
+                foreach (var parent in def.BaseSlimes)
+                {
+                    if (parent == null) continue;
+                    parents.Add(Name(parent));
+                    var map = parent.Diet?.EatMap;
+                    if (map == null) continue;
+                    for (var i = 0; i < map.Count; i++)
+                        if (map[i] != null && map[i].BecomesIdent != null && map[i].BecomesIdent.Pointer == type.Pointer) madeBy.Add(Name(parent) + " eats " + Name(map[i].EatsIdent));
+                }
+            var produces = new List<string>(); var favorites = new List<string>(); var groups = new List<string>();
+            if (diet.ProduceIdents != null) foreach (var x in diet.ProduceIdents) produces.Add(Name(x));
+            if (diet.FavoriteIdents != null) foreach (var x in diet.FavoriteIdents) favorites.Add(Name(x));
+            if (diet.MajorFoodIdentifiableTypeGroups != null) foreach (var g in diet.MajorFoodIdentifiableTypeGroups) if (g != null) groups.Add(g.name ?? "");
+            return "{\"is_largo\": " + (def.IsLargo ? "true" : "false") + ", \"parents\": " + List(parents) + ", \"produces\": " + List(produces) +
+                ", \"favorites\": " + List(favorites) + ", \"favorite_production_count\": " + diet.FavoriteProductionCount.ToString(CultureInfo.InvariantCulture) +
+                ", \"food_groups\": " + List(groups) + ", \"eat_map_entries\": " + (diet.EatMap?.Count ?? 0).ToString(CultureInfo.InvariantCulture) +
+                ", \"made_by\": " + List(madeBy) + "}";
         }
 
         private static string MembershipJson(Il2Cpp.IdentifiableType type)

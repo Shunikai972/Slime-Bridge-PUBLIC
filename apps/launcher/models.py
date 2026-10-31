@@ -22,6 +22,8 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 SCHEMA = 'slimebridge-largo-models'
+# the MODELS branch release of SlimeBridge (the author's finished largos, adapted for both games)
+DEFAULT_MANIFEST = 'https://github.com/Shunikai972/Slime-Bridge-PUBLIC/releases/download/largos/largo-models.json'
 SR1_ONLY = ('rad', 'quantum', 'mosaic')
 SR2_ONLY = ('slumber', 'cotton', 'flutter', 'angler', 'batty', 'ringtail', 'hyper', 'twin')
 DISPLAY = {'rad': 'Rad', 'quantum': 'Quantum', 'mosaic': 'Mosaic', 'slumber': 'Sloomber', 'cotton': 'Cotton',

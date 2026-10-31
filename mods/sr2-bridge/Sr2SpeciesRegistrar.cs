@@ -297,6 +297,19 @@ namespace SlimeBridge.SR2
             foreach (var result in results)
                 if (result.Status == "REGISTERED" && result.Def != null && result.Parents != null)
                     result.Detail["largo_index"] = IndexLargo(definitions, result.Def, result.Parents);
+            // The pairs above are added after the refresh built every eat map: rebuild the parents' maps so "a parent eats the
+            // other's plort" really becomes the Largo (without this no parent ever turned into an added Largo).
+            var parentsRefreshed = new HashSet<IntPtr>();
+            foreach (var result in results)
+            {
+                if (result.Status != "REGISTERED" || result.Def == null || result.Parents == null) continue;
+                foreach (var parent in result.Parents)
+                {
+                    if (parent == null || !parentsRefreshed.Add(parent.Pointer)) continue;
+                    try { parent.Diet?.RefreshEatMap(definitions, parent); }
+                    catch (Exception ex) { errors.Add("parent eat map refresh failed for " + (parent.name ?? "?") + ": " + ex.GetType().Name); }
+                }
+            }
             // Eat maps only exist after the refresh; a READY entry must have a working diet or it
             // fails closed and is rolled back so its receipt can never disagree with operability.
             foreach (var result in results)

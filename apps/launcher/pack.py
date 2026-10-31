@@ -79,7 +79,7 @@ def _data_dirs(installs):
     return out
 
 
-def prepare(realm, game_root, repo_root=REPO_ROOT, installs=None):
+def prepare(realm, game_root, repo_root=REPO_ROOT, installs=None, models_dir=None):
     """Idempotent: plugin, island layout and (LAB copies) species caches. Returns {'ok', 'steps', 'warnings'}; never raises."""
     steps, warnings = [], []
 
@@ -123,6 +123,17 @@ def prepare(realm, game_root, repo_root=REPO_ROOT, installs=None):
         warnings.append(f"online: {outcome.get('detail', '')}")
         outcome = {**outcome, 'status': 'UNAVAILABLE'}
     step('online', outcome['status'], outcome.get('detail', ''))
+
+    # finished largo models downloaded from the Largos page: their caches go where both plugins look (before the specs below)
+    if models_dir:
+        try:
+            from bridge.content import user_largos
+            synced = user_largos.sync(models_dir, Path(repo_root) / 'Lab' / 'AssetCache')
+            if synced['models']:
+                step('user-largos', 'READY', f"{synced['models']} downloaded largos")
+        except (OSError, ValueError) as exc:
+            warnings.append(f'downloaded largos: {exc}')
+            step('user-largos', 'FAILED', str(exc))
 
     if realm == 'SR1':
         try:

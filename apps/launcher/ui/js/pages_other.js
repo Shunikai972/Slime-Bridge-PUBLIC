@@ -78,6 +78,8 @@
       </section>
       <section class="panel"><h2>${t('opt.launcher')}</h2>
         <div class="setting"><div class="name">${t('opt.language')}</div>${segment('pref', 'language', P.language, [['auto', 'Auto'], ['en', 'English'], ['fr', 'Français']])}</div>
+        <div class="setting"><div style="min-width:0"><div class="name">${t('opt.nexus')}</div><div class="desc">${t('opt.nexus_d')}</div></div>
+          <span class="row" style="gap:6px"><input id="nexus-key" type="password" class="field mods-q" style="min-width:160px" placeholder="${P.nexus_api_key ? '••••••••' : t('opt.nexus_ph')}"><button class="btn btn--sm btn--ghost" data-act="nexus-key-save">${t('opt.save')}</button></span></div>
         <div class="setting"><div><div class="name">${t('opt.perf')}</div><div class="desc">${t('opt.perf_d')}</div></div>${segment('pref', 'performance', P.performance || 'off', [['off', t('opt.perf_off')], ['balanced', t('opt.perf_balanced')], ['fast', t('opt.perf_fast')]])}</div>
         ${toggle('pref-bool-inv', 'native_frame', !P.native_frame, t('opt.custom_frame'), t('opt.frame_d'))}
         ${toggle('pref-bool', 'reduce_motion', P.reduce_motion, t('opt.reduce'), t('opt.reduce_d'))}
@@ -180,6 +182,81 @@
 </section>`;
   }
 
-  SB.pages = Object.assign(SB.pages || {}, { multiplayer: { render: multiplayer }, options: { render: options }, about: { render: about }, debug: { render: debug } });
+  /** Mod manager: search the game's Nexus catalogue, install with one click, remove (kept aside, never deleted). */
+  function mods(S) {
+    const M = SB.local.mods = SB.local.mods || { realm: 'SR2', query: '', results: null, installed: {}, busy: false };
+    const realm = M.realm, inst = M.installed[realm], game = realm === 'SR1' ? 'Slime Rancher' : 'Slime Rancher 2';
+    const fmt = n => n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(n || 0);
+    const installedIds = new Set(((inst && inst.mods) || []).map(m => String(m.nexus_id)));
+    const card = m => `<article class="mod-card">
+        <span class="mod-thumb" data-thumb="${esc(m.thumbnail || '')}">${m.thumb ? `<img src="${m.thumb}" alt="">` : ''}</span>
+        <span class="mod-body"><b>${esc(m.name)}</b><small class="muted">${esc(m.author || '')} · v${esc(m.version || '?')} · ${fmt(m.downloads)} ${t('mods.downloads')}</small><span class="mod-sum">${esc(m.summary || '')}</span></span>
+        <span class="mod-actions">${installedIds.has(String(m.id)) ? `<span class="pill good">${t('mods.installed_pill')}</span>` : `<button class="btn btn--sm btn--sr${realm === 'SR1' ? '1' : '2'}" data-act="mod-install" data-arg="${m.id}">${t('mods.install')}</button>`}
+          <button class="btn btn--sm btn--ghost" data-act="open-url" data-arg="${esc(m.url)}">Nexus</button></span>
+      </article>`;
+    const pending = inst && inst.pending && inst.pending.realm === realm ? inst.pending : null;
+    const rows = inst ? (inst.mods.length ? inst.mods.map(m => `<div class="row between mod-row"><span><b>${esc(m.name)}</b>${m.version ? ` <small class="muted">v${esc(m.version)}</small>` : ''}${m.protected ? ` <span class="pill muted">${t('mods.protected')}</span>` : ''}</span>
+        ${m.protected ? '' : `<button class="btn btn--sm btn--ghost" data-act="mod-remove" data-arg="${esc(m.key)}">${t('mods.remove')}</button>`}</div>`).join('') : `<p class="muted">${t('mods.none')}</p>`) : `<p class="muted">${t('prof.loading')}</p>`;
+    return `<section class="page">
+  <div class="page-title"><h1>${t('nav.mods')}</h1><p>${t('mods.sub')}</p></div>
+  <div class="row mods-top">
+    <span class="segs game-switch">${['SR1', 'SR2'].map(r => `<button class="seg ${r === realm ? 'on' : ''}" data-act="mods-realm" data-arg="${r}">${r === 'SR1' ? 'Slime Rancher' : 'Slime Rancher 2'}</button>`).join('')}</span>
+    <input id="mods-q" class="field mods-q" placeholder="${esc(t('mods.search_ph', { game }))}" value="${esc(M.query)}" data-enter="mods-search">
+    <button class="btn btn--sky" data-act="mods-search">${t('mods.search')}</button>
+    <button class="btn btn--ghost" data-act="mod-file">${t('mods.from_file')}</button>
+  </div>
+  ${pending && pending.state === 'WAITING' ? `<p class="pill warn mod-wait">${t('mods.waiting', { name: esc(pending.name || '') })}</p>` : ''}
+  <div class="grid cols-2 mods-cols">
+    <section class="panel stack"><h2>${t('mods.results')}</h2>${M.busy ? `<p class="muted">${t('mods.searching')}</p>` : M.results ? (M.results.length ? `<div class="mod-list">${M.results.map(card).join('')}</div>` : `<p class="muted">${t('mods.no_result')}</p>`) : `<p class="muted">${t('mods.hint')}</p>`}</section>
+    <section class="panel stack"><h2>${t('mods.in_game', { game })}</h2>${rows}<p class="faint small">${t('mods.removed_note')}</p></section>
+  </div>
+  <p class="faint small">${t('mods.source')}</p>
+</section>`;
+  }
+
+  /** Credits: the people who made the launcher with me, then every project SlimeBridge uses (role, licence, link). */
+  const CREDITS = [
+    ['credits.g_loaders', [
+      ['SRML (Slime Rancher Mod Loader)', 'credits.r_srml', 'GPL-3.0', 'https://github.com/SlimeRancherModding/SRML'],
+      ['MelonLoader', 'credits.r_melon', 'Apache-2.0', 'https://github.com/LavaGang/MelonLoader'],
+      ['MelonSRML', 'credits.r_melonsrml', 'GPL-3.0', 'https://github.com/SlimeRancherModding/MelonSRML'],
+      ['Harmony', 'credits.r_harmony', 'MIT', 'https://github.com/pardeike/Harmony'],
+      ['Il2CppInterop', 'credits.r_interop', 'LGPL-3.0', 'https://github.com/BepInEx/Il2CppInterop'],
+    ]],
+    ['credits.g_online', [
+      ['SRMP Revival', 'credits.r_srmp', 'GPL-3.0', 'https://github.com/Shunikai972/Slime-rancher-multiplayer-public-mode'],
+      ['SRMP (srmp-public)', 'credits.r_srmp_up', 'GPL-3.0', 'https://github.com/cachenetworks/srmp-public'],
+      ['Ranching Together (SR2MP)', 'credits.r_sr2mp', 'GPL-3.0', 'https://github.com/pyeight/SlimeRancher2Multiplayer'],
+      ['Starlight', 'credits.r_starlight', 'Starlight-SAL', 'https://github.com/ThatFinn/Starlight'],
+    ]],
+    ['credits.g_tools', [
+      ['Cpp2IL', 'credits.r_cpp2il', 'MIT', 'https://github.com/SamboyCoding/Cpp2IL'],
+      ['UnityPy', 'credits.r_unitypy', 'MIT', 'https://github.com/K0lb3/UnityPy'],
+      ['TypeTreeGeneratorAPI', 'credits.r_ttg', 'MIT', 'https://github.com/K0lb3/TypeTreeGenerator'],
+      ['AssetRipper', 'credits.r_assetripper', 'GPL-3.0', 'https://github.com/AssetRipper/AssetRipper'],
+      ['Blender', 'credits.r_blender', 'GPL-2.0+', 'https://www.blender.org/'],
+      ['pywebview', 'credits.r_pywebview', 'BSD-3-Clause', 'https://github.com/r0x0r/pywebview'],
+      ['PyInstaller', 'credits.r_pyinstaller', 'GPL-2.0 + exception', 'https://pyinstaller.org/'],
+      ['dnfile · pygltflib · texture2ddecoder', 'credits.r_libs', 'MIT', 'https://pypi.org/project/dnfile/'],
+      ['NumPy · Pillow · PyYAML', 'credits.r_libs2', 'BSD / MIT-CMU / MIT', 'https://pypi.org/project/Pillow/'],
+      ['Nexus Mods', 'credits.r_nexus', '—', 'https://www.nexusmods.com/slimerancher2'],
+      ['Fredoka · Nunito', 'credits.r_fonts', 'SIL OFL 1.1', 'https://fonts.google.com/specimen/Fredoka'],
+    ]],
+  ];
+  function credits(S) {
+    const row = ([name, role, licence, url]) => `<div class="credit-row"><span><b>${esc(name)}</b><small class="muted">${t(role)}</small></span><span class="pill muted">${esc(licence)}</span><button class="btn btn--sm btn--ghost" data-act="open-url" data-arg="${esc(url)}">${t('credits.open')}</button></div>`;
+    return `<section class="page">
+  <div class="page-title"><h1>${t('nav.credits')}</h1><p>${t('credits.sub')}</p></div>
+  <section class="panel thanks">
+    <img src="img/pink-cotton-artist.png" alt="">
+    <div><h2>${t('credits.thanks_t')}</h2><p class="thanks-text">${t('credits.thanks')}</p></div>
+  </section>
+  ${CREDITS.map(([title, rows]) => `<section class="panel stack credits-group"><h2>${t(title)}</h2>${rows.map(row).join('')}</section>`).join('')}
+  <section class="panel stack credits-group"><h2>Monomi Park</h2><p class="muted">${t('credits.monomi')}</p>
+    <div class="row"><button class="btn btn--sm btn--ghost" data-act="open-url" data-arg="https://www.slimerancher.com/fan-content-policy">${t('nav.about')} · Fan Content Policy</button></div></section>
+</section>`;
+  }
+
+  SB.pages = Object.assign(SB.pages || {}, { credits: { render: credits }, mods: { render: mods }, multiplayer: { render: multiplayer }, options: { render: options }, about: { render: about }, debug: { render: debug } });
   SB.showLegal = showLegal;
 })(window.SB = window.SB || {});

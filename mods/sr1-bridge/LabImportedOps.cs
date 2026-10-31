@@ -20,7 +20,7 @@ namespace SlimeBridge.SR1
     internal sealed class LabImportedOps
     {
         private static readonly Regex OpPattern = new Regex(
-            @"\A(spawn|feed|price|vac_add|vac_remove|release|query|save_roundtrip):((?:slime|plort)\.[a-z0-9_]+|largo\.[a-z0-9_]+\.[a-z0-9_]+)(?::([0-9]{1,2}))?\z",
+            @"\A(spawn|feed|diet|price|vac_add|vac_remove|release|query|save_roundtrip):((?:slime|plort)\.[a-z0-9_]+|largo\.[a-z0-9_]+\.[a-z0-9_]+)(?::([0-9]{1,2}))?\z",
             RegexOptions.CultureInvariant);
 
         private readonly SpeciesRegistrar _registrar;
@@ -377,6 +377,16 @@ namespace SlimeBridge.SR1
                                 if (!executed) problems.Add("plort has no market price");
                                 break;
                             }
+                        case "diet":
+                        {
+                            // LAB readback of the registered gameplay: parents, plorts produced, favourite foods, food groups, and which
+                            // parent turns into this Largo when it eats the other's plort.
+                            var definition = game.SlimeDefinitions.GetSlimeByIdentifiableId(id);
+                            executed = definition != null && definition.Diet != null;
+                            if (!executed) { problems.Add("no registered definition"); break; }
+                            details.Add("\"diet\": " + DietJson(game, definition!, id));
+                            break;
+                        }
                         case "feed":
                             // LAB readback of the eat -> plort path: the species plus native carrots, reported 25 s later.
                             executed = !isPlort && AppendSpawn(game, scene, canonical, id, details, problems) && StartFeed(game, scene, canonical, id, details, problems);
@@ -483,6 +493,28 @@ namespace SlimeBridge.SR1
             return true;
         }
 
+        private static string Names<T>(IEnumerable<T>? values) =>
+            "[" + string.Join(",", (values ?? Enumerable.Empty<T>()).Select(v => RegistrySnapshotFormat.Quote(v?.ToString() ?? ""))) + "]";
+
+        private static string DietJson(GameContext game, SlimeDefinition definition, Identifiable.Id id)
+        {
+            var diet = definition.Diet;
+            var becomes = new List<string>();
+            foreach (var parent in definition.BaseSlimes ?? new SlimeDefinition[0])
+            {
+                if (parent?.Diet?.EatMap == null) continue;
+                foreach (var entry in parent.Diet.EatMap)
+                    if (entry.becomesId == id) becomes.Add(parent.IdentifiableId + " eats " + entry.eats);
+            }
+            return "{\"is_largo\": " + (definition.IsLargo ? "true" : "false") +
+                ", \"parents\": " + Names((definition.BaseSlimes ?? new SlimeDefinition[0]).Select(p => p.IdentifiableId)) +
+                ", \"produces\": " + Names(diet.Produces) + ", \"favorites\": " + Names(diet.Favorites) +
+                ", \"favorite_production_count\": " + diet.FavoriteProductionCount.ToString(CultureInfo.InvariantCulture) +
+                ", \"food_groups\": " + Names(diet.MajorFoodGroups) +
+                ", \"eat_map_entries\": " + (diet.EatMap?.Count ?? 0).ToString(CultureInfo.InvariantCulture) +
+                ", \"made_by\": " + Names(becomes) + "}";
+        }
+
         private void TickFeed()
         {
             if (_feeds.Count == 0) return;
@@ -495,10 +527,20 @@ namespace SlimeBridge.SR1
                 {
                     var food = watch.Food.Count(f => f != null);
                     var plorts = 0;
+                    var byKind = new Dictionary<string, int>(StringComparer.Ordinal);
                     foreach (var identifiable in UnityEngine.Object.FindObjectsOfType<Identifiable>())
-                        if (identifiable != null && identifiable.id == watch.PlortId && watch.PlortId != Identifiable.Id.NONE) plorts++;
+                    {
+                        if (identifiable == null) continue;
+                        if (identifiable.id == watch.PlortId && watch.PlortId != Identifiable.Id.NONE) plorts++;
+                        if (Identifiable.IsPlort(identifiable.id) || (int)identifiable.id >= 900000 && identifiable.id.ToString().Contains("PLORT"))
+                        {
+                            var key = identifiable.id.ToString();
+                            byKind[key] = byKind.TryGetValue(key, out var n) ? n + 1 : 1;
+                        }
+                    }
                     UnityEngine.Debug.Log("[SlimeBridge] feed report: species=" + watch.Canonical + " foodStart=" + watch.Food.Count + " foodNow=" + food +
-                        " plortsInWorld=" + plorts + " slimeAlive=" + (watch.Slime != null));
+                        " plortsInWorld=" + plorts + " slimeAlive=" + (watch.Slime != null) +
+                        " plortKinds=" + string.Join(",", byKind.Select(kv => kv.Key + ":" + kv.Value)));
                 }
                 catch (Exception ex) { UnityEngine.Debug.Log("[SlimeBridge] feed report failed: " + ex.GetType().Name); }
             }

@@ -22,10 +22,10 @@ from tools.lab.process_guard import assert_no_other_game_processes
 from tools.lab.travel_oracle import grab
 
 REPO_ROOT = oracle.REPO_ROOT
-NEEDLES = ('travel', 'autoload', 'SlimeBridge_SR2_Core] boot', 'Exception', 'save slot')
+NEEDLES = ('travel', 'autoload', 'SlimeBridge_SR2_Core] boot', 'Exception', 'save slot', 'imported', 'user largo', 'visual refused', 'physics')
 
 
-def run(sr2_root, plugin_dir, timeout_s):
+def run(sr2_root, plugin_dir, timeout_s, import_spec=None, import_ops=None):
     root = Path(sr2_root).resolve()
     exe = root / 'SlimeRancher2.exe'
     log = root / 'MelonLoader' / 'Latest.log'
@@ -45,18 +45,37 @@ def run(sr2_root, plugin_dir, timeout_s):
         finally:
             plugins.find_source = original
         env = dict(os.environ, SLIMEBRIDGE_TRAVEL_MODE='RESUME', SLIMEBRIDGE_TRAVEL_NEW='SlimeBridge probe', SLIMEBRIDGE_URL='http://127.0.0.1:9', SLIMEBRIDGE_TOKEN='probe')
-        if log.is_file():                                        # never read the previous run's log as this one
-            log.replace(log.with_name('Latest.before-probe.log'))
+        if import_spec:                                          # imported species/Largos + their LAB ops in this new game
+            env.update(SLIMEBRIDGE_LAB_EXE=str(exe.resolve()), SLIMEBRIDGE_IMPORT_SPEC=str(Path(import_spec).resolve()),
+                       SLIMEBRIDGE_IMPORT_OUT=str(directory), SLIMEBRIDGE_IMPORT_RUN=directory.name,
+                       SLIMEBRIDGE_IMPORT_CACHE_ROOT=str(REPO_ROOT / 'Lab' / 'AssetCache' / 'sr1-to-sr2'))
+            if import_ops:
+                env['SLIMEBRIDGE_IMPORT_OPS'] = json.dumps({'ops': import_ops})
+        start = log.stat().st_size if log.is_file() else 0       # never read the previous run's log as this one (the launcher's
+                                                                 # console may hold it open, so it is not renamed)
+        started_at = time.time()
+
+        def fresh():
+            if not log.is_file():
+                return ''
+            text = log.read_text(encoding='utf-8', errors='replace')
+            rewritten = log.stat().st_mtime >= started_at and len(text.encode('utf-8', 'replace')) < start
+            return text if rewritten or start == 0 else text[start:] if len(text) > start else text
         proc = subprocess.Popen([str(exe), *oracle.WINDOW_ARGS], cwd=str(root), env=env)
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline and proc.poll() is None:
-            text = log.read_text(encoding='utf-8', errors='replace') if log.is_file() else ''
+            text = fresh()
             lines = [l for l in text.splitlines() if any(n in l for n in NEEDLES)]
             result['lines'] = lines[-60:]
             if any('started a new native game' in l for l in lines):
                 time.sleep(60)                                   # let the new world load, then look at it
+                if import_ops:                                   # the ops run once the player stands in the world
+                    end = time.monotonic() + 240
+                    while time.monotonic() < end and not (directory / 'imported-ops-receipt.json').is_file():
+                        time.sleep(3)
+                    time.sleep(8)
                 result['screen'] = grab(directory, 'sr2-new-game')
-                text = log.read_text(encoding='utf-8', errors='replace')
+                text = fresh()
                 result['lines'] = [l for l in text.splitlines() if any(n in l for n in NEEDLES)][-60:]
                 result['passed'] = True
                 break
@@ -84,10 +103,12 @@ def main(argv=None):
     parser.add_argument('--plugin-dir', default=str(REPO_ROOT / 'mods' / 'sr2-bridge' / 'bin' / 'Release' / 'net6.0'))
     parser.add_argument('--timeout', type=float, default=300)
     parser.add_argument('--current-user-authorized', action='store_true')
+    parser.add_argument('--import-spec', help='import-spec-SR2.json to register in that game')
+    parser.add_argument('--import-ops', default='[]', help='JSON list of imported-species ops (spawn:largo.x.y, diet:...)')
     args = parser.parse_args(argv)
     if not args.current_user_authorized:
         raise SystemExit('--current-user-authorized is required')
-    result = run(args.sr2, args.plugin_dir, args.timeout)
+    result = run(args.sr2, args.plugin_dir, args.timeout, args.import_spec, json.loads(args.import_ops) or None)
     print('\n'.join(result['lines'][-25:]))
     print(json.dumps({k: result.get(k) for k in ('passed', 'screen', 'saves_match_backup_after_restore')}))
     return 0 if result['passed'] else 1

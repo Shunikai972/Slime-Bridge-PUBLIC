@@ -611,9 +611,18 @@ class ApiTests(unittest.TestCase):
         self.assertTrue((self.root / 'Lab' / 'Largos' / 'models' / 'rad_cotton' / 'rad_cotton.glb').is_file())
         self.assertEqual(self.api.models_state()['rows'][0]['state'] in ('INSTALLED', 'NOT_PUBLISHED'), True)
 
-    def test_models_refresh_without_source_is_honest(self):
+    def test_models_refresh_without_source_reads_the_published_largos(self):
+        from apps.launcher import models as models_module
+        asked = []
+
+        def offline(request, timeout=0):
+            asked.append(request.full_url)
+            raise OSError('offline')
+        self.api._opener = offline
         result = self.api.models_refresh()
-        self.assertEqual(result['error'], 'NO_SOURCE')
+        self.assertEqual(asked, [models_module.DEFAULT_MANIFEST])
+        self.assertFalse(result['ok'])
+        self.assertIn('offline', result['manifest']['error'])
         self.assertTrue(all(r['state'] == 'NOT_PUBLISHED' for r in result['rows']))
 
     def test_multiplayer_addresses_are_checked_and_remembered_without_dialling(self):

@@ -16,7 +16,7 @@ namespace SlimeBridge.SR1
     public sealed class BridgeEntry : ModEntryPoint
     {
         // Must stay a plain X.Y[.Z] integer string: SRML's ModVersion.Parse rejects suffixes like "-dev".
-        internal const string PluginVersion = "0.1.9";
+        internal const string PluginVersion = "0.2.0";
         private static readonly int Pid = Process.GetCurrentProcess().Id;
 
         private DateTime _nextHeartbeat = DateTime.MinValue;

@@ -485,7 +485,7 @@ namespace SlimeBridge.SR1
             var op = _ops.First!.Value;
             _ops.RemoveFirst();
             _events.Add("op: " + op);
-            if (op == "status") { _events.Add("status: " + Status()); return; }
+            if (op == "status") { _events.Add("status: " + Status() + " | timeScale=" + UnityEngine.Time.timeScale.ToString(System.Globalization.CultureInfo.InvariantCulture) + " time=" + UnityEngine.Time.time.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + " focused=" + UnityEngine.Application.isFocused); return; }
             if (op == "wait") { _waitUntil = Time.realtimeSinceStartup + 3f; return; }
             if (op.StartsWith("wait:", StringComparison.Ordinal) && float.TryParse(op.Substring(5), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds))
             { _waitUntil = Time.realtimeSinceStartup + Mathf.Clamp(seconds, 0f, 120f); return; }

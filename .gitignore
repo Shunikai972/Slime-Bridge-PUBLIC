@@ -50,6 +50,7 @@
 *.png
 !apps/launcher/ui/img/*.png
 !apps/launcher/ui/img/*.ico
+!apps/launcher/ui/img/*.gif
 *.jpg
 *.tga
 *.wav

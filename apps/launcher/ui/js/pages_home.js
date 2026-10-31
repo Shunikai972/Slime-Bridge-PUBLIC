@@ -60,7 +60,7 @@
     const last = S.last_session, card = (realm, sp) => {
       const g = S.games[realm], ok = !!(g && g.primary), run = g && g.running;
       return `<article class="play-card ${realm === 'SR1' ? 'sr1' : 'sr2'}">
-        <span class="pc-art">${slime(sp, { size: 64, cls: 'idle' })}</span>
+        <span class="pc-art"><img src="img/play-${realm.toLowerCase()}.png" alt=""></span>
         <span class="pc-body"><b>${NAMES[realm]}</b><small>${run ? t('home.running') : ok ? t('home.ready') : t('home.not_found')}</small></span>
         ${ok ? `<span class="pc-actions"><button class="btn ${realm === 'SR1' ? 'btn--sr1' : 'btn--sr2'}" data-act="launch" data-arg="${realm}" ${run ? 'disabled' : ''}>${icon('play')} ${t('home.play_game')}</button>
              ${S.games[other(realm)] && S.games[other(realm)].primary && !run ? `<button class="pc-both" data-act="launch" data-arg="BOTH_${realm}">${t('home.with_other', { game: other(realm) })}</button>` : ''}</span>`
@@ -94,7 +94,7 @@
   /* ---------------------------------------------------------------- games */
   function gameCard(S, realm) {
     const g = S.games[realm], p = g.primary, key = realm.toLowerCase();
-    const art = cutout(realm === 'SR1' ? /pink/i : /cotton/i, realm === 'SR1' ? 'pink' : 'sloomber', 64, { cls: '' });
+    const art = `<img class="gc-icon" src="img/play-${key}.png" alt="">`;          // artist icon (same as the home cards)
     const head = `<div class="gc-head"><div class="gc-art ${key}">${art}</div>
       <div class="gc-title"><h3>${NAMES[realm]}</h3><span class="muted small">${realm === 'SR1' ? t('games.engine1') : t('games.engine2')}</span></div>
       <span class="pill ${p ? 'good live' : 'warn'}">${p ? t('games.found') : t('games.notfound')}</span></div>`;
@@ -120,13 +120,13 @@
     return `<div class="page">
   <div class="page-title"><h1>${t('nav.games')}</h1><p>${t('games.sub')}</p></div>
   <section class="panel detect">
-    <div class="detect-art">${slime('phosphor', { size: 78, cls: 'hop', dur: 1.7 })}</div>
+    <div class="detect-art"><img src="img/find-games.png" alt=""></div>
     <div class="stack" style="flex:1"><h2>${t('games.detect_title')}</h2><p class="muted">${t('games.detect_body')}</p>
       <div class="row"><button class="btn btn--sky" data-act="detect">${icon('search')} ${t('games.autodetect')}</button><button class="btn btn--ghost" data-act="pick" data-arg="folder">${icon('folder')} ${t('games.choose_folder')}</button><button class="btn btn--ghost" data-act="pick" data-arg="exe">${t('games.choose_exe')}</button><span class="pill ${n ? 'good' : 'muted'}">${t('games.count', { n })}</span></div></div>
   </section>
   <div class="grid cols-2" id="games">${['SR1', 'SR2'].map(r => gameCard(S, r)).join('')}</div>
   <section class="panel own">
-    <div class="own-art">${plort('honey', { size: 54 })}</div>
+    <div class="own-art"><img src="img/need-games.gif" alt=""></div>
     <div class="stack" style="flex:1"><h2>${t('legal.own_title')}</h2><p class="muted">${t('legal.own_body')}</p>
       <div class="row"><button class="btn btn--ghost btn--sm" data-act="store" data-arg="SR1">${t('games.buy', { game: NAMES.SR1 })}</button><button class="btn btn--ghost btn--sm" data-act="store" data-arg="SR2">${t('games.buy', { game: NAMES.SR2 })}</button></div></div>
   </section></div>`;

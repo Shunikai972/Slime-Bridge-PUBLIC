@@ -225,6 +225,7 @@ ${deco ? `<g transform="translate(18 64)"><g class="float">${slime('pink', { siz
     search: 'M14 24 a9 9 0 1 0 0 -18 a9 9 0 0 0 0 18 M21 21 L28 28', refresh: 'M26 12 A11 11 0 1 0 27 20 M27 4 V12 H19',
     star: 'M16 3 L20 12 L30 13 L22 20 L25 29 L16 24 L7 29 L10 20 L2 13 L12 12Z', link: 'M13 19 a5 5 0 0 1 0 -7 l3 -3 a5 5 0 0 1 7 7 l-2 2 M19 13 a5 5 0 0 1 0 7 l-3 3 a5 5 0 0 1 -7 -7 l2 -2',
     stop: 'M8 8 H24 V24 H8Z', plus: 'M16 6 V26 M6 16 H26', trash: 'M6 9 H26 M12 9 V5 H20 V9 M9 9 L10.5 27 H21.5 L23 9',
+    mods: 'M9 4 h4 a2 2 0 1 1 4 0 h4 v6 a2 2 0 1 0 0 4 v6 h-6 a2 2 0 1 0 -4 0 h-6 v-6 a2 2 0 1 1 0 -4 Z',
     download: 'M16 4 V20 M9 14 L16 21 L23 14 M5 26 H27',
   };
   function glyph(name, cls = 'gl') {

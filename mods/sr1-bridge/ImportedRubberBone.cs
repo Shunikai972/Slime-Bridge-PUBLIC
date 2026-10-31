@@ -17,6 +17,7 @@ namespace SlimeBridge.SR1
     internal static class ImportedRubberBone
     {
         private const int MaxBones = 64;
+        private static bool _templateLogged;
 
         public static bool EnsureAttached(GameObject instance, GameObject visual, out string problem)
         {
@@ -50,6 +51,14 @@ namespace SlimeBridge.SR1
                 if (skinned.gameObject.name.StartsWith("body", StringComparison.OrdinalIgnoreCase)) { body = skinned; break; }
             }
 
+            if (!_templateLogged)
+            {
+                _templateLogged = true;
+                var rows = new List<string>();
+                foreach (var source in template.bones) if (source != null && source.trans != null) rows.Add(source.trans.name + ":" + source.intensity.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+                UnityEngine.Debug.Log("[SlimeBridge] rubber template " + template.Presets + " intensity=" + template.effectIntensity + " gravity=" + template.gravity +
+                    " damping=" + template.damping + " mass=" + template.mass + " stiffness=" + template.stiffness + " bones=" + string.Join(",", rows));
+            }
             var added = visual.AddComponent<RubberBoneEffect>();
             added.Presets = template.Presets;
             added.effectIntensity = template.effectIntensity;

@@ -539,6 +539,10 @@ namespace SlimeBridge.SR1
             return true;
         }
 
+        // Measured in the LAB desert (cyan sky light): a quarter of the colour from the scene light keeps the shading, the
+        // rest comes from the baked self-light map (tools/largo_models/postpass.py) so every hue stays the author's.
+        internal const float UserLargoLitShare = 0.25f, UserLargoGlowGain = 1f;
+
         private static bool TryBuildMaterialEntry(string directory, Dictionary<string, object> entry,
             HashSet<string> verifiedFiles, out Material material, out string problem)
         {
@@ -589,6 +593,29 @@ namespace SlimeBridge.SR1
             {
                 if (propertyTextures.TryGetValue(property, out var candidate)) { displayTexture = candidate; break; }
             }
+            // Finished user largo models: their base colour and their glow are baked from the author's materials. Drawn with
+            // the Standard shader's defaults they turned glossy and mirrored the sky, which shifted every colour toward
+            // cyan: matte, no reflections, and the baked glow as it is (its strength is in the map).
+            var litShare = 1f;
+            if (entry.TryGetValue("shader", out var shaderValue) && shaderValue as string == "SlimeBridge/Baked" && displayTexture != null)
+            {
+                result.SetFloat("_Glossiness", 0f);
+                result.SetFloat("_Metallic", 0f);
+                result.SetFloat("_SpecularHighlights", 0f);
+                result.SetFloat("_GlossyReflections", 0f);
+                result.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
+                result.EnableKeyword("_GLOSSYREFLECTIONS_OFF");
+                if (propertyTextures.TryGetValue("_EmissionMap", out var glow))
+                {
+                    // The scene's ambient light is tinted (the desert sky is cyan): the baked self-light map carries most of
+                    // the colour, the lit base (_LitShare of the albedo) only the shading, so the hue stays the author's.
+                    result.EnableKeyword("_EMISSION");
+                    result.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+                    result.SetTexture("_EmissionMap", glow);
+                    result.SetColor("_EmissionColor", new Color(UserLargoGlowGain, UserLargoGlowGain, UserLargoGlowGain, 1f));
+                    litShare = UserLargoLitShare;
+                }
+            }
             if (displayTexture != null) result.mainTexture = displayTexture;
             var color = Color.white;
             if (displayTexture == null && entry.TryGetValue("colors", out var colorRows) && colorRows is Dictionary<string, object> colors)
@@ -612,7 +639,7 @@ namespace SlimeBridge.SR1
                     }
                 }
             }
-            result.color = color;
+            result.color = litShare < 1f ? new Color(color.r * litShare, color.g * litShare, color.b * litShare, color.a) : color;
             result.name = "SlimeBridgeImportedMaterial";
             material = result;
             return true;

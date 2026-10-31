@@ -3,6 +3,24 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.0] - 2026-10-31
+
+### Added
+- **Mods page**: search the Nexus Mods catalogue of either game, install a mod in one click (into SRML/Mods for Slime
+  Rancher, Mods/UserLibs for Slime Rancher 2), or install a .zip/.dll you downloaded yourself; remove it again at any time
+  (its files are moved to SlimeBridge/removed-mods in the game folder, never deleted). SlimeBridge's own files (the plugin,
+  SRMP, Ranching Together, Starlight) are protected. With a Premium Nexus account, an optional API key in Settings
+  downloads without opening the website.
+- **The 24 cross-game Largos** (Rad, Quantum and Mosaic crossed with the eight Slime Rancher 2 species), modelled for
+  SlimeBridge: Largos > **Download all** installs them, and both games then have them, with both parents' diet,
+  favourite foods and plorts and each game's Largo rules (in Slime Rancher, the Rad, Quantum and Mosaic gameplay of the
+  family). The source models are on the new `MODELS` branch.
+- **Credits page**: the projects SlimeBridge is built on, and a huge thank-you to LoyalRancher128 (art and drawings of
+  the launcher) and Azemiss (testing).
+
+### Changed
+- New icons by LoyalRancher128 on the play cards, the game cards and the "find my games" / "you need the games" panels.
+
 ## [0.1.9] - 2026-10-29
 
 ### Changed

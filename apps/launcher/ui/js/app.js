@@ -6,7 +6,7 @@
   SB.errors = [];
   window.addEventListener('error', e => SB.errors.push(String(e.message)));
   window.addEventListener('unhandledrejection', e => SB.errors.push(String(e.reason && e.reason.message || e.reason)));
-  const NAV = ['home', 'news', 'games', 'assets', 'models', 'multiplayer', 'profiles', 'debug', 'options'];   // 'recovery' lives in 'debug' now
+  const NAV = ['home', 'news', 'games', 'mods', 'assets', 'models', 'multiplayer', 'profiles', 'debug', 'options', 'credits'];   // 'recovery' lives in 'debug' now
   const NAMES = { SR1: 'Slime Rancher', SR2: 'Slime Rancher 2' }, LOADERS = { SR1: 'SRML', SR2: 'MelonLoader' };
   const FAN_POLICY = 'https://www.slimerancher.com/fan-content-policy';
   let S = null, page = 'home', pollTimer = 0, busy = new Set(), menu = null;
@@ -58,7 +58,7 @@
     SB.net.hydrate($('#head'));
   }
   function renderSide() {
-    $('#side').innerHTML = `<nav class="nav" aria-label="Main">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${k === page ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k === 'debug' ? 'recovery' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>`;
+    $('#side').innerHTML = `<nav class="nav" aria-label="Main">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${k === page ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k === 'debug' ? 'recovery' : k === 'credits' ? 'star' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>`;
   }
   function renderChars() {
     const N = SB.NEWS || {}, pick = re => (N.slimes || []).find(u => re.test(u));
@@ -121,6 +121,7 @@
     if (page === 'models' && !L.models) loadModels();
     if (page === 'profiles' && !L.profiles) loadProfiles();
     if ((page === 'recovery' || page === 'debug') && !L.recovery) loadRecovery();
+    if (page === 'mods' && !(L.mods && L.mods.started)) { L.mods = L.mods || { realm: 'SR2', query: '', results: null, installed: {}, busy: false }; L.mods.started = true; loadModsInstalled(); A['mods-search'](); }
     if (page === 'multiplayer' && !L.mp) loadMp();
     if (page === 'assets' && !L.assets.job) pollJob(true);
     if (page === 'assets' && !L.sanct) loadSanct();
@@ -134,8 +135,18 @@
   async function loadLinks() { const r = await safe(() => api.travel_links()); L.links = r && r.ok ? r.links : []; if (page === 'options') renderView(true); }
   async function loadSettings() { const r = await safe(() => api.get_settings()); if (r) { L.settings = r; if (page === 'options') renderView(true); } }
   async function loadProfiles() { const r = await safe(() => api.profiles_state()); if (r) { L.profiles = r; if (page === 'profiles') renderView(true); } }
+  async function loadModsInstalled() { const M = L.mods; if (!M) return; const r = await safe(() => api.mods_installed(M.realm)); if (r) { M.installed[M.realm] = r.ok ? r : { mods: [], pending: null }; if (page === 'mods') renderView(true); } }
+  async function loadModThumbs() { const M = L.mods; if (!M || !M.results) return; const todo = M.results.filter(m => m.thumbnail && !m.thumb); if (!todo.length) return;
+    const data = await api.mods_thumbs(todo.map(m => m.thumbnail)).catch(() => []); todo.forEach((m, i) => { m.thumb = data[i] || null; }); if (page === 'mods') renderView(true); }
+  function watchModDownload() { const tick = async () => { await loadModsInstalled(); const p = L.mods.installed[L.mods.realm] && L.mods.installed[L.mods.realm].pending;
+      if (p && p.state === 'INSTALLED') { toast(t('mods.done', { name: p.name || '' }), 'good'); return; } if (p && (p.state === 'FAILED' || p.state === 'TIMEOUT')) { toast(t('mods.err') + ' (' + (p.error || p.state) + ')', 'bad'); return; } setTimeout(tick, 2500); }; setTimeout(tick, 2500); }
   async function loadRecovery() { const r = await safe(() => api.recovery_state()); if (r) { L.recovery = r; if (page === 'recovery' || page === 'debug') renderView(true); } }
-  async function loadModels() { const r = await safe(() => api.models_state()); if (r) { L.models = r; if (page === 'models') renderView(true); } }
+  async function loadModels() {
+    let r = await safe(() => api.models_state());
+    // the author's largos are published with SlimeBridge: read their list on the first visit, so "Download all" is one click
+    if (r && !(r.manifest && r.manifest.loaded) && !L.modelsAuto) { L.modelsAuto = true; const f = await safe(() => api.models_refresh()); if (f && f.rows) r = f; }
+    if (r) { L.models = r; if (page === 'models') renderView(true); }
+  }
   async function loadSanct() { const r = await safe(() => api.sanctuary_state()); if (r) { L.sanct = r; if (page === 'assets') renderView(true); } }
   async function loadMp() { const r = await safe(() => api.mp_state()); if (r) { L.mp = r; if (page === 'multiplayer') renderView(true); } }
   function go(name) { if (!SB.pages[name]) return; menu = null; page = name; location.hash = '#/' + name; renderHead(); renderView(false); }
@@ -285,6 +296,7 @@
     'sanct-remove': async () => { const r = await safe(() => api.sanctuary_remove()); if (r && r.ok) { toast(t('sanct.remove_ok'), 'good'); L.sanct = await api.sanctuary_state(); renderView(true); } },
     'install-cache': async () => { const r = await safe(() => api.extract_install_cache()); if (r) toast(t('assets.installed', { n: r.copied }), r.copied ? 'good' : 'warn'); },
 
+    'nexus-key-save': async () => { const v = ($('#nexus-key') || {}).value || ''; await safe(() => api.set_preference('nexus_api_key', v.trim() || null)); toast(t('opt.saved'), 'good'); await refresh(); },
     'manifest-save': async () => { const v = ($('#manifest-url') || {}).value || ''; try { await api.set_preference('largo_manifest_url', v.trim()); toast(t('models.saved'), 'good'); L.models = null; await refresh(); } catch (e) { toast(t('err.BAD_URL'), 'bad'); } },
     'recovery-export': async () => { const r = await safe(() => api.recovery_export()); if (r && r.ok) { L.exported = r.name; toast(t('rec.exported', { name: r.name }), 'good'); } else if (r) toast(r.error || 'error', 'bad'); renderView(true); },
     'models-refresh': async () => { const r = await safe(() => api.models_refresh()); if (r) { L.models = r; if (r.error === 'NO_SOURCE') toast(t('models.no_source'), 'warn'); else if (!r.ok) toast(r.manifest.error || 'error', 'bad'); else toast(t('models.refreshed'), 'good'); renderView(true); } },
@@ -305,6 +317,16 @@
     'pref-bool-inv': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') === 'true')); await refresh(); },
     'update-check': async () => { L.update = await safe(() => api.update_check()); renderView(true); if (L.update && L.update.ok && !L.update.update) toast(t('upd.uptodate'), 'good'); },
     'update-apply': async () => { if (L.update && L.update.frozen === false) { toast(t('upd.source'), 'warn'); return; } toast(t('upd.busy'), 'info'); const r = await safe(() => api.update_apply()); if (r && r.ok) toast(t('upd.restarting', { v: r.version }), 'good'); else toast(t('upd.err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
+    'mods-realm': a => { SB.local.mods.realm = a; SB.local.mods.results = null; renderView(true); loadModsInstalled(); A['mods-search'](); },
+    'mods-search': async () => { const M = SB.local.mods, q = $('#mods-q'); if (q) M.query = q.value; M.busy = true; renderView(true);
+      const r = await safe(() => api.mods_search(M.realm, M.query, 0)); M.busy = false; M.results = r && r.ok ? r.mods : []; if (r && !r.ok) toast(t('mods.err') + ' (' + r.error + ')', 'bad'); renderView(true); loadModThumbs(); },
+    'mod-install': async a => { const M = SB.local.mods, mod = (M.results || []).find(m => String(m.id) === String(a)); if (!mod) return;
+      const r = await safe(() => api.mods_install(M.realm, mod)); if (!r) return;
+      if (r.ok && r.installed) { toast(t('mods.done', { name: mod.name }), 'good'); loadModsInstalled(); }
+      else if (r.ok && r.waiting) { toast(t('mods.waiting', { name: mod.name }), 'info'); loadModsInstalled(); watchModDownload(); }
+      else toast(t('mods.err') + ' (' + r.error + ')', 'bad'); },
+    'mod-remove': async a => { const M = SB.local.mods; const r = await safe(() => api.mods_remove(M.realm, a)); if (r && r.ok) toast(t('mods.removed'), 'good'); else if (r) toast(t('mods.err') + ' (' + r.error + ')', 'bad'); loadModsInstalled(); },
+    'mod-file': async () => { const M = SB.local.mods; const r = await safe(() => api.mods_install_file(M.realm)); if (r && r.ok) { toast(t('mods.done', { name: r.installed.name }), 'good'); loadModsInstalled(); } else if (r && r.error !== 'CANCELLED') toast(t('mods.err') + ' (' + r.error + ')', 'bad'); },
     'console-set': a => { const [k, v] = a.split(':'); SB.console.state[k] = v; renderView(true); },
     'console-src': a => { SB.console.state.sources[a] = !SB.console.state.sources[a]; renderView(true); },
     'console-pause': () => { SB.console.state.paused = !SB.console.state.paused; renderView(true); },
@@ -333,6 +355,7 @@
     const el = e.target;
     if (el.id === 'ram-range') { const v = Number(el.value); const r = await safe(() => api.set_preference('extract_ram_gb', v)); if (r && r.ok !== false) S.preferences.extract_ram_gb = v; return; }
     if (el.dataset.change === 'choose') { await safe(() => api.choose_install(el.dataset.realm, el.value)); await refresh(); }
+    if (el.dataset.enter) { /* handled on keydown */ }
     if (el.dataset.change === 'play-target') { await safe(() => api.set_preference('play_target', el.value)); S.preferences.play_target = el.value; renderDock(); }
     if (el.classList.contains('opt-text')) { const r = await safe(() => api.set_setting(el.dataset.sec, el.dataset.key, el.value)); if (r && !r.ok) toast(r.error, 'bad'); }
   });
@@ -400,6 +423,7 @@
       else if (c.state === 'ROLLED_BACK' || c.state === 'FAILED') toast(t('cross.' + String(c.code || '').toLowerCase(), { game }) !== 'cross.' + String(c.code || '').toLowerCase() ? t('cross.' + String(c.code).toLowerCase(), { game }) : t('cross.failed', { game, code: c.code || '' }), 'bad');
     }
   }
+  document.addEventListener('keydown', ev => { const el = ev.target; if (ev.key === 'Enter' && el && el.dataset && el.dataset.enter && A[el.dataset.enter]) A[el.dataset.enter](); });
   setInterval(watchCrossings, 2500);
 
   /* ----- live console of both games (Console page) ----- */

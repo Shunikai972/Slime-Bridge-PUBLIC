@@ -197,9 +197,15 @@ def publish_spec(cache_root: Path = REPO_ROOT / 'Lab' / 'AssetCache', sr2_dir: P
         raise ValueError('no species import spec to extend')
     spec = json.loads(source.read_text(encoding='utf-8'))
     rows = [r for r in largo_roster(sr2_dir, sr1_dir, source) if r['status'] == 'READY' and cache_ready(r['canonical'], cache_root)]
+    # finished models the player downloaded (Largos page): Largos no game has, or a better look for one it has
+    from bridge.content import user_largos
+    users = set(user_largos.user_canonicals(cache_root, 'sr2-to-sr1'))
+    rows += [user_largos.row(c) for c in sorted(users - {r['canonical'] for r in rows})]
     ids = allocate_ids([r['canonical'] for r in rows], ledger_path)
     entries = [e for e in spec['entries'] if not str(e.get('canonical_id', '')).startswith('largo.')]
-    entries += [largo_entry(r, ids[r['canonical']], cache_palette(r['canonical'], cache_root)) for r in rows]
+    for r in rows:
+        entry = largo_entry(r, ids[r['canonical']], cache_palette(r['canonical'], cache_root))
+        entries.append(user_largos.adapt_sr1_entry(entry, cache_root) if r['canonical'] in users else entry)
     entries += kept_largos({r['canonical'] for r in rows}, cache_root, spec_root)
     spec['entries'] = entries
     stamp = time.strftime('%Y%m%d-%H%M%S')
@@ -250,8 +256,13 @@ def refresh_spec(repo_root: Path = REPO_ROOT, sr2_dir: Path | None = None, sr1_d
     base_ids = {e['canonical_id'] for e in json.loads(base.read_text(encoding='utf-8')).get('entries', [])} if base else set()
     newest_base = {e['canonical_id'] for e in newest if not str(e.get('canonical_id', '')).startswith('largo.')}
     wanted = {r['canonical'] for r in largo_roster(sr2_dir, sr1_dir) if r['status'] == 'READY' and cache_ready(r['canonical'], cache_root)}
+    from bridge.content import user_largos
+    wanted |= set(user_largos.user_canonicals(cache_root, 'sr2-to-sr1'))
     wanted |= {e['canonical_id'] for e in kept_largos(wanted, cache_root, spec_root)}
-    if wanted == listed and newest_base == base_ids:
+    templates = {e['canonical_id']: e.get('template', {}).get('slime_native_ref') for e in newest if str(e.get('canonical_id', '')).startswith('largo.')}
+    stale_users = any(templates.get(c) != user_largos.SR1_TEMPLATE.get(user_largos.family(c) or '', templates.get(c))
+                      for c in user_largos.user_canonicals(cache_root, 'sr2-to-sr1'))
+    if wanted == listed and newest_base == base_ids and not stale_users:
         return {'changed': False, 'largos': len(wanted)}
     published = publish_spec(cache_root, sr2_dir, sr1_dir, spec_root, repo_root / 'Lab' / 'GeneratedContent' / 'largo-ids.json')
     return {'changed': True, 'largos': published['largos'], 'directory': published['directory']}

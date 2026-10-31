@@ -15,6 +15,7 @@ import webbrowser
 from pathlib import Path
 from urllib.parse import urlparse
 
+from apps.launcher import modmanager
 from apps.launcher import detect, extract, models, news, pack, plugins, sanctuary, savelist, travel, windows
 from apps.launcher.installations import discover_manual
 from apps.launcher.main import KNOWN_MANUAL_SR1, KNOWN_MANUAL_SR2, available_installations
@@ -30,7 +31,7 @@ CONFIG_DEFAULTS = {'manual_paths': [], 'detected_paths': [], 'legal_understood':
                    'reduce_motion': False, 'backup_ack': False, 'prefer_lab': False, 'selected': {},
                    'native_frame': False, 'play_target': 'BOTH', 'converter_path': None, 'converter_output': None, 'cache_dir': None,
                    'largo_manifest_url': None,
-                   'models_dir': None, 'extract_ram_gb': None, 'performance': 'off', 'mp_host': {'name': 'My Ranch', 'port': 7777, 'mode': 'HYBRID'}}
+                   'models_dir': None, 'extract_ram_gb': None, 'performance': 'off', 'nexus_api_key': None, 'mp_host': {'name': 'My Ranch', 'port': 7777, 'mode': 'HYBRID'}}
 _VALIDATORS = {
     'language': lambda v: v in ('auto', 'en', 'fr'),
     'theme': lambda v: v in ('day', 'dusk'),
@@ -40,6 +41,7 @@ _VALIDATORS = {
     'native_frame': lambda v: isinstance(v, bool),
     'play_target': lambda v: v in ('SR1', 'SR2', 'BOTH', 'BOTH_SR1', 'BOTH_SR2'),
     'performance': lambda v: v is None or v in ('off', 'balanced', 'fast'),
+    'nexus_api_key': lambda v: v is None or (isinstance(v, str) and len(v) <= 400),
     'converter_path': lambda v: v is None or (isinstance(v, str) and 0 < len(v) <= 1024),
     'converter_output': lambda v: v is None or (isinstance(v, str) and 0 < len(v) <= 1024),
     'cache_dir': lambda v: v is None or (isinstance(v, str) and 0 < len(v) <= 1024),
@@ -238,6 +240,88 @@ class LauncherAPI:
         threading.Thread(target=_quit, daemon=True).start()
         return {'ok': True, 'version': ready['version'], **helper}
 
+    # ---- mod manager ------------------------------------------------------------------------------------------------
+    def _mod_root(self, realm):
+        if realm not in EXECUTABLES:
+            raise ValueError('unknown game')
+        primary = self._primary(realm)
+        if primary is None:
+            raise modmanager.ModError('GAME_NOT_FOUND')
+        return primary['root']
+
+    def _mod_call(self, fn):
+        try:
+            return {'ok': True, **fn()}
+        except modmanager.ModError as exc:
+            return {'ok': False, 'error': exc.code, 'detail': exc.detail}
+
+    def mods_search(self, realm: str, text: str = '', page: int = 0) -> dict:
+        return self._mod_call(lambda: modmanager.search(realm, str(text or ''), max(0, int(page or 0))))
+
+    def mods_installed(self, realm: str) -> dict:
+        return self._mod_call(lambda: {'mods': modmanager.installed(realm, self._mod_root(realm)), 'folder': str(modmanager.mod_dir(realm, self._mod_root(realm))),
+                                       'pending': getattr(self, '_mod_watch_state', None)})
+
+    def mods_thumbs(self, urls: list) -> list:
+        from concurrent.futures import ThreadPoolExecutor
+        wanted = [str(u) for u in list(urls or [])[:24]]
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            return list(pool.map(modmanager.thumbnail_data, wanted))
+
+    def mods_remove(self, realm: str, key: str) -> dict:
+        return self._mod_call(lambda: modmanager.remove(realm, self._mod_root(realm), str(key)))
+
+    def mods_install(self, realm: str, mod: dict) -> dict:
+        """One click: direct download with a Premium Nexus key, else open the mod's files page and install the file as soon as
+        it lands in Downloads (Nexus wants its own button clicked by free accounts)."""
+        mod = dict(mod or {})
+        root = self._mod_root(realm)
+        meta = {'name': mod.get('name'), 'nexus_id': mod.get('id'), 'version': mod.get('version'), 'url': mod.get('url')}
+        key = (self._load().get('nexus_api_key') or '').strip()
+        if key:
+            try:
+                got = modmanager.nexus_download(realm, mod.get('id'), key)
+                record = modmanager.install_file(realm, root, got['path'], {**meta, 'version': got.get('version') or meta['version']})
+                return {'ok': True, 'installed': record}
+            except modmanager.ModError as exc:
+                if exc.code != 'NEEDS_PREMIUM':
+                    return {'ok': False, 'error': exc.code, 'detail': exc.detail}
+        url = (mod.get('url') or '') + '?tab=files'
+        if news.link_allowed(url) or url.startswith('https://www.nexusmods.com/'):
+            webbrowser.open(url)
+        self._watch_mod_download(realm, root, meta)
+        return {'ok': True, 'waiting': True}
+
+    def _watch_mod_download(self, realm, root, meta):
+        since = time.time()
+        self._mod_watch_state = {'realm': realm, 'name': meta.get('name'), 'state': 'WAITING', 'since': since}
+
+        def _watch():
+            deadline = since + 15 * 60
+            while time.time() < deadline and not self._travel_stop.wait(2.0):
+                found = modmanager.newest_download(since)
+                if found is None:
+                    continue
+                try:
+                    record = modmanager.install_file(realm, root, found, meta)
+                    self._mod_watch_state = {**self._mod_watch_state, 'state': 'INSTALLED', 'file': found.name, 'installed': record}
+                except modmanager.ModError as exc:
+                    self._mod_watch_state = {**self._mod_watch_state, 'state': 'FAILED', 'error': exc.code, 'detail': exc.detail, 'file': found.name}
+                return
+            self._mod_watch_state = {**self._mod_watch_state, 'state': 'TIMEOUT'}
+        threading.Thread(target=_watch, name='slimebridge-mod-download', daemon=True).start()
+
+    def mods_install_file(self, realm: str) -> dict:
+        """Install a .zip/.dll the player picks (a mod downloaded from anywhere)."""
+        import webview
+        if self._window is None:
+            return {'ok': False, 'error': 'NO_WINDOW'}
+        chosen = self._window.create_file_dialog(webview.FileDialog.OPEN, file_types=('Mods (*.zip;*.dll)',))
+        if not chosen:
+            return {'ok': False, 'error': 'CANCELLED'}
+        path = chosen[0] if isinstance(chosen, (list, tuple)) else chosen
+        return self._mod_call(lambda: {'installed': modmanager.install_file(realm, self._mod_root(realm), path)})
+
     def console_poll(self) -> dict:
         """New lines of both games' logs and the crossing steps since the previous call (Console page)."""
         from apps.launcher import console
@@ -363,7 +447,7 @@ class LauncherAPI:
             games[realm] = {'primary': primary, 'all': [r for r in rows if r['game'] == realm],
                             'running': self._launcher.running(realm), 'store_page': STORE_PAGES[realm]}
         return {'version': VERSION, 'installations': rows, 'games': games, 'legal_understood': bool(data['legal_understood']),
-                'preferences': {k: data[k] for k in _VALIDATORS if k in data},
+                'preferences': {k: (bool(data[k]) if k == 'nexus_api_key' else data[k]) for k in _VALIDATORS if k in data},   # never the key itself
                 'host': self._host.state(), 'tool': self._tool(data),
                 'paths': {'models': str(self._models_dir(data)), 'output': str(self._output_dir(data)),
                           'cache': str(self._cache_dir(data))},
@@ -405,7 +489,7 @@ class LauncherAPI:
             lab_env = {}
             if pack.is_lab_copy(realm, primary['root']):
                 installs = {r: (self._primary(r) or {}).get('root') for r in ('SR1', 'SR2')}
-                prepared = pack.prepare(realm, primary['root'], installs=installs)
+                prepared = pack.prepare(realm, primary['root'], installs=installs, models_dir=self._models_dir())
                 warnings += [f'{realm}: {w}' for w in prepared['warnings']]
                 lab_env = pack.lab_env(realm, primary['root'])
             try:
@@ -746,14 +830,14 @@ class LauncherAPI:
                 'download': self._downloads.snapshot() if self._downloads else None}
 
     def models_refresh(self) -> dict:
-        url = self._load().get('largo_manifest_url')
+        url = self._load().get('largo_manifest_url') or models.DEFAULT_MANIFEST
         if not url:
-            return {'ok': False, 'error': 'NO_SOURCE', **self.models_state()}
+            return {**self.models_state(), 'ok': False, 'error': 'NO_SOURCE'}
         try:
             self._manifest = {'doc': self._store().fetch_manifest(url), 'error': None}
         except (models.ModelError, OSError, ValueError) as exc:
             self._manifest = {'doc': None, 'error': str(exc)[:300]}
-        return {'ok': self._manifest['error'] is None, **self.models_state()}
+        return {**self.models_state(), 'ok': self._manifest['error'] is None}
 
     def models_download(self, ids=None) -> dict:
         doc = self._manifest['doc']

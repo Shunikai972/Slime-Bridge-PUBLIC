@@ -214,10 +214,18 @@ def publish_spec(cache_root: Path = CACHE_ROOT, spec_root: Path = SPEC_ROOT, led
         if entry.get('canonical_id') in ready_species and not entry.get('diet', {}).get('major_food_groups'):
             entry['status'] = 'PENDING_DATA'
             entry.setdefault('blockers', []).append('no SR2 diet mapping for this species yet')
+    from bridge.content import user_largos
+    users = set(user_largos.user_canonicals(cache_root, 'sr1-to-sr2'))
     for row in largos:
         entry = largo_entry(row, ids[row['canonical']])
         entry['native_ref_id'] = 'SlimeBridge.SlimeDefinition.' + row['canonical']
         entry['template']['slime_native_ref'] = TEMPLATE_LARGO
+        if row['canonical'] in users:                       # a finished model the player downloaded: its own measured colours
+            entry['template']['slime_native_ref'] = user_largos.SR2_TEMPLATE.get(user_largos.partner(row['canonical']) or '', TEMPLATE_LARGO)
+            look = user_largos.palette(Path(cache_root) / 'sr1-to-sr2' / row['canonical'])
+            if look:
+                entry['appearance'] = look
+            entry.setdefault('notes', []).append('user-model')
         entries.append(entry)
     spec['entries'] = entries
     out_dir = Path(spec_root) / f"{time.strftime('%Y%m%d-%H%M%S')}-sr1"
@@ -242,7 +250,11 @@ def refresh_spec(repo_root: Path = REPO_ROOT, sr1_dir: Path | None = None, sr2_d
     listed = {e['canonical_id'] for e in json.loads(source.read_text(encoding='utf-8')).get('entries', [])
               if str(e.get('canonical_id', '')).startswith('largo.')}
     wanted = {r['canonical'] for r in cached_rows(cache_root) if r['kind'] == 'largo'}
-    if wanted == listed:
+    from bridge.content import user_largos
+    templates = {e['canonical_id']: e.get('template', {}).get('slime_native_ref') for e in json.loads(source.read_text(encoding='utf-8')).get('entries', [])}
+    stale = any(templates.get(c) != user_largos.SR2_TEMPLATE.get(user_largos.partner(c) or '', templates.get(c))
+                for c in user_largos.user_canonicals(cache_root, 'sr1-to-sr2'))
+    if wanted == listed and not stale:
         return {'changed': False, 'largos': len(wanted)}
     published = publish_spec(cache_root, spec_root, repo_root / 'Lab' / 'GeneratedContent' / 'largo-ids.json', sr1_dir, sr2_dir)
     return {'changed': True, 'largos': published['largos'], 'directory': published['directory']}

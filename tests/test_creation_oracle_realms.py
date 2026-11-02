@@ -13,6 +13,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
 from tools.lab import creation_oracle as creation
@@ -52,6 +53,9 @@ class CreationRealmTests(unittest.TestCase):
 
     def exercise(self, target='SR2', timeout=False, reconcile_bad=False, replay_change=None,
                  loaded_identity_missing=False, native_subdirectory=False, native_binding=True):
+        # This synthetic producer emits one sample, not a real periodic heartbeat. Freeze
+        # only its storage-binding clock; production freshness checks keep their real clock.
+        fixture_clock_ns = time.time_ns()
         source = 'SR1' if target == 'SR2' else 'SR2'
         source_proc, target_proc = Mock(pid=101), Mock(pid=202)
         source_proc.poll.return_value = target_proc.poll.return_value = None
@@ -107,7 +111,7 @@ class CreationRealmTests(unittest.TestCase):
                                   'storage_pointer': '0000000000000022',
                                   'provider_type': 'FileStorageProvider', 'initialized': True,
                                   'native_root': str(save_root.resolve()), 'binding_valid': True,
-                                  'sampled_utc_ms': time.time_ns() // 1_000_000,
+                                  'sampled_utc_ms': fixture_clock_ns // 1_000_000,
                                   'sample_id': 1}
                     raw = json.dumps(descriptor, separators=(',', ':')).encode('utf-8')
                     signature = hmac.new(b'test-only', raw, hashlib.sha256).hexdigest()
@@ -160,6 +164,8 @@ class CreationRealmTests(unittest.TestCase):
         host.wait_result.side_effect = wait
         host.heartbeats.side_effect = beats
         with contextlib.ExitStack() as stack:
+            stack.enter_context(patch('tools.lab.native_storage_binding.time',
+                                      SimpleNamespace(time_ns=lambda: fixture_clock_ns)))
             stack.enter_context(patch.dict('tools.lab.oracle.GAMES', games))
             stack.enter_context(patch('tools.lab.oracle.LAB', lab))
             stack.enter_context(patch('tools.lab.creation_oracle.Path.home', return_value=self.root / 'home'))
@@ -338,12 +344,30 @@ class CreationRealmTests(unittest.TestCase):
         for target in ('SR1', 'SR2'):
             with self.subTest(target=target):
                 result, host, creates, _proofs, _procs = self.exercise(target)
-                self.assertTrue(result['passed'])
+                # Keep the refusal diagnostic before TemporaryDirectory cleanup; a suite-only
+                # failure must remain explainable rather than becoming an opaque False.
+                self.assertTrue(result['passed'], json.dumps(result, sort_keys=True))
                 self.assertEqual(len(creates), 1, 'strict one CREATE enqueue; replay must use decision + reconciliation')
                 self.assertEqual(result['replay_decision']['decision'], 'USE_EXISTING_LINK')
                 self.assertNotIn('plugin_journal_replay', result)
                 self.assertEqual(result['independent_replay_readback'], result['independent_disk_readback'])
                 (self.root / 'profiles.sqlite').unlink()
+
+    def test_synthetic_storage_sample_does_not_age_with_test_runner_wall_clock(self):
+        # No real native heartbeat producer runs in this fixture. A slow disk or scheduler
+        # must not expire its one synthetic sample while testing unrelated orchestration.
+        now = time.time_ns()
+        calls = 0
+
+        def delayed_clock():
+            nonlocal calls
+            calls += 1
+            return now if calls == 1 else now + 6_000_000_000
+
+        with patch.object(time, 'time_ns', side_effect=delayed_clock):
+            result, _host, creates, _proofs, _procs = self.exercise('SR2')
+        self.assertTrue(result['passed'], json.dumps(result, sort_keys=True))
+        self.assertEqual(len(creates), 1)
 
     def test_timeout_reconciles_same_intent_and_never_replays_create(self):
         result, _host, creates, proofs, _procs = self.exercise(timeout=True)

@@ -249,7 +249,8 @@ def _resolve(manifest, index, catalog):
                 row['resolved_to'], row['present_version'] = target['id'], target['version']['text']
         rows.append(row)
         severity = 'info' if row['status'] == 'OPTIONAL_ABSENT' else ('warning' if dep['optional'] else 'error')
-        code = {'MISSING': 'DEPENDENCY_MISSING', 'VERSION_CONFLICT': 'DEPENDENCY_VERSION_CONFLICT',
+        code = {'MISSING': 'DEPENDENCY_MISSING', 'UNCHECKED': 'DEPENDENCY_UNCHECKED',
+                'VERSION_UNKNOWN': 'DEPENDENCY_VERSION_UNKNOWN', 'VERSION_CONFLICT': 'DEPENDENCY_VERSION_CONFLICT',
                 'REALM_MISMATCH': 'DEPENDENCY_REALM_MISMATCH', 'OPTIONAL_ABSENT': 'DEPENDENCY_OPTIONAL_ABSENT'
                 }.get(row['status'])
         if code is not None:
@@ -465,7 +466,8 @@ def _invalid_manifest_report(manifest, problems, target_realm):
 def analyze(manifest, evidence=None, *, target_realm=None, known_apis=None, available=None):
     """``bridge-mod-compat-report`` for one mod. Never raises on manifest/evidence content.
 
-    ``available`` (optional iterable of manifests) resolves dependencies; without it they stay UNCHECKED.
+    ``available`` (optional iterable of manifests) resolves dependencies; without it they stay UNCHECKED
+    and required non-platform dependencies block deployment.
     ``target_realm``/``known_apis`` are trusted program inputs and raise ``ValueError`` when invalid.
     """
     catalog = _catalog(known_apis)
@@ -690,6 +692,11 @@ def unit_status(report):
     if report['classification'] == 'NATIVE_DEEP_PATCH' or report['portability'] == 'NOT_PORTABLE' or \
             codes & set(QUARANTINE_BLOCKERS):
         return 'QUARANTINED'
+    # Also enforce completeness on valid historical reports produced before the
+    # resolver emitted UNCHECKED/VERSION_UNKNOWN diagnostics.
+    if any(not dep['optional'] and dep['status'] not in ('RESOLVED', 'PLATFORM')
+           for dep in report['dependencies']):
+        return 'PENDING_ADAPTER'
     if report['portability'] == 'PORTABLE' and not report['cross_realm'] and not codes:
         return 'EXPERIMENTAL' if report['local_queries'] else 'READY'
     return 'PENDING_ADAPTER'

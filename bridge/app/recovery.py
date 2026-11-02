@@ -10,6 +10,7 @@ offered. The exported bundle is redacted (no absolute paths, no credentials/toke
 import base64
 import json
 import re
+from urllib.parse import unquote_plus, urlsplit, urlunsplit
 
 from bridge.cache.fs import atomic_write, confined_root
 from bridge.content.canonical import sha256_json
@@ -100,6 +101,24 @@ def _redact_jwt(match):
     return '<redacted>' if isinstance(decoded, dict) and 'alg' in decoded else match.group(0)
 
 
+def _redact_location(match):
+    url = match.group('url')
+    if url is None:
+        return '<path>'
+    try:
+        parsed = urlsplit(url)
+        # Userinfo is never useful in an exported diagnostics endpoint.
+        authority = parsed.netloc.rsplit('@', 1)[-1]
+        fields = []
+        for field in parsed.query.split('&'):
+            key = field.partition('=')[0]
+            fields.append(key + '=%3Credacted%3E' if _SECRET_KEY.search(unquote_plus(key)) else field)
+        fragment = '%3Credacted%3E' if _SECRET_KEY.search(unquote_plus(parsed.fragment)) else parsed.fragment
+        return urlunsplit((parsed.scheme, authority, parsed.path, '&'.join(fields), fragment))
+    except ValueError:
+        return '<redacted-url>'
+
+
 def redact(value):
     """Copy with absolute paths and secret-looking fields removed."""
     if isinstance(value, dict):
@@ -108,7 +127,7 @@ def redact(value):
         return [redact(v) for v in value]
     if isinstance(value, str):
         value = _JWT.sub(_redact_jwt, _BEARER.sub('<redacted>', value))
-        return _ABS_PATH.sub(lambda m: m.group('url') or '<path>', value)
+        return _ABS_PATH.sub(_redact_location, value)
     return value
 
 

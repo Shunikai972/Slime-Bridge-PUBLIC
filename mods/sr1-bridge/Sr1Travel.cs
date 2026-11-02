@@ -41,16 +41,17 @@ namespace SlimeBridge.SR1
         private readonly TravelAgent _agent;
         private readonly bool _destinationMode;
         private bool _held, _arrived, _inputLocked;
-        private float _nextHeal, _focusedSince = -1f;
+        private float _nextHeal;
         private double _heldWorldTime = -1, _heldRealTime;
         private GameObject? _gui;
         private TravelDone? _pendingDone;
 
-        public bool Held => _held;
+        public bool Held => _held || _throttle.Active;
 
         private Sr1TravelRealm(string url, string token, bool destinationMode)
         {
             _destinationMode = destinationMode;
+            if (destinationMode) _throttle.MuteAudio();
             var transport = new HttpTravelTransport(url, token, "SR1", () => (double)Time.realtimeSinceStartup);
             _agent = new TravelAgent(transport, this, text => Debug.Log(text));
         }
@@ -89,6 +90,8 @@ namespace SlimeBridge.SR1
         {
             EnsureGui();
             var now = (double)Time.realtimeSinceStartup;
+            if (_destinationMode && !_arrived) _throttle.MuteAudio();
+            _throttle.Maintain();
             // A freshly started destination waits behind the card until the launcher brings the player in.
             if (_destinationMode && !_arrived && WorldReady() && !_overlay.IsCovering && !_held)
             {
@@ -102,12 +105,9 @@ namespace SlimeBridge.SR1
                     _nextHeal = Time.realtimeSinceStartup + 1f;
                     try { var state = SceneContext.Instance?.PlayerState; if (state != null) state.SetHealth(state.GetMaxHealth()); } catch (Exception) { }
                 }
-                // The player came back to this window by hand: do not leave them in a frozen world.
-                if (Application.isFocused) { if (_focusedSince < 0f) _focusedSince = Time.realtimeSinceStartup; }
-                else _focusedSince = -1f;
             }
             _agent.Tick(now);
-            if (_held && _focusedSince >= 0f && Time.realtimeSinceStartup - _focusedSince > 4f) { _focusedSince = -1f; ReturnByHand(); }
+            if (_held && _throttle.ReturnedByHand(Application.isFocused, Time.realtimeSinceStartup)) ReturnByHand();
         }
 
         private void ReturnByHand()
@@ -142,7 +142,20 @@ namespace SlimeBridge.SR1
                     LockInput(true);
                     _pendingDone = done;
                     var offer = Sr1Carry.Snapshot(message.CarryMode);
-                    _overlay.Close(TravelText.Departing(message.Destination.Length > 0 ? message.Destination : "SR2"), TravelText.Waiting(message.Destination), 1.7f, () => Report(done, true, offer.Count > 0 ? offer.Count + " kinds offered" : "", offer));
+                    _overlay.Close(TravelText.Departing(message.Destination.Length > 0 ? message.Destination : "SR2"), TravelText.Waiting(message.Destination), 0.8f, () =>
+                    {
+                        try
+                        {
+                            // Once covered, stop competing with the destination's startup. No inventory is removed here.
+                            _throttle.Apply(true);
+                            Report(done, true, offer.Count > 0 ? offer.Count + " kinds offered" : "", offer);
+                        }
+                        catch (Exception)
+                        {
+                            _throttle.Restore(); LockInput(false);
+                            Report(done, false, "departure_standby_failed");
+                        }
+                    });
                     break;
                 case "hold":
                     Hold(message.Policy, message.Carry, done);
@@ -173,7 +186,7 @@ namespace SlimeBridge.SR1
             _overlay.CoverNow(TravelText.Parked("SR1"), TravelText.Waiting("SR1"));
             _heldWorldTime = WorldClock(); _heldRealTime = Time.realtimeSinceStartup;
             _throttle.Apply(!string.Equals(policy, "THROTTLE", StringComparison.Ordinal));
-            _held = true; _focusedSince = -1f; _nextHeal = 0f;
+            _held = true; _nextHeal = 0f;
             done(true, removed.Count != moved.Count ? "carry mismatch" : "", removed);
         }
 
@@ -198,7 +211,7 @@ namespace SlimeBridge.SR1
             if (!string.IsNullOrEmpty(reason)) TravelNotice.Post(TravelText.Failure(reason!, "SR2"));
             _throttle.Restore();
             var report = HeldReport();
-            _held = false;
+            _held = false; _arrived = true;
             if (!_overlay.IsCovering) { LockInput(false); done?.Invoke(true, report); return; }
             _overlay.Open(1.2f, () => { LockInput(false); done?.Invoke(true, report); });
         }
@@ -214,7 +227,7 @@ namespace SlimeBridge.SR1
             SanctuaryHost.Instance?.PulsePortal();
             var how = (placed ? "portal" : "in_place") + (report.Length > 0 ? "; " + report : "");
             if (!_overlay.IsCovering) { LockInput(false); done(true, how, accepted); return; }
-            _overlay.Open(2.2f, () => { LockInput(false); done(true, how, accepted); });
+            _overlay.Open(1.1f, () => { LockInput(false); done(true, how, accepted); });
         }
 
         internal void Unload()

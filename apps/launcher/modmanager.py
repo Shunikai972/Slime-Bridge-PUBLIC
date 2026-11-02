@@ -18,7 +18,9 @@ import time
 import urllib.error
 import urllib.request
 import zipfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+
+from bridge.cache.fs import atomic_write, confined_root, ensure_dir, refuse_links
 
 NEXUS_GQL = 'https://api.nexusmods.com/v2/graphql'
 NEXUS_V1 = 'https://api.nexusmods.com/v1'
@@ -35,6 +37,8 @@ class ModError(RuntimeError):
 
 
 def mod_dir(realm, root) -> Path:
+    if realm not in DOMAINS:
+        raise ModError('UNKNOWN_REALM', str(realm))
     return Path(root) / ('SRML/Mods' if realm == 'SR1' else 'Mods')
 
 
@@ -43,17 +47,82 @@ def _record_path(root) -> Path:
 
 
 def _records(root) -> dict:
+    root = _guarded_root(root)
+    path = _record_path(root)
+    _refuse_links(root, path)
     try:
-        data = json.loads(_record_path(root).read_text(encoding='utf-8'))
-        return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
+        data = json.loads(path.read_text(encoding='utf-8'))
+    except FileNotFoundError:
         return {}
+    except (ValueError, RecursionError) as exc:
+        raise ModError('BAD_RECORDS', 'mod ledger is not valid JSON') from exc
+    if not isinstance(data, dict):
+        raise ModError('BAD_RECORDS', 'mod ledger must be an object')
+    return data
 
 
 def _save_records(root, data):
+    root = _guarded_root(root)
     path = _record_path(root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=1, ensure_ascii=False), encoding='utf-8')
+    atomic_write(root, path, json.dumps(data, indent=1, ensure_ascii=False).encode('utf-8'))
+
+
+def _guarded_root(root):
+    try:
+        return confined_root(root)
+    except ValueError as exc:
+        raise ModError('LINK_REFUSED', str(exc)) from exc
+
+
+def _refuse_links(root, path):
+    try:
+        refuse_links(root, path)
+    except ValueError as exc:
+        raise ModError('LINK_REFUSED', str(exc)) from exc
+
+
+def _path_parts(name):
+    if not isinstance(name, str) or not name or name.startswith(('/', '\\')) or ':' in name:
+        raise ModError('BAD_PATH', 'expected a relative mod path')
+    parts = name.replace('\\', '/').split('/')
+    if any(not part or part in ('.', '..') or part.endswith((' ', '.')) or
+           PureWindowsPath(part).is_reserved() for part in parts):
+        raise ModError('BAD_PATH', 'ambiguous or escaping mod path')
+    return parts
+
+
+def _protected_path(relative):
+    protected = {name.casefold() for name in PROTECTED}
+    return any(part.casefold() in protected for part in _path_parts(relative))
+
+
+def _mod_path(realm, root, relative):
+    """A ledger is untrusted input, not authority to move arbitrary game/user files."""
+    mod_dir(realm, root)
+    parts = _path_parts(relative)
+    folded = tuple(part.casefold() for part in parts)
+    prefixes = (('srml', 'mods'), ('userlibs',), ('plugins',)) if realm == 'SR1' else (
+        ('mods',), ('userlibs',), ('plugins',))
+    if not any(len(parts) > len(prefix) and folded[:len(prefix)] == prefix for prefix in prefixes):
+        raise ModError('BAD_PATH', 'file is outside loader mod folders')
+    path = root.joinpath(*parts)
+    _refuse_links(root, path)
+    if path.is_file() and path.stat().st_nlink > 1:
+        raise ModError('LINK_REFUSED', 'hardlinked mod file')
+    return path
+
+
+def _validated_records(realm, root):
+    records = _records(root).get(realm, {})
+    if not isinstance(records, dict):
+        raise ModError('BAD_RECORDS', 'realm ledger must be an object')
+    # Validate the entire operation set before probing or moving any of its files.
+    for record in records.values():
+        if not isinstance(record, dict) or not isinstance(record.get('files', []), list):
+            raise ModError('BAD_RECORDS', 'mod files must be a list')
+        for relative in record.get('files', []):
+            _mod_path(realm, root, relative)
+    return records
 
 
 # ---- search ---------------------------------------------------------------------------------------------------------
@@ -90,46 +159,55 @@ def search(realm, text='', page=0, count=20, opener=urllib.request.urlopen):
 # ---- installed ------------------------------------------------------------------------------------------------------
 def installed(realm, root):
     """Everything in the game's mod folder: mods installed here (with their name), others found there, protected ones."""
+    root = _guarded_root(root)
     folder = mod_dir(realm, root)
-    records = _records(root).get(realm, {})
-    owned = {f: key for key, rec in records.items() for f in rec.get('files', [])}
+    _refuse_links(root, folder)
+    records = _validated_records(realm, root)
+    owned = {f.casefold(): key for key, rec in records.items() for f in rec.get('files', [])}
     out, seen = [], set()
     for key, rec in records.items():
         present = [f for f in rec.get('files', []) if (Path(root) / f).exists()]
         if present:
             out.append({'key': key, 'name': rec.get('name') or key, 'version': rec.get('version'), 'nexus_id': rec.get('nexus_id'),
-                        'files': present, 'protected': False, 'managed': True})
-            seen.update(present)
+                        'files': present, 'protected': any(_protected_path(f) for f in present), 'managed': True})
+            seen.update(f.casefold() for f in present)
     if folder.is_dir():
         for entry in sorted(folder.iterdir(), key=lambda p: p.name.lower()):
             rel = entry.relative_to(root).as_posix()
-            if rel in seen or rel in owned or entry.name.startswith('.'):
+            if rel.casefold() in seen or rel.casefold() in owned or entry.name.startswith('.'):
                 continue
+            _mod_path(realm, root, rel)
             if entry.is_file() and entry.suffix.lower() not in MOD_EXT:
                 continue
             out.append({'key': 'file:' + rel, 'name': entry.stem if entry.is_file() else entry.name, 'version': None, 'nexus_id': None,
-                        'files': [rel], 'protected': entry.name in PROTECTED, 'managed': False})
+                        'files': [rel], 'protected': _protected_path(rel), 'managed': False})
     return out
 
 
 # ---- install --------------------------------------------------------------------------------------------------------
 def _safe_member(name):
-    parts = Path(name.replace('\\', '/')).parts
-    return name and not name.startswith(('/', '\\')) and '..' not in parts and ':' not in name
+    try:
+        _path_parts(name)
+        return True
+    except ModError:
+        return False
 
 
 def install_file(realm, root, path, meta=None):
     """Put a downloaded .zip or .dll into the game. Returns the record (files are relative to the game folder)."""
-    path, root = Path(path), Path(root)
+    path, root = Path(path), _guarded_root(root)
     meta = dict(meta or {})
     if not path.is_file():
         raise ModError('FILE_NOT_FOUND', str(path))
     target = mod_dir(realm, root)
-    target.mkdir(parents=True, exist_ok=True)
+    _refuse_links(root, target)
+    _validated_records(realm, root)
+    ensure_dir(root, target)
     written = []
     if path.suffix.lower() == '.dll':
         dest = target / path.name
-        if dest.name in PROTECTED:
+        dest = _mod_path(realm, root, dest.relative_to(root).as_posix())
+        if _protected_path(dest.relative_to(root).as_posix()):
             raise ModError('PROTECTED', dest.name)
         shutil.copy2(path, dest)
         written.append(dest)
@@ -143,10 +221,18 @@ def install_file(realm, root, path, meta=None):
             plan = _plan(realm, root, names)
             if not plan:
                 raise ModError('NO_MOD_IN_ARCHIVE', path.name)
+            seen = set()
+            for _member, dest in plan:
+                relative = dest.relative_to(root).as_posix()
+                _mod_path(realm, root, relative)
+                if _protected_path(relative):
+                    raise ModError('PROTECTED', relative)
+                if relative.casefold() in seen:
+                    raise ModError('BAD_ARCHIVE', 'duplicate destination')
+                seen.add(relative.casefold())
             for member, dest in plan:
-                if dest.name in PROTECTED:
-                    continue
-                dest.parent.mkdir(parents=True, exist_ok=True)
+                _mod_path(realm, root, dest.relative_to(root).as_posix())
+                ensure_dir(root, dest.parent)
                 with zf.open(member) as src, open(dest, 'wb') as out:
                     shutil.copyfileobj(src, out)
                 written.append(dest)
@@ -201,7 +287,7 @@ def _plan(realm, root, names):
 
 def remove(realm, root, key):
     """Move a mod's files out of the game (to SlimeBridge/removed-mods/<time>/); never deletes, never touches protected files."""
-    root = Path(root)
+    root = _guarded_root(root)
     entry = next((m for m in installed(realm, root) if m['key'] == key), None)
     if entry is None:
         raise ModError('NOT_INSTALLED', key)
@@ -210,11 +296,12 @@ def remove(realm, root, key):
     stash = root / 'SlimeBridge' / 'removed-mods' / time.strftime('%Y%m%d-%H%M%S')
     moved = []
     for rel in entry['files']:
-        src = root / rel
+        src = _mod_path(realm, root, rel)
         if not src.exists():
             continue
         dest = stash / rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        _refuse_links(root, dest)
+        ensure_dir(root, dest.parent)
         shutil.move(str(src), str(dest))
         moved.append(rel)
     data = _records(root)

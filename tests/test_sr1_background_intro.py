@@ -24,7 +24,11 @@ class SR1BackgroundIntroTests(unittest.TestCase):
         cls.env.update(DOTNET_SKIP_FIRST_TIME_EXPERIENCE="1", DOTNET_CLI_TELEMETRY_OPTOUT="1", DOTNET_GENERATE_ASPNET_CERTIFICATE="false")
         cls.project = ROOT / "tests/SR1BackgroundIntroHarness/SR1BackgroundIntroHarness.csproj"
         cls.out = Path(cls.temp.name) / "build"
-        result = subprocess.run([DOTNET, "build", str(cls.project), "-o", str(cls.out), "--nologo"], cwd=ROOT, env=cls.env, capture_output=True, text=True, timeout=120)
+        # Shared compiler servers outlive this fixture and map analyzers inside its TEMP.
+        # Keep build services out of the owned tree so strict cleanup can remove every DLL.
+        result = subprocess.run([DOTNET, "build", str(cls.project), "-o", str(cls.out), "--nologo",
+                                 "--disable-build-servers", "-p:UseSharedCompilation=false"],
+                                cwd=ROOT, env=cls.env, capture_output=True, text=True, timeout=120)
         if result.returncode:
             raise AssertionError("harness build failed (not behavioral RED):\n" + result.stdout + result.stderr)
 

@@ -24,13 +24,13 @@
       <div class="ld-art" ${art ? `data-bg="${esc(art)}" data-w="1920" data-h="1080"` : ''}></div>
       <div class="ld-veil"></div>
       <div class="ld-center">
-        <div class="ld-logo">${SB.Art.wordmark()}</div>
+        <div class="ld-logo"><img src="img/pink-cotton-artist.png" alt=""><strong>SlimeBridge</strong></div>
         ${opts.title ? `<h1 class="ld-title">${esc(opts.title)}</h1>` : ''}
         ${opts.sub ? `<p class="ld-sub">${esc(opts.sub)}</p>` : ''}
-        <div class="ld-bar" style="--p:3%"><i></i><span class="ld-hop">${slimeMarkup(70)}</span></div>
+        <div class="ld-bar" role="progressbar" aria-label="${esc(t('splash.loading'))}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="3" style="--p:3%"><i></i></div>
         <div class="ld-line"><b class="ld-step">${esc((opts.steps || [''])[0] || t('splash.loading'))}</b><span class="ld-pct">3%</span></div>
         <div class="ld-tip"></div>
-        ${opts.compact ? `<div class="ld-actions"></div>` : ''}
+        <div class="ld-actions"></div>
       </div>
       <div class="ld-notice">${esc(t('ribbon.a'))}${esc(t('ribbon.link'))}${esc(t('ribbon.b'))}</div>`;
     SB.ui.$('#loading-root').appendChild(root);
@@ -44,6 +44,7 @@
       progress(v, label) {
         const p = Math.max(0, Math.min(100, Math.round(v)));
         bar.style.setProperty('--p', Math.max(3, p) + '%'); pctEl.textContent = p + '%';
+        bar.setAttribute('aria-valuenow', String(p));
         if (label) stepEl.textContent = label;
       },
       done(label) { root.classList.add('ok'); ctl.progress(100, label); clearInterval(timer); tipEl.textContent = ''; },

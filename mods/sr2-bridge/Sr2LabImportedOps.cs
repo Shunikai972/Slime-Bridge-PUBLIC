@@ -69,59 +69,166 @@ namespace SlimeBridge.SR2
             }
             catch (Exception) { return null; }
             if (ops.Count == 0) return null;
+            if (Environment.GetEnvironmentVariable("SLIMEBRIDGE_LAB_CAPTURE_ISOLATED") == "1" &&
+                ops.Any(op => !op.StartsWith("spawn:", StringComparison.Ordinal))) return null;
             return new Sr2LabImportedOps(registrar, outDir, runId, ops);
         }
 
         private float _shotAt = -1f;
         private readonly List<UnityEngine.GameObject> _actors = new List<UnityEngine.GameObject>();
 
-        /// <summary>LAB evidence: a close-up of one spawned actor from the freest side, rendered by a temporary camera (the player may be facing a wall).</summary>
+        /// <summary>LAB evidence: a close-up from the freest side using the main camera's exposure history.</summary>
         private bool CaptureActor(UnityEngine.GameObject actor, string file)
         {
             var main = UnityEngine.Camera.main;
             if (actor == null || main == null) return false;
+            // framed on the slime's bounds: a largo is about two metres tall, a fixed close-up cut it off
             var focus = actor.transform.position + UnityEngine.Vector3.up * 0.5f;
+            var radius = 0.8f;
+            var bounded = false;
+            var box = new UnityEngine.Bounds(focus, UnityEngine.Vector3.zero);
+            void Add(UnityEngine.Bounds b) { if (!bounded) { box = b; bounded = true; } else box.Encapsulate(b); }
+            var frameRenderers = new List<UnityEngine.Renderer>();
+            var imported = actor.transform.Find(Sr2ImportedVisualMarker.RootName)?.gameObject.GetComponent<Sr2ImportedVisualMarker>();
+            if (imported != null && imported.Initialized && !imported.Disposed)
+            {
+                // Native hidden bodies and grass-interaction quads do not bound the imported model.
+                foreach (var r in imported.Renderers)
+                    if (r != null && r.enabled && r.gameObject.activeInHierarchy) { frameRenderers.Add(r); Add(r.bounds); }
+            }
+            else
+            {
+                foreach (var r in actor.GetComponentsInChildren<UnityEngine.SkinnedMeshRenderer>(false))
+                    if (r != null && r.enabled) { frameRenderers.Add(r); Add(r.bounds); }
+                foreach (var r in actor.GetComponentsInChildren<UnityEngine.MeshRenderer>(false))
+                    if (r != null && r.enabled) { frameRenderers.Add(r); Add(r.bounds); }
+            }
+            if (!bounded) return false;
+            if (bounded) { focus = box.center; radius = UnityEngine.Mathf.Clamp(box.extents.magnitude, 0.4f, 4f); }
+            var want = radius / UnityEngine.Mathf.Sin(25f * UnityEngine.Mathf.Deg2Rad) * 1.05f;
             var bestDir = UnityEngine.Vector3.forward;
             var bestFree = -1f;
+            var player = Il2Cpp.SceneContext.Instance?.Player;
+            var facing = actor.transform.forward; facing.y = 0f;
+            if (facing.sqrMagnitude < 0.01f) facing = UnityEngine.Vector3.forward;
             for (var i = 0; i < 8; i++)
             {
-                var dir = UnityEngine.Quaternion.Euler(0f, i * 45f, 0f) * UnityEngine.Vector3.forward;
-                var free = 3.0f;
-                if (UnityEngine.Physics.Raycast(focus, dir, out var hit, 3.0f, ~0, UnityEngine.QueryTriggerInteraction.Ignore)) free = hit.distance;
-                if (free > bestFree) { bestFree = free; bestDir = dir; }
+                // the face side first (colour checks compare with a front reference), the freest side when it is blocked
+                var dir = UnityEngine.Quaternion.Euler(0f, i * 45f, 0f) * facing.normalized;
+                var free = want + 0.3f;
+                foreach (var hit in UnityEngine.Physics.RaycastAll(focus + dir * radius, dir, want + 0.3f - radius,
+                    ~0, UnityEngine.QueryTriggerInteraction.Ignore))
+                {
+                    var obstacle = hit.collider?.transform;
+                    if (obstacle != null && (obstacle == actor.transform || obstacle.IsChildOf(actor.transform) ||
+                        (player != null && (obstacle == player.transform || obstacle.IsChildOf(player.transform))))) continue;
+                    free = UnityEngine.Mathf.Min(free, radius + hit.distance);
+                }
+                if (free > bestFree + (i == 0 ? -1.2f : 0f) || (i == 0 && free >= want * 0.8f)) { bestFree = free; bestDir = dir; if (i == 0 && free >= want * 0.8f) break; }
             }
-            var camObject = new UnityEngine.GameObject("SlimeBridgeLabCam");
-            var rt = new UnityEngine.RenderTexture(1024, 768, 24);
-            var tex = new UnityEngine.Texture2D(1024, 768, UnityEngine.TextureFormat.RGB24, false);
+            // The main camera itself, moved for the two renders: its auto exposure has history, a new camera's first render
+            // was not adapted and the shot and its background came out differently exposed (the difference mask failed).
+            var cam = main;
+            var savedPosition = cam.transform.position;
+            var savedRotation = cam.transform.rotation;
+            var savedFov = cam.fieldOfView;
+            var savedNear = cam.nearClipPlane;
+            var savedTarget = cam.targetTexture;
+            var savedActive = UnityEngine.RenderTexture.active;
+            UnityEngine.RenderTexture? rt = null;
+            UnityEngine.Texture2D? tex = null;
+            var renderers = frameRenderers.ToArray();
+            var modes = new UnityEngine.Rendering.ShadowCastingMode[renderers.Length];
+            var enabled = new bool[renderers.Length];
+            for (var i = 0; i < renderers.Length; i++)
+            {
+                modes[i] = renderers[i].shadowCastingMode;
+                enabled[i] = renderers[i].enabled;
+            }
+            var hiddenPlayerRenderers = new List<UnityEngine.Renderer>();
+            Exception? captureFailure = null;
             try
             {
-                var cam = camObject.AddComponent<UnityEngine.Camera>();
-                cam.CopyFrom(main);
-                cam.transform.position = focus + bestDir * UnityEngine.Mathf.Max(1.3f, bestFree - 0.3f) + UnityEngine.Vector3.up * 0.25f;
+                var captureRt = new UnityEngine.RenderTexture(1024, 768, 24);
+                rt = captureRt;
+                var captureTex = new UnityEngine.Texture2D(1024, 768, UnityEngine.TextureFormat.RGB24, false);
+                tex = captureTex;
+                void HidePlayerRenderer(UnityEngine.Renderer r)
+                {
+                    if (r == null || !r.enabled || r.transform == actor.transform || r.transform.IsChildOf(actor.transform) || hiddenPlayerRenderers.Contains(r)) return;
+                    hiddenPlayerRenderers.Add(r);
+                    r.enabled = false;
+                }
+                // Moving the player camera also moves its first-person weapon into the shot.
+                // Hide only its renderers; never disable the player's colliders or behaviours.
+                if (player != null)
+                    foreach (var r in player.GetComponentsInChildren<UnityEngine.Renderer>(false)) HidePlayerRenderer(r);
+                foreach (var r in main.GetComponentsInChildren<UnityEngine.Renderer>(false)) HidePlayerRenderer(r);
+                cam.transform.position = focus + bestDir * UnityEngine.Mathf.Max(radius * 1.2f, UnityEngine.Mathf.Min(want, bestFree - 0.3f)) + UnityEngine.Vector3.up * (radius * 0.3f);
                 cam.transform.LookAt(focus);
                 cam.fieldOfView = 50f;
                 cam.nearClipPlane = 0.05f;
-                cam.targetTexture = rt;
-                cam.Render();
+                // the slime's own renderers cast no shadow during the two renders, so "with" minus "without" is only the slime
+                for (var i = 0; i < renderers.Length; i++) renderers[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                cam.targetTexture = captureRt;
                 var previous = UnityEngine.RenderTexture.active;
-                UnityEngine.RenderTexture.active = rt;
-                tex.ReadPixels(new UnityEngine.Rect(0, 0, 1024, 768), 0, 0);
-                tex.Apply();
-                UnityEngine.RenderTexture.active = previous;
-                cam.targetTexture = null;
-                System.IO.File.WriteAllBytes(System.IO.Path.Combine(_outDir, file), UnityEngine.ImageConversion.EncodeToPNG(tex));
+                void Grab(string name)
+                {
+                    cam.Render();
+                    UnityEngine.RenderTexture.active = captureRt;
+                    captureTex.ReadPixels(new UnityEngine.Rect(0, 0, 1024, 768), 0, 0);
+                    captureTex.Apply();
+                    UnityEngine.RenderTexture.active = previous;
+                    if (name != null) System.IO.File.WriteAllBytes(System.IO.Path.Combine(_outDir, name), UnityEngine.ImageConversion.EncodeToPNG(captureTex));
+                }
+                Grab(null);                                            // settles the temporal history on the new view
+                Grab(file);
+                for (var i = 0; i < renderers.Length; i++) renderers[i].enabled = false;
+                Grab(file.Substring(0, file.Length - 4) + "-bg.png");
                 return true;
+            }
+            catch (Exception ex)
+            {
+                captureFailure = ex;
+                throw;
             }
             finally
             {
-                UnityEngine.Object.Destroy(camObject);
-                UnityEngine.Object.Destroy(rt);
-                UnityEngine.Object.Destroy(tex);
+                // A destroyed native renderer must not strand the main camera or the player.
+                // Attempt every restoration independently, retaining failures for the caller.
+                var failures = new List<Exception>();
+                void Restore(Action action)
+                {
+                    try { action(); }
+                    catch (Exception ex) { failures.Add(ex); }
+                }
+                for (var i = 0; i < renderers.Length; i++)
+                {
+                    var index = i;
+                    Restore(() => { if (renderers[index] != null) renderers[index].shadowCastingMode = modes[index]; });
+                    Restore(() => { if (renderers[index] != null) renderers[index].enabled = enabled[index]; });
+                }
+                foreach (var r in hiddenPlayerRenderers) Restore(() => { if (r != null) r.enabled = true; });
+                Restore(() => { if (cam != null) cam.targetTexture = savedTarget; });
+                Restore(() => { if (cam != null) cam.transform.position = savedPosition; });
+                Restore(() => { if (cam != null) cam.transform.rotation = savedRotation; });
+                Restore(() => { if (cam != null) cam.fieldOfView = savedFov; });
+                Restore(() => { if (cam != null) cam.nearClipPlane = savedNear; });
+                Restore(() => UnityEngine.RenderTexture.active = savedActive);
+                Restore(() => { if (rt != null) rt.Release(); });
+                Restore(() => { if (rt != null) UnityEngine.Object.Destroy(rt); });
+                Restore(() => { if (tex != null) UnityEngine.Object.Destroy(tex); });
+                if (failures.Count > 0)
+                {
+                    if (captureFailure != null) failures.Insert(0, captureFailure);
+                    throw new AggregateException("LAB capture restoration failed", failures);
+                }
             }
         }
 
         internal void Tick(Action<string> log)
         {
+            if (System.Threading.Thread.CurrentThread.ManagedThreadId != _mainThreadId) return;
             if (_shotAt > 0f && UnityEngine.Time.realtimeSinceStartup >= _shotAt)
             {
                 _shotAt = -1f;
@@ -134,7 +241,6 @@ namespace SlimeBridge.SR2
                 catch (Exception) { /* the close-ups are the evidence */ }
             }
             if (_done) return;
-            if (System.Threading.Thread.CurrentThread.ManagedThreadId != _mainThreadId) return;
             try { TickOnMainThread(log); }
             catch (Exception ex)
             {
@@ -183,17 +289,34 @@ namespace SlimeBridge.SR2
         private void Run(CounterpartCreator.WorldReading world, Action<string> log)
         {
             var rows = new List<string>();
+            var errors = new List<string>();
+            // Calibration only: capture each fresh actor before spawning the next one.
+            // The normal LAB gameplay/query path retains its live actors and delayed shots.
+            var isolated = Environment.GetEnvironmentVariable("SLIMEBRIDGE_LAB_CAPTURE_ISOLATED") == "1";
             foreach (var op in _ops)
             {
                 var match = OpPattern.Match(op);
                 var kind = match.Groups[1].Value;
                 var canonical = match.Groups[2].Value;
                 var count = match.Groups[3].Success ? int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture) : 1;
+                var previousActors = _actors.Count;
                 rows.Add(Execute(world, kind, canonical, count));
+                if (isolated && _actors.Count > previousActors)
+                {
+                    var actor = _actors[_actors.Count - 1];
+                    try
+                    {
+                        if (!CaptureActor(actor, "sr2-actor-" + _actors.Count.ToString(CultureInfo.InvariantCulture) + ".png"))
+                            errors.Add("isolated capture failed: " + canonical);
+                        else log("species ops: isolated close-up " + _actors.Count.ToString(CultureInfo.InvariantCulture));
+                    }
+                    catch (Exception ex) { errors.Add("isolated capture failed: " + canonical + ": " + ex.GetType().Name); }
+                    finally { actor.SetActive(false); }
+                }
             }
-            Publish(world, new List<string>(), rows);
+            Publish(world, errors, rows);
             log("species ops: " + rows.Count + " executed");
-            _shotAt = UnityEngine.Time.realtimeSinceStartup + 8f;
+            _shotAt = isolated ? -1f : UnityEngine.Time.realtimeSinceStartup + 8f;
         }
 
         private string Execute(CounterpartCreator.WorldReading world, string kind, string canonical, int count)

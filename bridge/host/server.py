@@ -260,6 +260,7 @@ class BridgeHost:
         self.transfer_store = transfer_store
         self._heartbeats: dict[str, dict] = {}
         self._lock = threading.Lock()
+        self._shutdown_requested = threading.Event()
         # Host -> plugin command mailbox. A pending command is redelivered on every poll until a
         # result arrives (at-least-once); plugins de-duplicate by op_id so it applies at most once.
         self._cmd_cond = threading.Condition()
@@ -377,6 +378,16 @@ class BridgeHost:
                     data = json.loads(self.rfile.read(length))
                 except (UnicodeError, ValueError):
                     return self._reply(400, {'error': 'invalid_json'})
+
+                if self.path == '/v1/shutdown':
+                    if not self._authorized(admin_only=True):
+                        return self._reply(401, {'error': 'unauthorized'})
+                    if not isinstance(data, dict) or data:
+                        return self._reply(400, {'error': 'invalid_arguments'})
+                    # Reply before waking the main thread; it owns server shutdown and cleanup.
+                    self._reply(200, {'protocol_version': 1, 'ok': True})
+                    outer._shutdown_requested.set()
+                    return
 
                 if self.path == '/v1/heartbeat':
                     if not _valid_heartbeat(data):
@@ -555,6 +566,10 @@ class BridgeHost:
                         copied[field] = dict(value) if isinstance(value, dict) else value
                     result[key] = copied
             return result
+
+    def wait_for_shutdown(self, timeout: float) -> bool:
+        """Wait in the owning main thread, never shut an HTTP server down from its request handler."""
+        return self._shutdown_requested.wait(timeout)
 
     def record_portal_request(self, data: dict) -> dict:
         """Remember a crossing request (bounded, newest last) and hand it to the launcher hook, if any.
@@ -925,7 +940,8 @@ def main():
                         # the launcher was reading the file (Windows refuses the replace): try again next second.
                         # Letting this escape stopped BridgeHost and every game lost it ("SlimeBridge is not answering").
                         pass
-                time.sleep(1)
+                if host.wait_for_shutdown(1):
+                    break
         except KeyboardInterrupt:
             pass
 

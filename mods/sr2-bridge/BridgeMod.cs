@@ -19,7 +19,7 @@ namespace SlimeBridge.SR2
     /// </summary>
     public sealed class BridgeMod : MelonMod
     {
-        public const string PluginVersion = "0.2.0";
+        public const string PluginVersion = "0.2.1";
         private static readonly int Pid = Environment.ProcessId;
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { UseProxy = false })
         {
@@ -220,6 +220,8 @@ namespace SlimeBridge.SR2
                     {
                         Volatile.Write(ref _storyBlocking, true);
                         var slot = Sr2NewGame.Start(director, m => LoggerInstance.Msg(m));
+                        _newGameDirector = director.Pointer;
+                        _newGameDispatched = true;
                         _autoloadRequested = true;
                         LoggerInstance.Msg("travel: started a new native game in save slot " + slot + " t+" + Since());
                     }
@@ -284,6 +286,8 @@ namespace SlimeBridge.SR2
         }
 
         private bool _introEnded;
+        private bool _newGameDispatched;
+        private IntPtr _newGameDirector;
         private int _introPresses;
         private float _nextIntroPress;
         private float _newGameStartedAt = -1f;
@@ -297,10 +301,17 @@ namespace SlimeBridge.SR2
         /// </summary>
         private void MaybeEndNewGameIntro()
         {
-            if (_introEnded || !TravelNewGame || !_autoloadRequested) { Volatile.Write(ref _storyBlocking, false); return; }
+            if (_introEnded || !TravelNewGame || !_autoloadRequested || !_newGameDispatched) { Volatile.Write(ref _storyBlocking, false); return; }
             if (_newGameStartedAt < 0f) _newGameStartedAt = UnityEngine.Time.realtimeSinceStartup;
             try
             {
+                var director = Il2Cpp.GameContext.Instance?.AutoSaveDirector;
+                if (director == null || director.Pointer != _newGameDirector)
+                {
+                    _introEnded = true;
+                    Volatile.Write(ref _storyBlocking, false);
+                    return;
+                }
                 var intro = UnityEngine.Object.FindObjectOfType<Il2CppMonomiPark.SlimeRancher.UI.IntroSequence.IntroSequenceUIRoot>();
                 if (intro == null)
                 {
@@ -312,9 +323,9 @@ namespace SlimeBridge.SR2
                 }
                 Volatile.Write(ref _storyBlocking, true);
                 if (UnityEngine.Time.realtimeSinceStartup < _nextIntroPress || !intro._isInputEnabled) return;
-                // the story ends with a fade into the gameplay scene: never get there before that scene has finished loading
-                // (ending it during the load left the game on a black screen for good)
-                if (!CounterpartCreator.TryReadWorld(out _)) return;
+                // Let the owned native story's input/transition gates drive its load and fade.
+                // Gameplay readiness can depend on that story ending; requiring it here deadlocks
+                // the first card. This grants no gameplay authority and never changes its guards.
                 // like a patient player: at most two presses per card (the first may only finish the text), a second apart,
                 // so the last card is never "ended" twice (that froze the load when the game ran slowly in the background)
                 var index = intro._frameIndex;

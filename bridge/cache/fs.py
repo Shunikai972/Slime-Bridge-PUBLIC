@@ -58,7 +58,8 @@ def atomic_write(root: Path, path: Path, data: bytes):
     refuse_links(root, path)
     if path.exists() and path.stat().st_nlink > 1:
         raise ValueError(f'Refusing to replace a hardlinked file: {path}')
-    tmp = path.with_name(f'.{path.name}.{uuid.uuid4().hex}.tmp')
+    # Do not repeat a long valid target name: the temporary sibling must also fit the filesystem.
+    tmp = path.with_name(f'.{uuid.uuid4().hex}.tmp')
     created = False
     try:
         with open(tmp, 'xb') as stream:

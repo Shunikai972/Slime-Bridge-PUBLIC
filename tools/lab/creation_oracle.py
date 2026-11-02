@@ -149,20 +149,18 @@ def require_finalized_prior_creations(root: Path) -> None:
             raise RuntimeError(f'Legacy or incomplete creation evidence requires existing-intent recovery: {prior}')
         restored = finalized.get('registry_restore', {})
         changes = finalized.get('registry_changes', {})
-        registry_finalized = (set(restored) == {'SR1', 'SR2'} and
-                              all(value == 'reimported' for value in restored.values()))
-        if set(changes) == {'SR1', 'SR2'}:
-            registry_finalized = all(
-                isinstance(diff, dict) and
-                all(isinstance(diff.get(key), list) for key in ('removed_or_changed', 'added_or_changed')) and
-                (not diff['removed_or_changed'] and not diff['added_or_changed'] or
-                 restored.get(realm) == 'reimported')
-                for realm, diff in changes.items())
+        if 'registry_changes' in finalized:
+            registry_finalized = save_guard.registry_restoration_verified(changes, restored, ('SR1', 'SR2'))
+        else:
+            # Preserve the existing legacy full-import receipt contract; absence
+            # rollback requires modern per-realm change/presence evidence.
+            registry_finalized = (isinstance(restored, dict) and set(restored) == {'SR1', 'SR2'} and
+                                  all(value == 'reimported' for value in restored.values()))
         if (finalized.get('sources_untouched') is not True or
                 finalized.get('saves_match_backup_after_restore') is not True or
                 finalized.get('lab_fingerprints_unchanged') is not True or
                 finalized.get('cleanup_completed') is not True or
-                not registry_finalized or any(value != 'reimported' for value in restored.values()) or
+                not registry_finalized or
                 any(finalized.get(key) for key in ('safety_error', 'registry_error', 'cleanup_error', 'restoration_skipped',
                                                   'registry_restore_skipped', 'save_restore_errors',
                                                   'stop_errors'))):

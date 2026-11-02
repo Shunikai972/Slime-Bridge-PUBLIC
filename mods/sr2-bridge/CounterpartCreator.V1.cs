@@ -70,6 +70,17 @@ namespace SlimeBridge.SR2
         // Opaque identity of the current world; replaced whenever the game, slot, director or scene changes.
         internal static object? CurrentWorldWitness => _witness;
 
+        private static string? _lastReadinessGate;
+        private static bool ReadinessGate(string reason)
+        {
+            if (_lastReadinessGate != reason)
+            {
+                _lastReadinessGate = reason;
+                MelonLoader.MelonLogger.Msg("travel readiness: " + reason);
+            }
+            return false;
+        }
+
         internal static bool TryReadWorld(out WorldReading? reading)
         {
             reading = null;
@@ -77,22 +88,32 @@ namespace SlimeBridge.SR2
             {
                 var game = Il2Cpp.GameContext.Instance; var director = game?.AutoSaveDirector;
                 var scene = Il2Cpp.SceneContext.Instance; var loader = Il2Cpp.SystemContext.Instance?.SceneLoader;
-                if (game == null || director == null || director.Pointer == IntPtr.Zero) { _witness = null; return false; }
+                if (game == null || director == null || director.Pointer == IntPtr.Zero) { _witness = null; return ReadinessGate("no native game/director"); }
                 var current = director.CurrentGame();
                 var name = current?.GameName;
-                if (current == null || name == null || !NativeName.IsMatch(name)) { _witness = null; return false; }
+                if (current == null || name == null || !NativeName.IsMatch(name)) { _witness = null; return ReadinessGate("metadata: current=" + (current != null) + " name=" + (name ?? "null")); }
                 if (loader == null || loader.IsSceneLoadInProgress || !loader.IsCurrentSceneGroupGameplay() ||
-                    loader._currentSceneGroup?.name?.StartsWith("MainMenu", StringComparison.OrdinalIgnoreCase) == true) return false;
+                    loader._currentSceneGroup?.name?.StartsWith("MainMenu", StringComparison.OrdinalIgnoreCase) == true)
+                    return ReadinessGate("scene: loader=" + (loader != null) + " busy=" + (loader?.IsSceneLoadInProgress ?? false) +
+                        " gameplay=" + (loader?.IsCurrentSceneGroupGameplay() ?? false) + " group=" + (loader?._currentSceneGroup?.name ?? "null"));
                 if (scene == null || scene.Pointer == IntPtr.Zero || scene.PlayerState == null || scene.Player == null ||
-                    !scene.Player.activeInHierarchy || scene.PlayerState.GetCurrHealth() <= 0) return false;
+                    !scene.Player.activeInHierarchy || scene.PlayerState.GetCurrHealth() <= 0)
+                    return ReadinessGate("player: scene=" + (scene != null) + " state=" + (scene?.PlayerState != null) +
+                        " player=" + (scene?.Player != null) + " active=" + (scene?.Player?.activeInHierarchy ?? false) +
+                        " health=" + (scene?.PlayerState?.GetCurrHealth() ?? -1));
                 var slot = director.CurrentSlot();
                 if (!(_witness is Witness known) || known.Director != director.Pointer || known.Scene != scene.Pointer ||
                     known.Name != name || known.Slot != slot)
                     _witness = new Witness(director.Pointer, scene.Pointer, name, slot);
                 reading = new WorldReading(game, scene, director, name);
+                if (_lastReadinessGate != "ready")
+                {
+                    _lastReadinessGate = "ready";
+                    MelonLoader.MelonLogger.Msg("travel readiness: ready slot=" + slot + " name=" + name);
+                }
                 return true;
             }
-            catch (Exception) { _witness = null; return false; }
+            catch (Exception ex) { _witness = null; return ReadinessGate("exception " + ex.GetType().Name + ": " + ex.Message); }
         }
     }
 }

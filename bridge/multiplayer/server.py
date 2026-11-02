@@ -386,8 +386,10 @@ class BridgeServer:
         else:
             if session.transition is None or session.transition['transition_id'] != transition['transition_id']:
                 return 'WRONG_SESSION', 'no such realm switch in progress'
+            if session.transition != transition:
+                return 'WRONG_SESSION', 'realm switch differs from the pending intent'
             if phase == 'COMMIT':
-                session.realm = transition['to_realm']
+                session.realm = session.transition['to_realm']
             session.transition, session.status = None, 'ONLINE' if session.realm else 'LOBBY'
             if self.store is not None:
                 self.store.clear_transition(session.player_id, transition['transition_id'])

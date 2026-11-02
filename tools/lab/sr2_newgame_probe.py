@@ -1,4 +1,4 @@
-"""Protected check of SR2 1.x new-game creation on a real install, alone (no SR1, no crossing).
+"""Protected check of SR2 1.x new-game creation on a LAB copy, alone (no SR1, no crossing).
 
     py -3.12 -m tools.lab.sr2_newgame_probe --sr2 <SR2 folder> [--plugin-dir <built net6.0 folder>] --current-user-authorized
 
@@ -19,6 +19,7 @@ from pathlib import Path
 from apps.launcher import plugins
 from tools.lab import oracle, save_guard
 from tools.lab.process_guard import assert_no_other_game_processes
+from tools.lab.paths import validate_lab_destination
 from tools.lab.travel_oracle import grab
 
 REPO_ROOT = oracle.REPO_ROOT
@@ -26,7 +27,7 @@ NEEDLES = ('travel', 'autoload', 'SlimeBridge_SR2_Core] boot', 'Exception', 'sav
 
 
 def run(sr2_root, plugin_dir, timeout_s, import_spec=None, import_ops=None):
-    root = Path(sr2_root).resolve()
+    root = validate_lab_destination(Path(sr2_root) / 'SlimeRancher2.exe', oracle.LAB).parent
     exe = root / 'SlimeRancher2.exe'
     log = root / 'MelonLoader' / 'Latest.log'
     assert_no_other_game_processes()
@@ -37,6 +38,7 @@ def run(sr2_root, plugin_dir, timeout_s, import_spec=None, import_ops=None):
     from tools.lab import screen_guard
     screens = screen_guard.snapshot(('SR2',))
     proc = None
+    previous_plugins = oracle.snapshot_plugins({'SR2': root})
     try:
         original = plugins.find_source
         plugins.find_source = lambda realm, repo_root=None: Path(plugin_dir)
@@ -51,16 +53,16 @@ def run(sr2_root, plugin_dir, timeout_s, import_spec=None, import_ops=None):
                        SLIMEBRIDGE_IMPORT_CACHE_ROOT=str(REPO_ROOT / 'Lab' / 'AssetCache' / 'sr1-to-sr2'))
             if import_ops:
                 env['SLIMEBRIDGE_IMPORT_OPS'] = json.dumps({'ops': import_ops})
-        start = log.stat().st_size if log.is_file() else 0       # never read the previous run's log as this one (the launcher's
-                                                                 # console may hold it open, so it is not renamed)
-        started_at = time.time()
+        initial_log = log.read_bytes() if log.is_file() else b''
+        started_at_ns = time.time_ns()
 
         def fresh():
             if not log.is_file():
                 return ''
-            text = log.read_text(encoding='utf-8', errors='replace')
-            rewritten = log.stat().st_mtime >= started_at and len(text.encode('utf-8', 'replace')) < start
-            return text if rewritten or start == 0 else text[start:] if len(text) > start else text
+            data = log.read_bytes()
+            if data.startswith(initial_log):
+                return data[len(initial_log):].decode('utf-8', errors='replace')
+            return data.decode('utf-8', errors='replace') if log.stat().st_mtime_ns >= started_at_ns else ''
         proc = subprocess.Popen([str(exe), *oracle.WINDOW_ARGS], cwd=str(root), env=env)
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline and proc.poll() is None:
@@ -83,17 +85,16 @@ def run(sr2_root, plugin_dir, timeout_s, import_spec=None, import_ops=None):
                 break
             time.sleep(3)
     finally:
-        if proc is not None and proc.poll() is None:
-            proc.terminate()
-            try:
-                proc.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-        time.sleep(2)
-        oracle._finalize_current_user(result, snap, [], directory)
-        result['display_settings_restored'] = screen_guard.restore(screens)
-        (directory / 'sr2-newgame.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
-        print(f'evidence: {directory}', flush=True)
+        try:
+            oracle.cleanup_steps(result, [
+                ('stop_errors', lambda: oracle._stop_owned({'SR2': proc}, {'SR2': exe}) if proc is not None else {}),
+                ('plugins_restored', lambda: oracle.restore_plugins(previous_plugins)),
+                ('protected_finalizer', lambda: oracle._finalize_current_user(result, snap, [], directory)),
+                ('display_settings_restored', lambda: screen_guard.restore(screens)),
+            ])
+        finally:
+            (directory / 'sr2-newgame.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
+            print(f'evidence: {directory}', flush=True)
     return result
 
 

@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 import webbrowser
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -58,6 +59,7 @@ class LauncherAPI:
     def __init__(self, config_path: Path = CONFIG, known_paths: tuple[Path, ...] = (KNOWN_MANUAL_SR1, KNOWN_MANUAL_SR2),
                  lab_games: Path = LAB_GAMES, *, popen=None, host_popen=None, opener=None, news_opener=None):
         self._config_path = config_path
+        self._config_lock = threading.RLock()
         self._known_paths = known_paths
         self._lab_games = lab_games
         self._window = None
@@ -73,7 +75,8 @@ class LauncherAPI:
         self._travel = travel.TravelCoordinator(self._host, self._launcher, self._primary, lambda: bool(self._load()['backup_ack']) or self._session_ack,
                                                 self._window_control(), travel.TravelLinks(Path(config_path).parent / 'travel-links.json'),
                                                 settings=lambda: self._settings()[1]['bridge'], list_saves=savelist.list_groups,
-                                                notify=lambda _transition: self._raise_window(), session=self._session)
+                                                notify=lambda _transition: self._raise_window(), session=self._session,
+                                                prepare_destination=self._prepare_travel_destination)
         self._downloads = None
         self._manifest = {'doc': None, 'error': None}
         self._lock = threading.Lock()
@@ -103,6 +106,15 @@ class LauncherAPI:
         refuse_reparse(self._config_path)
         os.replace(temp, self._config_path)
 
+    @contextmanager
+    def _edit_config(self):
+        # pywebview invokes API calls concurrently: lock the complete transaction,
+        # not just os.replace, or disjoint preference updates overwrite each other.
+        with self._config_lock:
+            data = self._load()
+            yield data
+            self._save(data)
+
     def _lab_root(self) -> Path:
         return Path(self._config_path).parent.parent
 
@@ -129,11 +141,10 @@ class LauncherAPI:
             value = None
         if not _VALIDATORS[key](value):
             raise ValueError(f'invalid value for {key}')
-        data = self._load()
-        data[key] = value
-        self._save(data)
-        if key == 'largo_manifest_url':
-            self._manifest = {'doc': None, 'error': None}
+        with self._edit_config() as data:
+            data[key] = value
+            if key == 'largo_manifest_url':
+                self._manifest = {'doc': None, 'error': None}
         return {'ok': True, 'key': key, 'value': value}
 
     # ---- installations --------------------------------------------------------------------------------------------
@@ -190,12 +201,11 @@ class LauncherAPI:
         item = detect.resolve_install(path)
         if item is None:
             raise ValueError('Not a compatible SR1/SR2 executable or game folder')
-        data = self._load()
-        paths = data['manual_paths']
-        if str(item.root).casefold() not in {str(p).casefold() for p in paths}:
-            paths.append(str(item.root))
-        data['selected'][item.game] = str(item.root)
-        self._save(data)
+        with self._edit_config() as data:
+            paths = data['manual_paths']
+            if str(item.root).casefold() not in {str(p).casefold() for p in paths}:
+                paths.append(str(item.root))
+            data['selected'][item.game] = str(item.root)
         return self._installation_info(item)
 
     @staticmethod
@@ -382,37 +392,33 @@ class LauncherAPI:
     def autodetect(self) -> dict:
         """Look for the games in Steam / Epic / GOG / common folders; remember what was verified."""
         found = detect.auto_detect()
-        data = self._load()
-        known = {str(p).casefold() for p in data['detected_paths'] + data['manual_paths']}
         added = []
-        for item in found:
-            if str(item.root).casefold() not in known:
-                data['detected_paths'].append(str(item.root))
-                known.add(str(item.root).casefold())
-                added.append(self._installation_info(item))
-        if added:
-            self._save(data)
+        with self._edit_config() as data:
+            known = {str(p).casefold() for p in data['detected_paths'] + data['manual_paths']}
+            for item in found:
+                if str(item.root).casefold() not in known:
+                    data['detected_paths'].append(str(item.root))
+                    known.add(str(item.root).casefold())
+                    added.append(self._installation_info(item))
         return {'ok': True, 'found': len(found), 'added': added, 'installations': self._installations()}
 
     def forget_game(self, realm: str) -> dict:
         """Stop using the remembered folders for one game (files on disk are never touched)."""
         if realm not in EXECUTABLES:
             raise ValueError('realm must be SR1 or SR2')
-        data = self._load()
         def keep(path):
             item = discover_manual(path) or detect.resolve_install(path)
             return item is None or item.game != realm
-        data['manual_paths'] = [p for p in data['manual_paths'] if keep(p)]
-        data['detected_paths'] = [p for p in data['detected_paths'] if keep(p)]
-        data['selected'] = {k: v for k, v in data['selected'].items() if k != realm}
-        self._save(data)
+        with self._edit_config() as data:
+            data['manual_paths'] = [p for p in data['manual_paths'] if keep(p)]
+            data['detected_paths'] = [p for p in data['detected_paths'] if keep(p)]
+            data['selected'] = {k: v for k, v in data['selected'].items() if k != realm}
         return {'ok': True, 'installations': self._installations()}
 
     def acknowledge_legal(self) -> dict:
-        data = self._load()
-        data['legal_understood'] = True
-        data['backup_ack'] = True              # the welcome card says to keep copies of the saves: no second reminder on Play
-        self._save(data)
+        with self._edit_config() as data:
+            data['legal_understood'] = True
+            data['backup_ack'] = True              # the welcome card says to keep copies of the saves: no second reminder on Play
         return {'understood': True}
 
     def _primary(self, realm: str):
@@ -433,8 +439,8 @@ class LauncherAPI:
         if realm not in EXECUTABLES or matched is None:
             raise ValueError('unknown installation')
         data = self._load()
-        data['selected'][realm] = matched
-        self._save(data)
+        with self._edit_config() as data:
+            data['selected'][realm] = matched
         return {'ok': True}
 
     # ---- the page's whole state -----------------------------------------------------------------------------------
@@ -469,8 +475,8 @@ class LauncherAPI:
         if confirmed:
             self._session_ack = True            # a launch the player confirmed: the portal may start the other game too
         if confirmed and remember and not data['backup_ack']:
-            data['backup_ack'] = True
-            self._save(data)
+            with self._edit_config() as current:
+                current['backup_ack'] = True
         realms = ((front, 'SR2' if front == 'SR1' else 'SR1') if target == 'BOTH' else (target,))
         warnings, errors, launched = [], [], []
         # The bridge (portals, travel, shared inventory) needs BridgeHost whichever game is started first.
@@ -505,6 +511,20 @@ class LauncherAPI:
             self._keep_in_front(front)
         return {'ok': bool(launched) and not errors, 'launched': launched, 'errors': errors, 'warnings': warnings,
                 'host': self._host.state(), 'front': front if target == 'BOTH' else None}
+
+    def _prepare_travel_destination(self, installation):
+        """Cold portal launches need the same bridge files as Play, without silently editing real installs."""
+        realm, root = installation['game'], installation['root']
+        if self._launcher.running(realm):
+            return {'ok': False, 'error': 'GAME_RUNNING'}
+        if pack.is_lab_copy(realm, root):
+            installs = {r: (self._primary(r) or {}).get('root') for r in ('SR1', 'SR2')}
+            prepared = pack.prepare(realm, root, installs=installs, models_dir=self._models_dir())
+            if prepared.get('ok') is not True:
+                return prepared
+        status = plugins.status(realm, root)
+        return {'ok': status['state'] == 'current' and bool(status['loader']),
+                'error': None if status['state'] == 'current' else 'PLUGIN_NOT_CURRENT'}
 
     def _keep_in_front(self, front):
         """Both games were started: the chosen one stays in front, the other is minimized as soon as its window shows."""
@@ -544,14 +564,14 @@ class LauncherAPI:
         return {'ok': True, **self._host.stop(), 'host': self._host.state()}
 
     def _window_control(self):
-        """Window control restricted to PIDs whose image is still a verified game executable."""
+        """Window control restricted to live owned PIDs whose exact launch image still matches."""
         if os.name != 'nt':
             return windows.NullWindows()
         from tools.lab.process_guard import process_image_path
 
         def verified(pid):
             image = process_image_path(pid)
-            return image is not None and image.name in EXECUTABLES.values()
+            return self._launcher.owns_image(pid, image)
         try:
             return windows.Win32Windows(verify=verified)
         except windows.WindowError:
@@ -966,8 +986,8 @@ class LauncherAPI:
         if mode not in ('HYBRID', 'SR1_ONLY', 'SR2_ONLY') or not 1024 <= port <= 65535:
             return {'ok': False, 'error': 'mode or port out of range'}
         data = self._load()
-        data['mp_host'] = {'name': name, 'port': port, 'mode': mode}
-        self._save(data)
+        with self._edit_config() as data:
+            data['mp_host'] = {'name': name, 'port': port, 'mode': mode}
         return {'ok': True, 'host': data['mp_host']}
 
     # ---- SlimeBridge options (shared settings schema) --------------------------------------------------------------

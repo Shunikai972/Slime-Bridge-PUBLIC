@@ -118,7 +118,7 @@ class LastSession:
 
 class TravelCoordinator:
     def __init__(self, host, launcher, install_for, backup_acknowledged, windows, links, *, settings=None, opener=urlopen,
-                 clock=time.time, list_saves=None, notify=None, session=None):
+                 clock=time.time, list_saves=None, notify=None, session=None, prepare_destination=None):
         """``settings()`` -> dict with ``travel_save_mode`` and ``background_policy`` (optional)."""
         self._host, self._launcher, self._install_for = host, launcher, install_for
         self._acknowledged, self._windows, self._links = backup_acknowledged, windows, links
@@ -130,6 +130,7 @@ class TravelCoordinator:
         self._notify_fn = notify
         self._lock = threading.RLock()                 # polled by a background thread and by the window
         self._session = session
+        self._prepare_destination = prepare_destination
         self.transitions = []
 
     # ---- host relay -------------------------------------------------------------------------------------------------
@@ -226,13 +227,15 @@ class TravelCoordinator:
         return self._heartbeat(realm).get('pid')
 
     def _window(self, transition, action, realm):
-        pid = self._pid(realm)
+        # A native window exists before the plugin sends its first heartbeat. The backend still verifies the launch image.
+        pid = self._pid(realm) or (transition.get('destination_pid') if realm == transition['to'] else None)
         if not pid:
-            return
+            return False
         try:
-            getattr(self._windows, action)(pid)
-        except Exception as exc:                                      # noqa: BLE001 - a window problem never aborts a crossing
+            return getattr(self._windows, action)(pid) is not False
+        except Exception as exc:                                      # noqa: BLE001 - report and let the state machine retry
             self._log(transition, f'window {action} {realm}: {exc}')
+            return False
 
     # ---- state machine ----------------------------------------------------------------------------------------------
     def _begin(self, request):
@@ -347,8 +350,18 @@ class TravelCoordinator:
         elif not self._acknowledged():
             return self._refuse(transition, 'NEEDS_BACKUP_CONFIRMATION')
         else:
+            if self._prepare_destination is not None:
+                try:
+                    prepared = self._prepare_destination(installation)
+                except Exception as exc:
+                    return self._refuse(transition, 'DESTINATION_PREPARATION_FAILED', type(exc).__name__)
+                if not isinstance(prepared, dict) or prepared.get('ok') is not True:
+                    return self._refuse(transition, 'DESTINATION_PREPARATION_FAILED')
+                self._log(transition, f'{destination} plugin preparation verified')
             try:
-                self._launcher.launch(installation, extra_env=self._destination_env(transition))
+                launched = self._launcher.launch(installation, extra_env=self._destination_env(transition))
+                if isinstance(launched, dict) and type(launched.get('pid')) is int and launched['pid'] > 0:
+                    transition['destination_pid'] = launched['pid']
                 transition['launched'] = True
                 transition['deadline'] = DEADLINES['PREPARING_COLD']
                 self._log(transition, f'starting {destination}')
@@ -388,10 +401,10 @@ class TravelCoordinator:
         if state == 'PREPARING':
             if self._saw(transition, src, 'failed'):
                 return self._rollback(transition, 'SOURCE_FAILED')
-            if transition['launched'] and not transition.get('parked') and self._pid(dst):
-                # A freshly started game opens in front: put the player back on the source until the destination is ready.
-                transition['parked'] = True
-                self._window(transition, 'minimize', dst)
+            if (transition['launched'] and (not transition.get('parked') or not self._world_ready(dst))
+                    and (self._pid(dst) or transition.get('destination_pid'))):
+                # Recheck throughout loading: Unity's player window can appear after the loader console was parked.
+                transition['parked'] = self._window(transition, 'minimize', dst)
                 self._window(transition, 'focus', src)
             if transition.get('create_new') and not transition.get('dest_save') and self._world_ready(dst):
                 created = (self._heartbeat(dst).get('status') or {}).get('save_id')
@@ -402,7 +415,13 @@ class TravelCoordinator:
                     self._log(transition, f'linked {src} {transition["source_save"]} <-> {dst} {created} (new save)')
             if self._saw(transition, src, 'departure_ready') and self._world_ready(dst) and self._launcher.running(dst):
                 self._window(transition, 'restore', dst)
-                self._window(transition, 'focus', dst)
+                focused = self._window(transition, 'focus', dst)
+                if getattr(self._windows, 'requires_focus_confirmation', False) and not focused:
+                    if not transition.get('waiting_foreground'):
+                        self._log(transition, f'waiting for verified {dst} foreground before arrival')
+                    transition['waiting_foreground'] = True
+                    return
+                transition.pop('waiting_foreground', None)
                 offer = self._latest_carry(transition, src, 'departure_ready') if self._carry_mode() != 'NONE' else {}
                 transition['carry_offered'] = offer
                 extra = {'carry': offer} if offer else {}

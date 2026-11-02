@@ -42,10 +42,12 @@ def build_key(game_root) -> str:
     asm = root / 'GameAssembly.dll'
     if meta is None or not asm.is_file():
         raise SchemaError(f'{root} is not an IL2CPP Slime Rancher 2 folder (no GameAssembly.dll / global-metadata.dat)')
-    digest = hashlib.sha256(str(asm.stat().st_size).encode())
-    with meta.open('rb') as f:
-        for block in iter(lambda: f.read(1 << 20), b''):
-            digest.update(block)
+    digest = hashlib.sha256(b'bridge-sr2-schema-v2:')
+    for source in (asm, meta):
+        digest.update(str(source.stat().st_size).encode('ascii') + b':')
+        with source.open('rb') as stream:
+            for block in iter(lambda: stream.read(1 << 20), b''):
+                digest.update(block)
     return digest.hexdigest()[:16]
 
 

@@ -77,7 +77,7 @@ Capability rows (`required_capabilities`) map a source capability to a target ca
 | `EXPERIMENTAL` | `PORTABLE`, same realm, no blocker, but open local queries (for example a same-realm Harmony mod) |
 | `PENDING_ADAPTER` | everything else (cross realm, `UNKNOWN`, missing or conflicting dependencies) |
 
-A cross-realm unit carries no files, because the adapter does not exist yet. `requires` lists required mod dependencies, so the deploy planner refuses a missing one.
+A cross-realm unit carries no files, because the adapter does not exist yet. `requires` lists required mod dependencies, so the deploy planner refuses a missing one. Required non-platform dependencies must be resolved against an explicit `available` catalogue: `UNCHECKED` or `VERSION_UNKNOWN` cannot produce a deployable unit, including when reading an older report. The mod service also checks version constraints against the currently enabled journal units, not merely the catalogue used for analysis.
 
 ## Confidence
 
@@ -106,6 +106,7 @@ Evidence can be given as a list (matched by `mod_id`; two documents for one id a
 - Nothing from the source mod is reproduced. Only the id, a display name reduced to `[A-Za-z0-9 _-]` and the numeric version reach the output. Type, member, Harmony-target, file and config names from the evidence never do; Harmony patches appear only as a count.
 - Output is byte-deterministic.
 - Files are written through `bridge.cache.fs.atomic_write`. `subdir` must be a safe relative path. A symlinked root or a symlink or hard link on any output path refuses the whole write before any file is written.
+- Directory names preserve underscores, so distinct mod IDs cannot collapse through deploy-key normalization. Long IDs use a bounded prefix and the full ID digest. Every occupied generated file must exactly match the expected bytes, including the owning report metadata; modified source or a different report is refused before any write. Regenerate changed templates into a fresh output root rather than overwriting developer work. An identical rerun leaves existing files untouched.
 
 ## Trust boundaries
 
@@ -113,7 +114,7 @@ Evidence can be given as a list (matched by `mod_id`; two documents for one id a
   - Inputs are bounded: 256 KiB per manifest document, 1 MiB per evidence document, nesting depth 32, and per-list limits.
   - Strings must be printable, and lone surrogates are rejected.
   - Duplicate JSON keys, NaN and infinite numbers are rejected.
-  - Paths must be safe relative POSIX paths, and a case-insensitive collision is an error.
+  - Paths must be safe relative POSIX paths, and a case-insensitive collision is an error. Trailing dots and Windows reserved device basenames are rejected in every segment, rather than normalized into another file owner's name.
   - Hostile content produces diagnostics, never exceptions. A randomized mutation test covers this.
 - **Trusted program inputs:** `target_realm` and the `known_apis` catalogue. Invalid values raise `ValueError`. A the local provider catalogue is validated with `load_known_apis()` before use.
 - **Synthetic vs real:** reports carry `data_evidence` (`SYNTHETIC`, `STATIC` or `NONE`). Synthetic input can never support a native claim.

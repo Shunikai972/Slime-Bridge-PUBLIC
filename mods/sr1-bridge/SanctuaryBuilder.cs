@@ -722,7 +722,8 @@ namespace SlimeBridge.SR1
             lamp.enabled = false;
             var trigger = new GameObject("trigger");
             trigger.transform.SetParent(root.transform, false);
-            trigger.transform.localPosition = center;
+            // The visual ring centre is above the player's head. Keep the crossing volume at walking height.
+            trigger.transform.localPosition = new Vector3(0f, Mathf.Min(1.2f, spec.RingCenterHeight), 0f);
             var sphere = trigger.AddComponent<SphereCollider>();
             sphere.isTrigger = true; sphere.radius = spec.TriggerRadius;
             var playerTrigger = trigger.AddComponent<SanctuaryPlayerTrigger>();

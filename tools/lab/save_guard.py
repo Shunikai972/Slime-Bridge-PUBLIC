@@ -32,8 +32,21 @@ VOLATILE_SUFFIXES = ('.log',)
 
 
 def _registry_key_exists(key: str) -> bool:
-    """True when the HKCU key exists (reg.exe query exits 0). Only the fixed REGISTRY_KEYS strings are ever passed."""
-    return subprocess.run(['reg.exe', 'query', key], capture_output=True).returncode == 0
+    """Only an explicit native not-found result establishes key absence."""
+    if key not in REGISTRY_KEYS.values():
+        raise ValueError('unsupported registry key')
+    if subprocess.run(['reg.exe', 'query', key], capture_output=True).returncode == 0:
+        return True
+    # reg.exe also returns failure for denied access and other provider errors.
+    # Avoid parsing localized stderr or treating an unreadable key as disposable.
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key.removeprefix('HKCU\\')):
+            return True
+    except FileNotFoundError:
+        return False
+    except (OSError, ImportError) as ex:
+        raise RuntimeError('registry key presence could not be verified') from ex
 
 
 def local_low(profile: Path | None = None) -> Path:
@@ -350,33 +363,60 @@ def registry_changes(snap: Path) -> dict:
     return out
 
 
+def registry_restoration_verified(changes, restored, realms) -> bool:
+    """Correlate each rollback receipt with that realm's actual pre-run presence."""
+    expected = set(realms)
+    if (not expected or not expected <= REGISTRY_KEYS.keys() or
+            not isinstance(changes, dict) or set(changes) != expected or
+            not isinstance(restored, dict) or not set(restored) <= expected):
+        return False
+    for realm, diff in changes.items():
+        if (not isinstance(diff, dict) or
+                any(not isinstance(diff.get(key), list) for key in ('removed_or_changed', 'added_or_changed')) or
+                type(diff.get('absent_before', False)) is not bool):
+            return False
+        absent = diff.get('absent_before', False)
+        if absent and diff['removed_or_changed']:
+            return False
+        state = 'removed-new-key' if absent else 'reimported'
+        if diff['removed_or_changed'] or diff['added_or_changed'] or realm in restored:
+            if restored.get(realm) != state:
+                return False
+    return True
+
+
 def restore_registry(snap: Path, changes: dict) -> dict:
-    """Re-import prior values, then verify a fresh export (imports do not remove new values)."""
+    """Verify each rollback independently; a failed realm must not strand safe siblings."""
     done = {}
     for realm, diff in changes.items():
-        if diff.get('absent_before'):
-            # The key did not exist before the run: the evidence export was taken in registry_changes, now remove the new key.
-            if diff['added_or_changed']:
-                removed = subprocess.run(['reg.exe', 'delete', REGISTRY_KEYS[realm], '/f'], capture_output=True)
-                done[realm] = ('removed-new-key' if removed.returncode == 0 and not _registry_key_exists(REGISTRY_KEYS[realm])
-                               else f'could not remove the key created by the run ({removed.returncode})')
-            continue
-        backup = snap / f'{realm}.reg'
-        if not backup.is_file():
-            raise RuntimeError(f'{realm} registry backup missing; cannot restore')
-        if diff['removed_or_changed'] or diff['added_or_changed']:
-            proc = subprocess.run(['reg.exe', 'import', str(backup)], capture_output=True)
-            if proc.returncode != 0:
-                done[realm] = f'import failed ({proc.returncode})'
+        try:
+            if diff.get('absent_before'):
+                # Post-run evidence was captured before allowing a newly created key's removal.
+                if diff['added_or_changed']:
+                    removed = subprocess.run(['reg.exe', 'delete', REGISTRY_KEYS[realm], '/f'], capture_output=True)
+                    done[realm] = ('removed-new-key' if removed.returncode == 0 and not _registry_key_exists(REGISTRY_KEYS[realm])
+                                   else f'could not remove the key created by the run ({removed.returncode})')
                 continue
-            verify = snap / 'post-run' / f'{realm}-after-restore.reg'
-            exported = subprocess.run(['reg.exe', 'export', REGISTRY_KEYS[realm], str(verify), '/y'],
-                                      capture_output=True)
-            if exported.returncode != 0 or not verify.is_file():
-                done[realm] = 'verification export failed'
-            else:
-                done[realm] = ('reimported' if _reg_records(backup) == _reg_records(verify)
-                               else 'still differs after import (new values may remain)')
+            backup = snap / f'{realm}.reg'
+            if not backup.is_file():
+                raise RuntimeError(f'{realm} registry backup missing; cannot restore')
+            if diff['removed_or_changed'] or diff['added_or_changed']:
+                proc = subprocess.run(['reg.exe', 'import', str(backup)], capture_output=True)
+                if proc.returncode != 0:
+                    done[realm] = f'import failed ({proc.returncode})'
+                    continue
+                verify = snap / 'post-run' / f'{realm}-after-restore.reg'
+                exported = subprocess.run(['reg.exe', 'export', REGISTRY_KEYS[realm], str(verify), '/y'],
+                                          capture_output=True)
+                if exported.returncode != 0 or not verify.is_file():
+                    done[realm] = 'verification export failed'
+                else:
+                    done[realm] = ('reimported' if _reg_records(backup) == _reg_records(verify)
+                                   else 'still differs after import (new values may remain)')
+        except Exception as ex:
+            # In particular, unknown post-delete presence is still a failure,
+            # never absence. Record it and attempt each independently backed realm.
+            done[realm] = f'restore failed: {type(ex).__name__}: {ex}'
     return done
 
 

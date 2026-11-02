@@ -3,6 +3,29 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.1] - 2026-11-02
+
+### Fixed
+- Portal travel reads Slime Rancher 2 1.3.0's loaded-save metadata through its actual native type, avoiding an intermittent wait
+  for a world that has already loaded. Existing save, scene and player checks remain in place.
+- Switching games selects the playable Unity window rather than the mod loader's console, confirms foreground ownership and
+  retries window parking while a cold destination is still creating its windows.
+- Cold portal launches prepare and verify the destination plugin before starting it. An already running destination is neither
+  reinstalled nor relaunched; a different linked save is still refused.
+- The game left behind enters recoverable standby after the screen is covered: reduced quality and frame rate, muted audio and
+  paused single-player simulation. Audio and graphics settings are restored on arrival or cancellation; a quality-setting error
+  no longer prevents the other settings from being restored.
+- The SR1 portal crossing volume is reachable at walking height, and arrival leaves clearance outside its trigger.
+- Launcher startup uses the current artwork and layout throughout loading and first-run consent. Optional news and game scans
+  no longer block startup; backend failures have an explicit retry, unavailable navigation is disabled and late cached news
+  cannot replace a completed refresh or leave an empty feed loading indefinitely.
+- SR2 imported-species baked colour profiles, model lifetime checks, cache publication, archive/path validation, cancellation and
+  rollback checks have been tightened. Native save/registry cleanup reports incomplete restoration as a failure.
+
+### Changed
+- Shorter portal close and emergence animations. A cold destination still needs its normal game startup and save-loading time;
+  keeping both games running avoids that startup cost on subsequent crossings.
+
 ## [0.2.0] - 2026-10-31
 
 ### Added

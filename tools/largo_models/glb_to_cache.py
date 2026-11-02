@@ -223,31 +223,47 @@ for o in meshes:                      # morph targets cannot travel to the games
     if o.data.shape_keys:
         report.setdefault('shape_keys_dropped', []).append(o.name)
         o.shape_key_clear()
+# One mesh per material before reducing: faces, eyes and markings are often thin layers just above the skin, and reducing
+# the whole mesh at once pushed them under it (Quantum Ringtail lost its face). Each part then keeps its own budget.
+def separate_by_material(o):
+    used = {p.material_index for p in o.data.polygons}
+    if len(used) < 2 or skinned_to(o) is None:
+        return [o]
+    for other in bpy.context.selected_objects:
+        other.select_set(False)
+    o.select_set(True)
+    bpy.context.view_layer.objects.active = o
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.separate(type='MATERIAL')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    pieces = [x for x in bpy.context.selected_objects if x.type == 'MESH' and x.data.polygons]
+    report.setdefault('separated', {})[o.name] = len(pieces)
+    return pieces
+
+
+def weld_seams(o):
+    """Exports cut the mesh at every UV seam (or into a soup of loose triangles). Reduced as is, each piece shrinks on its
+    own and holes open between them (Quantum Cotton, Rad Flutter): weld first, the UVs keep their seams."""
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    before = len(bm.verts)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    if len(bm.verts) < before:
+        bm.to_mesh(o.data)
+        report.setdefault('welded', {})[o.name] = [before, len(bm.verts)]
+    bm.free()
+
+
+for o in meshes:
+    weld_seams(o)
+meshes = [piece for o in meshes for piece in separate_by_material(o)]
 total = sum(len(o.data.polygons) for o in meshes)
 tri_counts = {}
 for o in meshes:
     o.data.calc_loop_triangles()
     tri_counts[o.name] = len(o.data.loop_triangles)
 total_tris = sum(tri_counts.values())
-if total_tris > TRIS:
-    for o in meshes:
-        share = max(400, TRIS * tri_counts[o.name] / total_tris)
-        ratio = min(1.0, share / max(1, tri_counts[o.name]))
-        if ratio < 0.98:
-            bpy.context.view_layer.objects.active = o
-            for other in bpy.context.selected_objects:
-                other.select_set(False)
-            o.select_set(True)
-            mod = o.modifiers.new('sb_decimate', 'DECIMATE')
-            mod.decimate_type = 'COLLAPSE'
-            mod.ratio = ratio
-            mod.use_collapse_triangulate = True
-            while o.modifiers[0] != mod:
-                bpy.ops.object.modifier_move_up(modifier=mod.name)
-            bpy.ops.object.modifier_apply(modifier=mod.name)
-            o.data.calc_loop_triangles()
-            report['decimated'][o.name] = [tri_counts[o.name], len(o.data.loop_triangles)]
-
 # ---- normalisation: the slime fits a 1-unit box, feet on y=0, centred (visual_transform then lowers it by 0.5 like the
 # extracted largos) ---------------------------------------------------------------------------------------------------
 lo, hi = Vector((1e9, 1e9, 1e9)), Vector((-1e9, -1e9, -1e9))
@@ -278,7 +294,36 @@ def round_list(values, nd=6):
     return [round(float(v), nd) for v in values]
 
 
-rest = [to_unity(rest_world(n)) for n in nodes]
+def apply_clip(action):
+    clear_animation()
+    for o in bpy.data.objects:
+        if action.name in actions_by_object.get(o.name, ()):
+            o.animation_data.action = action
+            slots_ = getattr(action, 'slots', None)
+            if slots_ and len(slots_):
+                match = next((s for s in slots_ if s.identifier.endswith(o.name)), slots_[0])
+                try:
+                    o.animation_data.action_slot = match
+                except Exception:
+                    pass
+
+
+def pose_bind():
+    """The pose the model is bound in: the first frame of its idle clip, i.e. what the author sees. A rig's rest pose can
+    differ (Quantum Ringtail's rig turns the body round in every clip, so at rest it faced backward)."""
+    names = sorted({a for ns in actions_by_object.values() for a in ns})
+    chosen = next((n for n in names if n.lower() == 'idle'), names[0] if names else None)
+    if chosen is None:
+        clear_animation()
+        return None
+    action = bpy.data.actions[chosen]
+    apply_clip(action)
+    scene.frame_set(int(action.frame_range[0]))
+    return chosen
+
+
+report['bind_pose'] = pose_bind()
+rest = [to_unity(node_world(n)) for n in nodes]
 
 
 def local(worlds, i):
@@ -295,7 +340,7 @@ bind_poses = [round_list([m[r][c] for r in range(4) for c in range(4)], 7) for m
 # ---- textures: each material's final colour, baked -----------------------------------------------------------------
 # The finished materials regrade their source textures with node trees (colour ramps, mixes, measured palettes), so the
 # raw image is not the colour the model shows. Cycles bakes what the material really produces onto the game mesh's UVs:
-# the base colour after every node (DIFFUSE, colour only) and the light it emits, strength included (EMIT).
+# the base colour after every node and the light it emits, strength included.
 def _bake_sizes():
     tris = {}
     for o in meshes:
@@ -334,7 +379,7 @@ def bake_all():
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
     scene.cycles.samples = 1
-    scene.render.bake.margin = 4
+    scene.render.bake.margin = 16                   # mipmaps of the smaller levels must not reach the empty texels
     scene.render.bake.use_clear = True
     for o in bpy.context.selected_objects:
         o.select_set(False)
@@ -362,10 +407,55 @@ def bake_all():
                 node.image = dummy
                 m.node_tree.nodes.active = node
                 nodes['skip:' + m.name] = (node, dummy)
-        if kind == 'albedo':
-            bpy.ops.object.bake(type='DIFFUSE', pass_filter={'COLOR'}, margin=4, use_clear=True)
-        else:
-            bpy.ops.object.bake(type='EMIT', margin=4, use_clear=True)
+        # What feeds the BSDF's Base Color (or Emission x strength) goes through a temporary emission shader and is baked as
+        # it is: exact, noise-free, and blind to transparency (hashed alpha speckled the DIFFUSE pass), transmission and metal.
+        restore = []
+        for m in wanted:
+            tree = m.node_tree
+            output = next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL' and n.is_active_output), None) or                 next((n for n in tree.nodes if n.type == 'OUTPUT_MATERIAL'), None)
+            bsdf = bsdf_of(m)
+            if output is None:
+                continue
+            old_links = [(l.from_socket, l.to_socket) for l in output.inputs['Surface'].links]
+            emit = tree.nodes.new('ShaderNodeEmission')
+            if bsdf is None:
+                emit.inputs['Color'].default_value = list(m.diffuse_color)[:3] + [1.0]
+            elif kind == 'alpha':
+                src = bsdf.inputs['Alpha']
+                if src.is_linked:
+                    tree.links.new(src.links[0].from_socket, emit.inputs['Color'])
+                else:
+                    emit.inputs['Color'].default_value = [src.default_value] * 3 + [1.0]
+            elif kind == 'albedo':
+                src = bsdf.inputs['Base Color']
+                if src.is_linked:
+                    tree.links.new(src.links[0].from_socket, emit.inputs['Color'])
+                else:
+                    emit.inputs['Color'].default_value = src.default_value
+            else:
+                src = bsdf.inputs.get('Emission Color') or bsdf.inputs.get('Emission')
+                strength = bsdf.inputs.get('Emission Strength')
+                if src is not None and src.is_linked:
+                    tree.links.new(src.links[0].from_socket, emit.inputs['Color'])
+                elif src is not None:
+                    emit.inputs['Color'].default_value = src.default_value
+                if strength is not None and strength.is_linked:
+                    tree.links.new(strength.links[0].from_socket, emit.inputs['Strength'])
+                elif strength is not None:
+                    emit.inputs['Strength'].default_value = strength.default_value
+            for l in list(output.inputs['Surface'].links):
+                tree.links.remove(l)
+            tree.links.new(emit.outputs['Emission'], output.inputs['Surface'])
+            restore.append((tree, output, emit, old_links))
+        try:
+            bpy.ops.object.bake(type='EMIT', margin=16, use_clear=True)
+        finally:
+            for tree, output, emit, old_links in restore:
+                for l in list(output.inputs['Surface'].links):
+                    tree.links.remove(l)
+                for a, b in old_links:
+                    tree.links.new(a, b)
+                tree.nodes.remove(emit)
         out = {}
         for key, (node, img) in nodes.items():
             if not key.startswith('skip:'):
@@ -382,11 +472,62 @@ def bake_all():
     emission = run('emission', emitting) if emitting else {}
     for m in mats:
         baked[m.name] = {'albedo': albedo.get(m.name), 'emission': emission.get(m.name)}
-    bake_report.update({'materials': len(mats), 'emitting': len(emitting), 'sizes': {k: v for k, v in sizes.items()}})
+    folded = [m.name for m in emitting if baked[m.name]['albedo'] and baked[m.name]['emission'] and fold_glow(baked[m.name])]
+    # Alpha-blended parts with an alpha map (Quantum Twin's energy ribbons, mostly transparent): drawn opaque they hid the
+    # body. Their alpha is baked apart; the post-pass moves it into the albedo and the games clip at half.
+    blended = [m for m in mats if baked[m.name]['albedo'] and getattr(m, 'surface_render_method', '') == 'BLENDED'
+               and bsdf_of(m) is not None and bsdf_of(m).inputs['Alpha'].is_linked]
+    for name, file in (run('alpha', blended) if blended else {}).items():
+        baked[name]['alpha'] = file
+    bake_report.update({'materials': len(mats), 'emitting': len(emitting), 'glow_folded': folded,
+                        'alpha_clipped': [m.name for m in blended], 'sizes': {k: v for k, v in sizes.items()}})
+
+
+def fold_glow(entry):
+    """A glow material (an energy ring, a flame) looks like its emission over a dark albedo. Slime Rancher 2 draws no
+    emission and Slime Rancher only a fraction, so it came out dark: its glow becomes its albedo."""
+    import numpy as np
+    images = [bpy.data.images.load(os.path.join(OUT, entry[k])) for k in ('albedo', 'emission')]
+    a, e = (np.empty(len(img.pixels), dtype=np.float32) for img in images)
+    images[0].pixels.foreach_get(a)
+    images[1].pixels.foreach_get(e)
+    a, e = a.reshape(-1, 4), e.reshape(-1, 4)
+    weights = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
+    la, le = a[:, :3] @ weights, e[:, :3] @ weights
+    filled = (la > 0.02) | (le > 0.02)
+    if not filled.any() or le[filled].mean() <= la[filled].mean():
+        return False
+    a[:, :3] = np.maximum(a[:, :3], e[:, :3])
+    images[0].pixels.foreach_set(a.reshape(-1))
+    images[0].save()
+    entry['emission'] = None
+    return True
 
 
 bake_all()
 report['bake'] = bake_report
+
+# the textures are baked first, on the full mesh: the reduced mesh no longer covers its UV islands whole (holes in the
+# bake, black blotches in game), and samples the complete texture instead
+if total_tris > TRIS:
+    for o in meshes:
+        share = max(400, TRIS * tri_counts[o.name] / total_tris)
+        ratio = min(1.0, share / max(1, tri_counts[o.name]))
+        if ratio < 0.98:
+            bpy.context.view_layer.objects.active = o
+            for other in bpy.context.selected_objects:
+                other.select_set(False)
+            o.select_set(True)
+            mod = o.modifiers.new('sb_decimate', 'DECIMATE')
+            mod.decimate_type = 'COLLAPSE'
+            mod.ratio = ratio
+            mod.use_collapse_triangulate = True
+            while o.modifiers[0] != mod:
+                bpy.ops.object.modifier_move_up(modifier=mod.name)
+            bpy.ops.object.modifier_apply(modifier=mod.name)
+            o.data.calc_loop_triangles()
+            report['decimated'][o.name] = [tri_counts[o.name], len(o.data.loop_triangles)]
+
 
 
 def material_entry(m):
@@ -399,18 +540,45 @@ def material_entry(m):
         entry['textures'].append({'property': '_MainTex', 'file': done['albedo'], 'source_color_space': 1})
     if done and done['emission']:
         entry['textures'].append({'property': '_EmissionMap', 'file': done['emission'], 'source_color_space': 1})
+    if done and done.get('alpha'):
+        entry['floats']['_Cutoff'] = 0.5
+        entry['alpha_merge'] = done['alpha']          # consumed by postpass.merge_alpha
     return entry
 
 
 # ---- parts ---------------------------------------------------------------------------------------------------------
 parts = []
 names_index = {n['name']: i for i, n in enumerate(nodes)}
-largest = max(meshes, key=lambda o: len(o.data.loop_triangles))
+BODY_GROUP = re.compile(r'(^|_)(BODY|BAND|BRIDGE)(_|$)', re.I)
+
+
+def body_score(o):
+    """Vertices held mostly by a body bone (BODY, BAND_*, BRIDGE). The body renderer is the mesh with the most: the
+    largest mesh can be a ring (Quantum Twin) or a wing (Rad Flutter, split per material)."""
+    if skinned_to(o) is None:
+        return 0
+    names = {vg.index: vg.name for vg in o.vertex_groups}
+    count = 0
+    for v in o.data.vertices:
+        if v.groups:
+            name = names.get(max(v.groups, key=lambda g: g.weight).group, '')
+            count += bool(BODY_GROUP.search(name)) and 'ROOT' not in name.upper()
+    return count
+
+
+scores = {o.name: body_score(o) for o in meshes}
+largest = max(meshes, key=lambda o: (scores[o.name], len(o.data.loop_triangles)))
+report['body_mesh'] = largest.name
+depsgraph = bpy.context.evaluated_depsgraph_get()
+evaluated = []
 for o in meshes:
-    me = o.data
+    source = o.data                                  # vertex groups (same vertex indices as the evaluated mesh)
+    eo = o.evaluated_get(depsgraph)                  # the mesh as bound: deformed by the rig in the bind pose
+    me = eo.to_mesh(preserve_all_data_layers=True, depsgraph=depsgraph)
+    evaluated.append(eo)
     me.calc_loop_triangles()
     uv_layer = me.uv_layers.active
-    mw = o.matrix_world
+    mw = eo.matrix_world.copy()
     arm = skinned_to(o)
     group_bone = {}
     if arm is not None:
@@ -445,7 +613,7 @@ for o in meshes:
                 if vi not in vweights:
                     ws = []
                     if arm is not None:
-                        for g in me.vertices[vi].groups:
+                        for g in source.vertices[vi].groups:
                             if g.group in group_bone and g.weight > 1e-4:
                                 ws.append((g.weight, group_bone[g.group]))
                     ws.sort(reverse=True)
@@ -521,17 +689,7 @@ for clip in clip_names:
     count = int(math.floor(duration * RATE + 1e-6)) + 1
     times = [round(min(i / RATE, duration), 6) for i in range(count)]
     times = sorted(set(times))
-    clear_animation()
-    for o in bpy.data.objects:
-        if action.name in actions_by_object.get(o.name, ()):
-            o.animation_data.action = action
-            slots_ = getattr(action, 'slots', None)
-            if slots_ and len(slots_):
-                match = next((s for s in slots_ if s.identifier.endswith(o.name)), slots_[0])
-                try:
-                    o.animation_data.action_slot = match
-                except Exception:
-                    pass
+    apply_clip(action)
     per_node = [[] for _ in nodes]
     for t in times:
         f = start + t * fps
@@ -587,7 +745,7 @@ for clip in clip_names:
 default = next((c['name'] for c in clips_out if c['name'] == 'Idle v4'), clips_out[0]['name'] if clips_out else None)
 
 # ---- icon: the model itself, front 3/4, transparent ---------------------------------------------------------------
-clear_animation()
+pose_bind()                                      # the icon shows the model as bound (idle pose)
 icon = 'icon.png'
 cam_data = bpy.data.cameras.new('sb_cam')
 cam_data.type = 'ORTHO'

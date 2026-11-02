@@ -598,7 +598,7 @@ class SkeletonTests(unittest.TestCase):
             second = K.generate_adapter_skeleton(report, out_root=Path(tmp) / 'two', subdir='adapters')
             self.assertEqual((first['status'], second['status']), ('WRITTEN', 'WRITTEN'))
             self.assertEqual(first['files'], second['files'])
-            self.assertEqual(first['directory'], 'adapters/fixture.harmony-heavy.sr2')
+            self.assertEqual(first['directory'], 'adapters/fixture.harmony_heavy.sr2')
             for entry in first['files']:
                 data = (Path(tmp) / 'one' / entry['path']).read_bytes()
                 self.assertEqual(hashlib.sha256(data).hexdigest(), entry['sha256'])

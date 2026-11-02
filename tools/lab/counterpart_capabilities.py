@@ -12,7 +12,7 @@ import stat
 import tempfile
 import time
 
-from tools.lab import oracle, process_guard
+from tools.lab import oracle, process_guard, save_guard
 from tools.lab.paths import refuse_reparse, validate_lab_destination
 
 _NAME = re.compile(r'[A-Za-z0-9_-]{1,128}\Z')
@@ -201,14 +201,8 @@ def _cleanup_verified(result: dict) -> bool:
             any(result.get(k) for k in ('safety_error', 'registry_error', 'restoration_skipped',
                                        'registry_restore_skipped', 'save_restore_errors', 'stop_errors'))):
         return False
-    changes, restored = result.get('registry_changes'), result.get('registry_restore')
-    if not isinstance(changes, dict) or set(changes) != {'SR2'} or not isinstance(restored, dict):
-        return False
-    delta = changes['SR2']
-    return (isinstance(delta, dict) and all(isinstance(delta.get(k), list) for k in
-            ('removed_or_changed', 'added_or_changed')) and
-            (not delta['removed_or_changed'] and not delta['added_or_changed'] or restored.get('SR2') == 'reimported') and
-            all(value == 'reimported' for value in restored.values()))
+    return save_guard.registry_restoration_verified(
+        result.get('registry_changes'), result.get('registry_restore'), ('SR2',))
 
 
 def run_diagnostic(*, current_user_authorized: bool, timeout_s: float = 240) -> dict:

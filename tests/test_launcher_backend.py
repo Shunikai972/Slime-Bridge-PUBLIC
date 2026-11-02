@@ -423,6 +423,8 @@ class ApiTests(unittest.TestCase):
         self.api = LauncherAPI(config_path=self.root / 'Lab' / 'Launcher' / 'installations.json', known_paths=(self.sr1, self.sr2),
                                lab_games=self.root / 'nolab',
                                popen=lambda cmd, **kw: self.started.append((cmd, kw)) or FakeProc())
+        # a Play test starts a real BridgeHost: stop it, or every run left one server running for good
+        self.addCleanup(lambda: self.api._host.stop())
 
     def test_exposed_surface_is_methods_only(self):
         self.assertFalse([n for n in vars(self.api) if not n.startswith('_')])
@@ -479,6 +481,7 @@ class ApiTests(unittest.TestCase):
 
     def test_unknown_game_is_reported_not_guessed(self):
         api = LauncherAPI(config_path=self.root / 'c2.json', known_paths=(), lab_games=self.root / 'x')
+        self.addCleanup(lambda: api._host.stop())
         api.set_preference('backup_ack', True)
         result = api.launch('SR1')
         self.assertFalse(result['ok'])

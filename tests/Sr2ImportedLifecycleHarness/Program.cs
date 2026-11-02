@@ -116,7 +116,10 @@ try
  multiOwner.ReleaseOwned();UnityEngine.Object.Destroy(multiOwner.gameObject);
  Sr2ImportedSpawner.Configure(false);var refused=Actor(definition);
  Check(!Sr2ImportedSpawner.TryApply(refused.Actor,out _) && refused.Body.enabled,"non-LAB executable refuses cache");
- Console.WriteLine($"RESULT {passed} passed; 0 failed (managed native doubles only; NOT game proof)");
+ Console.WriteLine($"LIFECYCLE RESULT {passed} passed; 0 failed (managed native doubles only; NOT game proof)");
+ ColourContracts.Run(Check);
+ ColourProfileContracts.Run(Check);
+ Console.WriteLine($"RESULT {passed} passed; 0 failed (production-linked managed CPU contracts only; NOT game/GPU proof)");
 }
 finally
 {

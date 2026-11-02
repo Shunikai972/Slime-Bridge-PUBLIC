@@ -1,5 +1,5 @@
 """Protected run of the portal crossing through the REAL launcher path (LauncherAPI.launch, BridgeHost child process,
-per-game tokens, the background travel thread), on real installs.
+per-game tokens, the background travel thread), on isolated LAB copies.
 
     py -3.12 -m tools.lab.launcher_travel_probe --sr1 <SR1 folder> --sr2 <SR2 folder> --current-user-authorized
 
@@ -23,6 +23,7 @@ from apps.launcher import plugins
 from apps.launcher.desktop import LauncherAPI
 from tools.lab import oracle, sanctuary_oracle, save_guard, screen_guard
 from tools.lab.process_guard import assert_no_other_game_processes
+from tools.lab.paths import validate_lab_destination
 from tools.lab.window_shot import capture
 
 REPO_ROOT = oracle.REPO_ROOT
@@ -46,7 +47,8 @@ def wait_for(api, label, timeout, result):
 
 
 def run(sr1_root, sr2_root, timeout_s):
-    roots = {'SR1': str(Path(sr1_root).resolve()), 'SR2': str(Path(sr2_root).resolve())}
+    roots = {realm: str(validate_lab_destination(Path(root) / name, oracle.LAB).parent)
+             for realm, root, name in (('SR1', sr1_root, 'SlimeRancher.exe'), ('SR2', sr2_root, 'SlimeRancher2.exe'))}
     assert_no_other_game_processes()
     directory = REPO_ROOT / 'Lab' / 'RuntimeArtifacts' / ('launcher-travel-' + datetime.now().strftime('%Y%m%d-%H%M%S'))
     directory.mkdir(parents=True)
@@ -55,6 +57,7 @@ def run(sr1_root, sr2_root, timeout_s):
     screens = screen_guard.snapshot(('SR1', 'SR2'))
     config = Path(tempfile.mkdtemp(prefix='sb-launcher-')) / 'Launcher' / 'installations.json'
     api = None
+    previous_plugins = oracle.snapshot_plugins(roots)
     try:
         original = plugins.find_source
         plugins.find_source = lambda realm, repo_root=None: BUILD[realm]
@@ -95,20 +98,19 @@ def run(sr1_root, sr2_root, timeout_s):
             result['sr1_screen'] = capture(sr1.pid, directory / 'sr1-return.png') if sr1 else 'no SR1'
         result['passed'] = bool(out and out['state'] == 'COMPLETE' and result.get('back') and result['back']['state'] == 'COMPLETE')
     finally:
-        if api is not None:
-            for realm, child in list(api._launcher._children.items()):
-                if child.poll() is None:
-                    child.terminate()
-                    try:
-                        child.wait(timeout=20)
-                    except Exception:  # noqa: BLE001
-                        child.kill()
-            api.shutdown()
-        time.sleep(2)
-        oracle._finalize_current_user(result, snap, [], directory)
-        result['display_settings_restored'] = screen_guard.restore(screens)
-        (directory / 'launcher-travel.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
-        print(f'evidence: {directory}', flush=True)
+        try:
+            oracle.cleanup_steps(result, [
+                ('stop_errors', lambda: oracle._stop_owned(dict(api._launcher._children),
+                    {realm: Path(roots[realm]) / name for realm, name in
+                     (('SR1', 'SlimeRancher.exe'), ('SR2', 'SlimeRancher2.exe'))}) if api is not None else {}),
+                ('launcher_shutdown', lambda: api.shutdown() if api is not None else None),
+                ('plugins_restored', lambda: oracle.restore_plugins(previous_plugins)),
+                ('protected_finalizer', lambda: oracle._finalize_current_user(result, snap, [], directory)),
+                ('display_settings_restored', lambda: screen_guard.restore(screens)),
+            ])
+        finally:
+            (directory / 'launcher-travel.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
+            print(f'evidence: {directory}', flush=True)
     return result
 
 
@@ -128,7 +130,8 @@ def main(argv=None):
         for h in item.get('history', []):
             print('   ', h['text'])
     print(json.dumps({k: result.get(k) for k in ('passed', 'saves_match_backup_after_restore', 'display_settings_restored')}))
+    return 0 if result.get('passed') is True and result.get('cleanup_completed') is True else 1
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

@@ -539,9 +539,27 @@ namespace SlimeBridge.SR1
             return true;
         }
 
-        // Measured in the LAB desert (cyan sky light): a quarter of the colour from the scene light keeps the shading, the
-        // rest comes from the baked self-light map (tools/largo_models/postpass.py) so every hue stays the author's.
-        internal const float UserLargoLitShare = 0.25f, UserLargoGlowGain = 1f;
+        /// <summary>How finished user largo models are lit (calibrated by measurement against the author's Blender renders):
+        /// the baked colour lit normally, the baked glow at its authored strength, and a neutral ambient light of their own
+        /// (SR1's ambient is the cyan sky, which pulled every colour toward cyan). LAB runs may override the three numbers with
+        /// SLIMEBRIDGE_LARGO_LOOK="ambient=..,albedo=..,emit=.." to calibrate.</summary>
+        // calibrated 2026-10-31 (tools/largo_models/colour_check.py): mean deltaE 5-7 against the Material Preview renders
+        internal static float LookAmbient = 1.2f, LookAlbedo = 1f, LookEmit = 0.3f, LookCool = 0.5f;
+        private static bool _lookRead;
+        internal static void ReadLook()
+        {
+            if (_lookRead) return;
+            _lookRead = true;
+            var raw = Environment.GetEnvironmentVariable("SLIMEBRIDGE_LARGO_LOOK");
+            if (string.IsNullOrEmpty(raw) || !BridgeEntry.OracleExecutableMatches()) return;
+            foreach (var pair in raw.Split(','))
+            {
+                var kv = pair.Split('=');
+                if (kv.Length != 2 || !float.TryParse(kv[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) || v < 0f || v > 8f) continue;
+                if (kv[0] == "ambient") LookAmbient = v; else if (kv[0] == "albedo") LookAlbedo = v; else if (kv[0] == "emit") LookEmit = v; else if (kv[0] == "cool") LookCool = v;
+            }
+            UnityEngine.Debug.Log("[SlimeBridge] largo look: ambient=" + LookAmbient + " albedo=" + LookAlbedo + " emit=" + LookEmit + " cool=" + LookCool);
+        }
 
         private static bool TryBuildMaterialEntry(string directory, Dictionary<string, object> entry,
             HashSet<string> verifiedFiles, out Material material, out string problem)
@@ -593,27 +611,37 @@ namespace SlimeBridge.SR1
             {
                 if (propertyTextures.TryGetValue(property, out var candidate)) { displayTexture = candidate; break; }
             }
-            // Finished user largo models: their base colour and their glow are baked from the author's materials. Drawn with
-            // the Standard shader's defaults they turned glossy and mirrored the sky, which shifted every colour toward
-            // cyan: matte, no reflections, and the baked glow as it is (its strength is in the map).
+            // Finished user largo models: base colour and glow baked from the author's materials. Matte and without reflections
+            // (the Standard defaults mirrored the cyan sky); the glow at its authored strength; the ambient is set per renderer
+            // at spawn (ImportedSpawner.ApplyNeutralAmbient).
             var litShare = 1f;
             if (entry.TryGetValue("shader", out var shaderValue) && shaderValue as string == "SlimeBridge/Baked" && displayTexture != null)
             {
+                ReadLook();
+                result.name = "SlimeBridgeUserLargo";
                 result.SetFloat("_Glossiness", 0f);
                 result.SetFloat("_Metallic", 0f);
                 result.SetFloat("_SpecularHighlights", 0f);
                 result.SetFloat("_GlossyReflections", 0f);
                 result.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
                 result.EnableKeyword("_GLOSSYREFLECTIONS_OFF");
+                litShare = LookAlbedo;
+                // Parts the author drew alpha-blended (glow ribbons): clipped at the baked alpha, opaque they hid the body.
+                if (entry.TryGetValue("floats", out var floatRows) && floatRows is Dictionary<string, object> floats &&
+                    floats.TryGetValue("_Cutoff", out var cutoffValue) && TryFloat(cutoffValue, out var cutoff))
+                {
+                    result.SetFloat("_Mode", 1f);
+                    result.SetFloat("_Cutoff", cutoff);
+                    result.SetOverrideTag("RenderType", "TransparentCutout");
+                    result.EnableKeyword("_ALPHATEST_ON");
+                    result.renderQueue = 2450;
+                }
                 if (propertyTextures.TryGetValue("_EmissionMap", out var glow))
                 {
-                    // The scene's ambient light is tinted (the desert sky is cyan): the baked self-light map carries most of
-                    // the colour, the lit base (_LitShare of the albedo) only the shading, so the hue stays the author's.
                     result.EnableKeyword("_EMISSION");
                     result.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
                     result.SetTexture("_EmissionMap", glow);
-                    result.SetColor("_EmissionColor", new Color(UserLargoGlowGain, UserLargoGlowGain, UserLargoGlowGain, 1f));
-                    litShare = UserLargoLitShare;
+                    result.SetColor("_EmissionColor", new Color(LookEmit, LookEmit, LookEmit, 1f));
                 }
             }
             if (displayTexture != null) result.mainTexture = displayTexture;
@@ -639,8 +667,8 @@ namespace SlimeBridge.SR1
                     }
                 }
             }
-            result.color = litShare < 1f ? new Color(color.r * litShare, color.g * litShare, color.b * litShare, color.a) : color;
-            result.name = "SlimeBridgeImportedMaterial";
+            result.color = litShare != 1f ? new Color(color.r * litShare, color.g * litShare, color.b * litShare, color.a) : color;
+            if (result.name != "SlimeBridgeUserLargo") result.name = "SlimeBridgeImportedMaterial";
             material = result;
             return true;
         }

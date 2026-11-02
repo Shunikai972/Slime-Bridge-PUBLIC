@@ -221,7 +221,7 @@ def validate_glb(data):
         return out
     try:
         _validate_doc(doc, binary, err)
-    except (KeyError, TypeError, ValueError, IndexError, AttributeError, struct.error) as exc:
+    except (KeyError, TypeError, ValueError, IndexError, AttributeError, OverflowError, struct.error) as exc:
         err('GLB_STRUCTURE_INVALID', f'{type(exc).__name__}: {exc}')
     return out
 

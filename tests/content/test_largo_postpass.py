@@ -73,3 +73,28 @@ class LargoPostpassTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class LargoBodyBoneTests(unittest.TestCase):
+    def _rig(self, names, counts):
+        bones = [{'name': 'ROOT', 'parent': -1, 'p': [0.0, 0.0, 0.0], 'q': [0.0, 0.0, 0.0, 1.0], 's': [1.0, 1.0, 1.0]}]
+        bones += [{'name': n, 'parent': 0, 'p': [0.0, 0.0, 0.0], 'q': [0.0, 0.0, 0.0, 1.0], 's': [1.0, 1.0, 1.0]} for n in names]
+        rng = np.random.default_rng(2)
+        verts, weights = [], []
+        for i, (n, (count, lo, hi)) in enumerate(zip(names, counts), start=1):
+            verts += rng.uniform(lo, hi, size=(count, 3)).round(4).tolist()
+            weights += [[1.0, 0, 0, 0, i, i, i, i]] * count
+        palette = ['ROOT'] + names
+        return {'skeleton': {'bones': bones}, 'skinned_renderers': [
+            {'role': 'body', 'mesh_name': 'b', 'vertices': verts, 'bone_weights': weights, 'skin_bones': palette}]}
+
+    def test_a_heavier_wing_is_not_taken_for_the_body(self):
+        model = self._rig(['WING_UP_R', 'BODY'], [(900, [0.5, 0, 0], [2.5, 1, 0.1]), (300, [-0.3, 0, -0.3], [0.3, 0.6, 0.3])])
+        self.assertEqual(postpass._anchor(model)[0], 'BODY')
+        _, lo, hi = postpass._core(model)
+        self.assertLess(hi[0] - lo[0], 0.7)
+
+    def test_a_twin_is_measured_on_one_of_its_bodies(self):
+        model = self._rig(['BODY_L', 'BODY_R'], [(300, [-0.6, 0, -0.3], [0.0, 0.6, 0.3]), (300, [0.0, 0, -0.3], [0.6, 0.6, 0.3])])
+        _, lo, hi = postpass._core(model)
+        self.assertLess(hi[0] - lo[0], 0.7)

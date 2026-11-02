@@ -24,7 +24,10 @@ def _label(group):
     match = STAMP.match(group)
     if not match:
         return group
-    stamp = datetime.strptime(match['stamp'], '%Y%m%d%H%M%S')
+    try:
+        stamp = datetime.strptime(match['stamp'], '%Y%m%d%H%M%S')
+    except ValueError:
+        return group
     name = match['name']
     # SR2 groups look like <stamp>_<slot>; SR1 groups carry the name the player typed.
     return f"{name} ({stamp:%Y-%m-%d %H:%M})" if not name.isdigit() else f"{stamp:%Y-%m-%d %H:%M} (#{name})"

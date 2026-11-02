@@ -386,7 +386,10 @@ namespace SlimeBridge.SR1
                 if (player == null) return false;
                 var p = _layout.Portal.Position;
                 var facing = Quaternion.Euler(0f, _layout.Portal.Yaw, 0f);
-                var position = new Vector3(p[0], p[1], p[2]) + facing * Vector3.forward * (emerge ? 3.4f : 5.5f);
+                // Include the player's capsule clearance: arriving inside the trigger consumes its entry during cooldown.
+                var distance = emerge ? Mathf.Max(4.2f, _layout.Portal.TriggerRadius + 2f)
+                                      : Mathf.Max(5.5f, _layout.Portal.TriggerRadius + 3f);
+                var position = new Vector3(p[0], p[1], p[2]) + facing * Vector3.forward * distance;
                 var yaw = emerge ? _layout.Portal.Yaw : _layout.Portal.Yaw + 180f;
                 player.TeleportTo(position, scene.RegionRegistry.GetCurrentRegionSetId(), new Vector3(4f, yaw, 0f), false, false);
                 _lastCrossRequest = Time.realtimeSinceStartup;      // standing at the portal must not start a new crossing
@@ -792,6 +795,48 @@ namespace SlimeBridge.SR1
                     catch (Exception) { }
                     var file = Path.Combine(folder, "actor-" + tag + "-" + (++count).ToString("D2") + "-" + canonical.Replace('.', '-') + ".png");
                     File.WriteAllBytes(file, tex.EncodeToPNG());
+                    // The same view with only this slime drawn on a magenta background: an exact mask of its pixels (colour
+                    // measurement), unaffected by its shadow or by anything moving in the scene.
+                    try
+                    {
+                        var isolated = 31;                                 // an unnamed layer nothing else uses (the vacpack has one)
+                        for (var l = 31; l >= 8; l--) if (string.IsNullOrEmpty(LayerMask.LayerToName(l))) { isolated = l; break; }
+                        var layers = new List<KeyValuePair<GameObject, int>>();
+                        foreach (var r in identifiable.GetComponentsInChildren<Renderer>(false))
+                            if (r != null && r.enabled) { layers.Add(new KeyValuePair<GameObject, int>(r.gameObject, r.gameObject.layer)); r.gameObject.layer = isolated; }
+                        var mask = new RenderTexture(1000, 800, 24, RenderTextureFormat.ARGB32);
+                        var cullingMask = cam.cullingMask; var clearFlags = cam.clearFlags; var background = cam.backgroundColor;
+                        cam.cullingMask = 1 << isolated; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(1f, 0f, 1f, 1f);
+                        cam.targetTexture = mask;
+                        cam.Render();
+                        RenderTexture.active = mask;
+                        var maskTex = new Texture2D(mask.width, mask.height, TextureFormat.RGB24, false);
+                        maskTex.ReadPixels(new Rect(0, 0, mask.width, mask.height), 0, 0);
+                        maskTex.Apply();
+                        RenderTexture.active = previous;
+                        cam.targetTexture = null; cam.cullingMask = cullingMask; cam.clearFlags = clearFlags; cam.backgroundColor = background;
+                        foreach (var kv in layers) if (kv.Key != null) kv.Key.layer = kv.Value;
+                        File.WriteAllBytes(file.Substring(0, file.Length - 4) + "-mask.png", maskTex.EncodeToPNG());
+                        UnityEngine.Object.Destroy(maskTex);
+                        // and the same view without the slime: where the shot equals it, something stands in front of the slime
+                        var hidden = new List<Renderer>();
+                        foreach (var r in identifiable.GetComponentsInChildren<Renderer>(false))
+                            if (r != null && r.enabled) { r.enabled = false; hidden.Add(r); }
+                        cam.targetTexture = mask;
+                        cam.Render();
+                        RenderTexture.active = mask;
+                        var bgTex = new Texture2D(mask.width, mask.height, TextureFormat.RGB24, false);
+                        bgTex.ReadPixels(new Rect(0, 0, mask.width, mask.height), 0, 0);
+                        bgTex.Apply();
+                        RenderTexture.active = previous;
+                        cam.targetTexture = null;
+                        foreach (var r in hidden) if (r != null) r.enabled = true;
+                        File.WriteAllBytes(file.Substring(0, file.Length - 4) + "-bg.png", bgTex.EncodeToPNG());
+                        UnityEngine.Object.Destroy(bgTex);
+                        mask.Release();
+                        UnityEngine.Object.Destroy(mask);
+                    }
+                    catch (Exception ex) { _events.Add("actor mask failed " + canonical + ": " + ex.GetType().Name); }
                     _shots.Add(file);
                     UnityEngine.Object.Destroy(tex);
                     rt.Release();

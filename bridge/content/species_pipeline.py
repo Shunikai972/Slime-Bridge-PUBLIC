@@ -197,13 +197,11 @@ def _extract_with_fallback(species, canonical, sr2_dir, work, clips, source_bund
 
 def _promote(built: Path, cache_root: Path, canonical: str) -> None:
     """Swap the new cache in, keeping the previous one under pipeline-replaced (never silently destroyed)."""
-    target = Path(cache_root) / 'sr2-to-sr1' / canonical
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if target.exists():
-        REPLACED_ROOT.mkdir(parents=True, exist_ok=True)
-        stamp = time.strftime('%Y%m%d-%H%M%S')
-        shutil.move(str(target), str(REPLACED_ROOT / f'{canonical}-{stamp}'))
-    shutil.move(str(built), str(target))
+    from .cache_publication import cache_path, publish_directory
+    import uuid
+    target = cache_path(cache_root, 'sr2-to-sr1', canonical)
+    previous = REPLACED_ROOT / f'{canonical}-{uuid.uuid4().hex}'
+    publish_directory(built, target, backup=previous)
 
 
 def add_missing_clips(cache_dir: Path, assets: Sr2Assets, plan: dict) -> list[str]:
@@ -253,8 +251,9 @@ def add_missing_clips(cache_dir: Path, assets: Sr2Assets, plan: dict) -> list[st
 
 
 def build_species(row: dict, assets: Sr2Assets, sr2_dir: Path, cache_root: Path, force: bool = False) -> dict:
+    from .cache_publication import cache_path, checked_tree
     species, canonical = row['species'], row['canonical']
-    cache_dir = Path(cache_root) / 'sr2-to-sr1' / canonical
+    cache_dir = checked_tree(cache_path(cache_root, 'sr2-to-sr1', canonical))
     report = {'canonical': canonical, 'species': species, 'notes': []}
     clips, assets, source_bundle, species = _plan(row, assets, sr2_dir)
     if cache_is_complete(cache_dir) and not force:
@@ -264,7 +263,7 @@ def build_species(row: dict, assets: Sr2Assets, sr2_dir: Path, cache_root: Path,
         if added:
             report['notes'].append('clips added: ' + ', '.join(added))
     else:
-        work = WORK_ROOT / canonical
+        work = checked_tree(WORK_ROOT / canonical)
         shutil.rmtree(work, ignore_errors=True)
         work.mkdir(parents=True, exist_ok=True)
         try:

@@ -12,11 +12,14 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import uuid
 from collections import deque
 from pathlib import Path
+
+from bridge.cache.fs import confined_root, ensure_dir, refuse_links
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOL_NAME = 'SlimeBridge-AssetConverter'
@@ -24,6 +27,7 @@ DIRECTIONS = ('sr1-to-sr2', 'sr2-to-sr1', 'both')
 PHASES = (('list', 'Counting species', 0.03), ('convert', 'Extracting and converting', 0.62),
           ('verify', 'Verifying', 0.20), ('export', 'Preparing the SlimeBridge caches', 0.15))
 _KEY = re.compile(r'^\[([^\]]+)\]')
+_CACHE_INSTALL_LOCK = threading.Lock()
 
 
 def tool_candidates(configured=None):
@@ -291,6 +295,7 @@ class BuiltinExtractJob:
         self._run_fn, self._roster_fn, self._verify_fn, self._largo_fn = run, roster, verify, largos
         self._run_sr1_fn, self._roster_sr1_fn = run_sr1, roster_sr1
         self._lock = threading.Lock()
+        self._proc = None
         self._cancel = threading.Event()
         self._thread = None
         self._logs = deque(maxlen=300)
@@ -309,6 +314,14 @@ class BuiltinExtractJob:
     def cancel(self):
         self._cancel.set()
 
+        with self._lock:
+            process = self._proc
+            if process is not None and process.poll() is None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass  # the owned child finished between poll and kill
+
     def snapshot(self, log_tail=60):
         with self._lock:
             return {'id': self.id, **json.loads(json.dumps(self.state, default=str)), 'logs': list(self._logs)[-log_tail:],
@@ -324,6 +337,8 @@ class BuiltinExtractJob:
         """The pipeline in its own process under the memory limit; progress arrives as `@@{json}` lines on its stdout."""
         import subprocess
         import sys
+        if self._cancel.is_set():
+            raise InterruptedError('cancelled')
         request = self.cache_dir / '.extract-request.json'
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         request.write_text(json.dumps({'mode': mode, 'rows': rows, 'sr2_dir': str(data_dir), 'sr1_dir': str(self._sr1_data()),
@@ -338,6 +353,10 @@ class BuiltinExtractJob:
                                    creationflags=low_priority)
         outcome, fatal, tail = None, None, deque(maxlen=12)
         try:
+            with self._lock:
+                self._proc = process
+            if self._cancel.is_set():
+                raise InterruptedError('cancelled')
             for line in process.stdout:
                 if self._cancel.is_set():
                     process.kill()
@@ -360,13 +379,23 @@ class BuiltinExtractJob:
                 elif event.get('event') == 'fatal':
                     fatal = event.get('error')
         finally:
-            if process.poll() is None:
-                process.kill()
-            process.wait()
             try:
-                request.unlink()
-            except OSError:
-                pass
+                if process.poll() is None:
+                    process.kill()
+                process.wait()
+            finally:
+                try:
+                    process.stdout.close()
+                finally:
+                    with self._lock:
+                        if self._proc is process:
+                            self._proc = None
+                    try:
+                        request.unlink()
+                    except OSError:
+                        pass
+        if self._cancel.is_set():
+            raise InterruptedError('cancelled')
         if fatal:
             raise RuntimeError(fatal)
         if outcome is None:
@@ -564,27 +593,60 @@ def _counts(result):
 def install_cache(output, destination):
     """Copy the SlimeBridge caches built by the converter into the folder the plugins read (``<dest>/<direction>/<id>``).
 
-    Only complete cache folders (with a manifest) are copied; existing ones are replaced atomically per species.
+    Only complete cache folders (with a manifest) are copied. Each replacement retains a rollback copy until commit.
     """
+    with _CACHE_INSTALL_LOCK:
+        return _install_cache(output, destination)
+
+
+def _install_cache(output, destination):
     import shutil
-    source_root = Path(output) / 'bridge-cache'
-    destination = Path(destination)
+    source_root = confined_root(Path(output) / 'bridge-cache')
+    destination = confined_root(destination)
+    if source_root == destination or source_root in destination.parents or destination in source_root.parents:
+        raise ValueError('Cache source and destination must not overlap')
     copied = []
     if not source_root.is_dir():
         return {'copied': 0, 'skipped': 0, 'destination': str(destination)}
     skipped = 0
+    plans = []
+    # Validate the entire static tree before changing any installed species. This is not an ancestor-swap lease.
+    for base, dirs, files in os.walk(source_root):
+        for name in dirs + files:
+            refuse_links(source_root, Path(base) / name)
     for direction_dir in sorted(p for p in source_root.iterdir() if p.is_dir()):
+        if direction_dir.name.lower() not in ('sr1-to-sr2', 'sr2-to-sr1'):
+            raise ValueError('Unknown cache direction')
         target_dir = destination / direction_dir.name.lower()
         for species in sorted(p for p in direction_dir.iterdir() if p.is_dir()):
-            if not any(species.glob('*manifest*.json')):
+            if not any(p.is_file() for p in species.glob('*manifest*.json')):
                 skipped += 1
                 continue
             target = target_dir / species.name
-            temp = target_dir / f'.{species.name}.tmp'
-            target_dir.mkdir(parents=True, exist_ok=True)
-            shutil.rmtree(temp, ignore_errors=True)
-            shutil.copytree(species, temp)
-            shutil.rmtree(target, ignore_errors=True)
-            os.replace(temp, target)
-            copied.append(f'{direction_dir.name}/{species.name}')
+            refuse_links(destination, target)
+            if target.exists() and not target.is_dir():
+                raise ValueError('Installed cache is not a directory')
+            plans.append((species, target))
+    for species, target in plans:
+        ensure_dir(destination, target.parent)
+        work = Path(tempfile.mkdtemp(prefix='.cache-', dir=target.parent))
+        staging, previous = work / 'new', work / 'previous'
+        try:
+            shutil.copytree(species, staging)
+            refuse_links(destination, target)
+            if target.exists():
+                os.replace(target, previous)
+            try:
+                os.replace(staging, target)
+            except OSError:
+                if previous.exists():
+                    os.replace(previous, target)
+                raise
+            if previous.exists():
+                shutil.rmtree(previous)
+            copied.append(f'{species.parent.name}/{species.name}')
+        finally:
+            # If rollback itself fails, retain the previous cache instead of deleting its recovery copy.
+            if not previous.exists():
+                shutil.rmtree(work)
     return {'copied': len(copied), 'skipped': skipped, 'destination': str(destination), 'items': copied[:200]}

@@ -10,7 +10,7 @@ Putting both games in one process was investigated first, because it would be th
 
 | | Slime Rancher 1 | Slime Rancher 2 |
 |---|---|---|
-| Unity player | 2019.4.29 (`UnityPlayer.dll`) | 2021.3.28 (`UnityPlayer.dll`) |
+| Unity player | 2019.4.29 (`UnityPlayer.dll`) | Unity 6 for 1.3.0; 2021.3.28 for the older 0.6 branch (`UnityPlayer.dll`) |
 | Scripting | Mono (`SlimeRancher_Data/Managed/*.dll`) | IL2CPP (`GameAssembly.dll`) + MelonLoader |
 | Mod loader | SRML / Harmony 1 | MelonLoader / Il2CppInterop |
 
@@ -43,7 +43,14 @@ portal facing away, light flash, iris opens: the player *comes out of the portal
 * Messages are at-least-once through a per-realm mailbox in BridgeHost (`/v1/travel/send|next|event|events`). A message stays at the
   head until its event is acknowledged; `resume`/`abort` jump the queue so a stuck instruction can never block the way back.
 * Safety nets in the plugin: a held game resumes by itself if BridgeHost stays silent for 45 s, or if the player returns to its
-  window by hand and stays for 4 s.
+  window by hand and stays for 4 s after a real background-to-foreground return. A source window lingering in front during startup
+  does not count as a manual return.
+* Window handoff checks the actual Unity player window. The mod loader can have a console in the same process; foreground PID
+  alone is not enough to authorize arrival. A denied focus request is retried within the existing transition deadline.
+* The destination waits silently while loading without pausing its startup. The covered source enters standby before it reports
+  departure ready. Audio mute is maintained while parked, and the previous listener settings are restored after graphics settings.
+* On SR2 1.3.0, the generated nullable metadata getter can return a native box of the underlying `GameMetadata`. The compatibility
+  reader checks that native type before using nullable methods; an unfamiliar type is rejected, not treated as a ready save.
 * Multiplayer (SR1 side): the traveller's body stays in the running SR1 world, parked in front of the portal with health kept full;
   with the `THROTTLE` policy the world keeps simulating slowly instead of freezing. Background policy is a launcher option.
 

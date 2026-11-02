@@ -505,6 +505,20 @@ namespace SlimeBridge.SR2
             MelonLoader.MelonLogger.Msg("[SlimeBridge] no lit shader found: user largo models use their measured palette");
             return null;
         }
+        private static float _lightFloor = -1f;
+        /// <summary>The user largos' light floor (share of the base colour drawn regardless of lighting). LAB calibration runs
+        /// may override it with SLIMEBRIDGE_SR2_LARGO_FLOOR.</summary>
+        private static float LightFloor()
+        {
+            if (_lightFloor >= 0f) return _lightFloor;
+            _lightFloor = 0.25f;
+            var raw = Environment.GetEnvironmentVariable("SLIMEBRIDGE_SR2_LARGO_FLOOR");
+            if (!string.IsNullOrEmpty(raw) && float.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed)
+                && !float.IsNaN(parsed) && !float.IsInfinity(parsed))
+                _lightFloor = Mathf.Clamp(parsed, 0f, 1f);
+            MelonLoader.MelonLogger.Msg("[SlimeBridge] user largo light floor " + _lightFloor.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return _lightFloor;
+        }
         private static Material? BakedMaterial(NativeMeshMaterial source, Binding binding, Sr2ImportedVisualMarker owner, Dictionary<string, Texture2D> textures)
         {
             var template = LitTemplate();
@@ -530,7 +544,7 @@ namespace SlimeBridge.SR2
                 }
                 if (texture.Property == "_MainTex") loaded = image; else glow = image;
             }
-            // The game's HDRP lighting is neutral: the baked colour as the base, lit by the scene. The emissive-map variant of
+            // Use the baked colour as the base, lit by the scene. The emissive-map variant of
             // HDRP/Lit is not compiled into the game (a set emissive colour without its map whitened the whole model).
             if (clone.HasProperty("_EmissiveColor")) clone.SetColor("_EmissiveColor", Color.black);
             clone.DisableKeyword("_EMISSIVE_COLOR_MAP");
@@ -538,6 +552,32 @@ namespace SlimeBridge.SR2
             foreach (var key in new[] { "_BaseColor", "_Color" }) if (clone.HasProperty(key)) clone.SetColor(key, colour);
             if (loaded != null)
                 foreach (var key in new[] { "_BaseColorMap", "_MainTex" }) if (clone.HasProperty(key)) { clone.SetTexture(key, loaded); clone.SetTextureScale(key, Vector2.one); clone.SetTextureOffset(key, Vector2.zero); }
+            // A light floor like the native slime shader's: lit only by HDRP, the side away from the sun went near black.
+            // A constant emission multiplied by the base colour map (_AlbedoAffectEmissive is a plain uniform, unlike the
+            // emissive map variant) and not scaled by exposure keeps the texture's colours.
+            if (loaded != null && clone.HasProperty("_AlbedoAffectEmissive") && clone.HasProperty("_EmissiveColor"))
+            {
+                var floor = LightFloor();
+                clone.SetFloat("_AlbedoAffectEmissive", 1f);
+                if (clone.HasProperty("_UseEmissiveIntensity")) clone.SetFloat("_UseEmissiveIntensity", 0f);
+                if (clone.HasProperty("_EmissiveExposureWeight")) clone.SetFloat("_EmissiveExposureWeight", 0f);
+                clone.SetColor("_EmissiveColor", new Color(floor, floor, floor, 1f));
+                if (clone.HasProperty("_EmissiveColorLDR")) clone.SetColor("_EmissiveColorLDR", new Color(floor, floor, floor, 1f));
+            }
+            // These are linear gains, not sRGB colours. Match both the model and its texture
+            // manifest snapshot before touching the cloned HDRP material; other assets stay neutral.
+            if (loaded != null && clone.HasProperty("_BaseColor"))
+                clone.SetVector("_BaseColor", Sr2BakedColourProfiles.Resolve(binding.Cache.CanonicalId,
+                    binding.Cache.ModelSha256, binding.Cache.ManifestSha256, clone.shader.name));
+            // Parts the author drew alpha-blended (glow ribbons): clipped at the baked alpha, opaque they hid the body.
+            if (loaded != null && source.Floats.TryGetValue("_Cutoff", out var cutoff))
+            {
+                if (clone.HasProperty("_AlphaCutoffEnable")) clone.SetFloat("_AlphaCutoffEnable", 1f);
+                if (clone.HasProperty("_AlphaCutoff")) clone.SetFloat("_AlphaCutoff", cutoff);
+                if (clone.HasProperty("_Cutoff")) clone.SetFloat("_Cutoff", cutoff);
+                clone.EnableKeyword("_ALPHATEST_ON");
+                clone.renderQueue = 2475;
+            }
             return clone;
         }
         private static void PaletteFallback(Material material, NativeMeshMaterial source, string key, float[] value)

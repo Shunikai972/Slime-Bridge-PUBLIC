@@ -1,4 +1,4 @@
-"""Protected run of a full SR1 <-> SR2 crossing on the player's REAL installs (SR2 1.x), with a real BridgeHost and the
+"""Protected run of a full SR1 <-> SR2 crossing on isolated LAB copies (SR2 1.x), with a real BridgeHost and the
 real launcher coordinator in its default (AUTO link) mode.
 
     py -3.12 -m tools.lab.real_travel_oracle --sr1 <SR1 folder> --sr2 <SR2 folder> --current-user-authorized
@@ -6,7 +6,7 @@ real launcher coordinator in its default (AUTO link) mode.
 Same doctrine as tools.lab.travel_oracle (which is tied to the LAB copies, SR2 0.6): every SR1/SR2 save file and the games'
 registry keys are backed up and verified first and restored afterwards (so the throw-away SR1 game and the SR2 game created for it
 disappear), the games this run started are stopped, the sanctuary progress lives in the run folder. The freshly built plugins are
-installed into both games (and stay: they are what the launcher installs anyway).
+temporarily installed into both LAB copies, then the previous plugin bytes and absence states are restored.
 
 Flow: SR1 starts on a throw-away new game, the sanctuary is unlocked, the player walks into the portal -> the coordinator finds no
 SR2 save for this ranch, starts SR2 with SLIMEBRIDGE_TRAVEL_NEW -> SR2 creates a new game by itself -> the player arrives at the
@@ -27,6 +27,7 @@ from pathlib import Path
 from apps.launcher import plugins, savelist, travel, windows
 from bridge.host.server import BridgeHost
 from tools.lab import oracle, sanctuary_oracle, save_guard
+from tools.lab.paths import validate_lab_destination
 from tools.lab.process_guard import assert_no_other_game_processes, process_image_path
 from tools.lab.travel_oracle import OracleHost, beats, drive, grab, log_lines, post
 
@@ -36,7 +37,7 @@ BUILD = {'SR1': REPO_ROOT / 'mods' / 'sr1-bridge' / 'bin' / 'Release' / 'net472'
 
 
 class RealLauncher:
-    """Starts the two real installs, each with its own realm credential (never the admin token)."""
+    """Starts the two verified LAB copies, each with its own realm credential (never the admin token)."""
 
     def __init__(self, host, roots, started):
         self.host, self.roots, self.started = host, roots, started
@@ -110,7 +111,8 @@ def install_plugins(roots):
 def run(sr1_root, sr2_root, timeout_s, current_user_authorized):
     if not current_user_authorized:
         raise ValueError('--current-user-authorized is required (owner-authorized protected run)')
-    roots = {'SR1': str(Path(sr1_root).resolve()), 'SR2': str(Path(sr2_root).resolve())}
+    roots = {realm: str(validate_lab_destination(Path(root) / EXE[realm], oracle.LAB).parent)
+             for realm, root in (('SR1', sr1_root), ('SR2', sr2_root))}
     for realm, root in roots.items():
         if not (Path(root) / EXE[realm]).is_file():
             raise ValueError(f'{root} has no {EXE[realm]}')
@@ -125,6 +127,7 @@ def run(sr1_root, sr2_root, timeout_s, current_user_authorized):
     result['save_snapshot'] = str(snap)
     print(f'[real-travel] saves backed up to {snap}', flush=True)
     started, host = {}, None
+    previous_plugins = oracle.snapshot_plugins(roots)
     try:
         result['plugins'] = install_plugins(roots)
         host = BridgeHost().__enter__()
@@ -194,17 +197,15 @@ def run(sr1_root, sr2_root, timeout_s, current_user_authorized):
         raise
     finally:
         try:
-            result['stop_errors'] = stop_started(started, roots)
-            if host is not None:
-                host.__exit__(None, None, None)
-            result['sr1_log'] = log_lines(sanctuary_oracle.SR1_LOG, ('travel', 'sanctuary', 'SlimeBridge'))
-            result['sr2_log'] = log_lines(Path(roots['SR2']) / 'MelonLoader' / 'Latest.log', ('travel', 'SlimeBridge', 'autoload', 'boot'))
-            oracle._finalize_current_user(result, snap, [], directory)
-            result['display_settings_restored'] = screen_guard.restore(screens)
-            # the verdict is the two crossings + saves restored; registry leftovers of the new SR2 game are reported, not fatal
-            result['passed'] = bool(not result.get('error') and (result.get('outbound') or {}).get('state') == 'COMPLETE'
-                                    and (result.get('back') or {}).get('state') == 'COMPLETE' and result.get('saves_match_backup_after_restore')
-                                    and not result.get('stop_errors'))
+            oracle.cleanup_steps(result, [
+                ('stop_errors', lambda: stop_started(started, roots)),
+                ('host_closed', lambda: host.__exit__(None, None, None) if host is not None else None),
+                ('sr1_log', lambda: log_lines(sanctuary_oracle.SR1_LOG, ('travel', 'sanctuary', 'SlimeBridge'))),
+                ('sr2_log', lambda: log_lines(Path(roots['SR2']) / 'MelonLoader' / 'Latest.log', ('travel', 'SlimeBridge', 'autoload', 'boot'))),
+                ('plugins_restored', lambda: oracle.restore_plugins(previous_plugins)),
+                ('protected_finalizer', lambda: oracle._finalize_current_user(result, snap, [], directory)),
+                ('display_settings_restored', lambda: screen_guard.restore(screens)),
+            ])
         finally:
             (directory / 'real-travel.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
             print(f'[real-travel] evidence: {directory}', flush=True)

@@ -7,12 +7,14 @@
   never injects anything and never bypasses a store: the game starts exactly as if the player double-clicked it.
 """
 
+import http.client
 import json
 import os
 import subprocess
 import sys
 import time
 import urllib.request
+from urllib.parse import urlsplit
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -116,16 +118,44 @@ class HostProcess:
         self.stop()
         raise RuntimeErrorWithCode('HOST_TIMEOUT', 'BridgeHost did not report an address in time')
 
+    @staticmethod
+    def _request_shutdown(status, token):
+        if not token:
+            return False
+        connection = None
+        try:
+            url = urlsplit(status.get('url') or '')
+            if (url.scheme != 'http' or url.hostname != '127.0.0.1' or url.port is None or
+                    url.username is not None or url.password is not None or url.path not in ('', '/') or url.query or url.fragment):
+                return False
+            # An admin credential must never follow a proxy or an HTTP redirect.
+            connection = http.client.HTTPConnection('127.0.0.1', url.port, timeout=1)
+            connection.request('POST', '/v1/shutdown', body=b'{}',
+                               headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'})
+            response = connection.getresponse()
+            data = json.loads(response.read(4097))
+            return response.status == 200 and isinstance(data, dict) and data.get('ok') is True
+        except (OSError, ValueError, http.client.HTTPException):
+            return False
+        finally:
+            if connection is not None:
+                connection.close()
+
     def stop(self):
-        child, self._child, self._token = self._child, None, None
+        child, token = self._child, self._token
+        status = self._read_status() if child is not None else {}
+        self._child, self._token = None, None
         if child is None:
             return {'stopped': False}
         if child.poll() is None:
-            child.terminate()
+            # Let the real interpreter close its files before the Windows venv redirector exits.
+            if not self._request_shutdown(status, token):
+                child.terminate()
             try:
                 child.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 child.kill()
+                child.wait(timeout=5)
         for leftover in (self.token_file, self.status_file):
             leftover.unlink(missing_ok=True)
         return {'stopped': True}
@@ -137,10 +167,26 @@ class GameLauncher:
     def __init__(self, popen=subprocess.Popen):
         self._popen = popen
         self._children = {}
+        self._executables = {}
 
     def running(self, realm):
         child = self._children.get(realm)
         return child is not None and child.poll() is None
+
+    def owns_image(self, pid, image):
+        """A live owned child and its pinned launch image, not just an executable basename."""
+        if type(pid) is not int or image is None:
+            return False
+        for realm, child in tuple(self._children.items()):
+            if child.pid == pid and child.poll() is None:
+                expected = self._executables.get(realm)
+                if expected is None:
+                    return False
+                try:
+                    return Path(image).resolve() == expected
+                except (OSError, ValueError):
+                    return False
+        return False
 
     def launch(self, installation, extra_env=None):
         realm = installation['game']
@@ -159,6 +205,7 @@ class GameLauncher:
         except OSError as exc:
             raise RuntimeErrorWithCode('LAUNCH_FAILED', str(exc)) from exc
         self._children[realm] = child
+        self._executables[realm] = exe.resolve()
         return {'realm': realm, 'pid': child.pid, 'already_running': False, 'exe': str(exe)}
 
     def status(self):

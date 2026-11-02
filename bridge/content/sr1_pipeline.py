@@ -111,7 +111,8 @@ def roster(sr1_dir: Path = DEFAULT_SR1_DATA, sr2_dir: Path = DEFAULT_SR2_DATA, o
 
 # ---------------------------------------------------------------------------------------------------------------------- caches
 def cache_dir(canonical: str, cache_root: Path = CACHE_ROOT) -> Path:
-    return Path(cache_root) / 'sr1-to-sr2' / canonical
+    from .cache_publication import cache_path
+    return cache_path(cache_root, 'sr1-to-sr2', canonical)
 
 
 def cache_is_complete(canonical: str, cache_root: Path = CACHE_ROOT) -> bool:
@@ -121,22 +122,22 @@ def cache_is_complete(canonical: str, cache_root: Path = CACHE_ROOT) -> bool:
 
 def build_row(row: dict, sr1_dir: Path, cache_root: Path, assets, force: bool = False) -> dict:
     from bridge.content import sr1_asset_extract
+    from .cache_publication import checked_tree, publish_directory
+    import uuid
     canonical = row['canonical']
     report = {'canonical': canonical, 'species': row['species'], 'notes': []}
-    target = cache_dir(canonical, cache_root)
+    target = checked_tree(cache_dir(canonical, cache_root))
     if cache_is_complete(canonical, cache_root) and not force:
         report.update(status='UP_TO_DATE', mode='existing')
         return report
-    work = Path(cache_root) / 'pipeline-tmp' / ('sr1-' + canonical)
+    work = checked_tree(Path(cache_root) / 'pipeline-tmp' / ('sr1-' + canonical))
     shutil.rmtree(work, ignore_errors=True)
     work.parent.mkdir(parents=True, exist_ok=True)
     result = sr1_asset_extract.extract_species(row['species'], canonical, sr1_dir, work, allow_nonlab=True, prefab=row['prefab'],
                                                largo=row['kind'] == 'largo', assets=assets)
-    if target.exists():
-        REPLACED_ROOT.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(target), str(REPLACED_ROOT / f"{canonical}-sr1-{time.strftime('%Y%m%d-%H%M%S')}"))
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(work), str(target))
+    previous = REPLACED_ROOT / f'{canonical}-sr1-{uuid.uuid4().hex}'
+    publish_directory(work, target, backup=previous)
+    shutil.rmtree(work)
     report.update(status='BUILT', mode='sr1-offline', vertices=result.get('vertex_total'), clips=result.get('clips'))
     return report
 

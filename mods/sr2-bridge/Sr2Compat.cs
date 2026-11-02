@@ -25,7 +25,15 @@ namespace SlimeBridge.SR2
             Il2CppSystem.Nullable<GameMetadata>? current;
             try { current = director._currentGameMetadata; }
             catch (System.NullReferenceException) { return null; }
-            return current == null || !current.HasValue ? null : current.Value;
+            if (current == null) return null;
+            // IL2CPP boxes a populated Nullable<T> as T. The generated managed wrapper can therefore
+            // point at GameMetadata, not Nullable<GameMetadata>; invoking HasValue there uses the wrong receiver.
+            var boxed = current.TryCast<GameMetadata>();
+            if (boxed != null) return boxed;
+            // Only inspect Nullable fields when the native object really has that type. Unknown boxes fail closed.
+            var expected = Il2CppInterop.Runtime.Il2CppClassPointerStore<Il2CppSystem.Nullable<GameMetadata>>.NativeClassPtr;
+            if (expected == System.IntPtr.Zero || current.ObjectClass != expected) return null;
+            return !current.HasValue ? null : current.Value;
         }
 
         internal static string? CurrentGameName(this AutoSaveDirector director) => director.CurrentGame()?.GameName;

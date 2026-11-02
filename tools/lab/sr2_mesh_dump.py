@@ -16,23 +16,24 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from tools.lab import oracle
 from tools.lab.paths import refuse_reparse, validate_lab_destination
+from bridge.content.cache_publication import cache_path, checked_path, checked_tree, publish_directory
 
-_CANONICAL_RE = re.compile(r'^[a-z0-9][a-z0-9_.-]*$')
+_CANONICAL_RE = re.compile(r'[a-z0-9]+(?:[._-][a-z0-9]+)*')
 
 
 def validate_canonical(canonical: str) -> str:
     """Canonical ids are flat tokens: no traversal, separators, or leading dots."""
-    if (not canonical or not _CANONICAL_RE.match(canonical) or '..' in canonical
-            or '/' in canonical or '\\' in canonical):
+    if not isinstance(canonical, str) or len(canonical) > 127 or not _CANONICAL_RE.fullmatch(canonical):
         raise ValueError(f'invalid canonical id: {canonical!r}')
     return canonical
 
@@ -60,53 +61,89 @@ def canonical_from_reference(reference: str) -> str:
     return 'slime.' + snake
 
 
+def _texture_name(name):
+    return (isinstance(name, str) and name.startswith('tex-') and name.endswith('.png') and
+            len(name) <= 240 and Path(name).name == name and
+            not any(ord(c) < 32 or c in '\\/:*?"<>|' for c in name))
+
+
 def _validate_dump(directory: Path, target: str):
-    """Validate the mod's dump against its receipt. Returns (details, problems)."""
+    """Bind every model dependency and the exact receipt to confined, verified dump bytes."""
+    directory = checked_tree(directory)
     problems = []
-    model_path = directory / 'model.json'
-    receipt_path = directory / 'dump-receipt.json'
+    model_path, receipt_path = directory / 'model.json', directory / 'dump-receipt.json'
     receipt = json.loads(receipt_path.read_text(encoding='utf-8'))
+    model = json.loads(model_path.read_text(encoding='utf-8'))
+    if not isinstance(receipt, dict) or not isinstance(model, dict):
+        return {}, ['model and receipt must be objects']
     if receipt.get('schema') != RECEIPT_SCHEMA or receipt.get('schema_version') != RECEIPT_SCHEMA_VERSION:
         problems.append('dump receipt schema/version mismatch')
-    if receipt.get('target') != target:
-        problems.append(f"receipt target {receipt.get('target')!r} != {target!r}")
-    reference = receipt.get('reference_id') or ''
-    if not reference:
+    if not isinstance(target, str) or not target or receipt.get('target') != target:
+        problems.append('receipt target mismatch')
+    reference = receipt.get('reference_id')
+    if not isinstance(reference, str) or not reference:
         problems.append('receipt has no reference_id')
-    if _sha(model_path) != receipt.get('model_sha256'):
+    model_sha = _sha(model_path)
+    if model_sha != receipt.get('model_sha256'):
         problems.append('model.json hash does not match the receipt')
-    model = json.loads(model_path.read_text(encoding='utf-8'))
     if model.get('schema') != DUMP_SCHEMA or model.get('schema_version') != DUMP_SCHEMA_VERSION:
         problems.append('model schema/version mismatch')
     if model.get('reference_id') != reference:
         problems.append('model reference_id does not match the receipt')
-    skinned = model.get('skinned_renderers') or []
-    static = model.get('static_renderers') or []
-    vertex_total = 0
-    texture_rows = 0
+    texture_files = receipt.get('textures')
+    if not isinstance(texture_files, list) or not texture_files:
+        return {}, problems + ['receipt carries no texture list']
+    texture_hashes, names = {}, {}
+    for row in texture_files:
+        name = row.get('file') if isinstance(row, dict) else None
+        if not _texture_name(name):
+            problems.append('unsafe texture filename')
+            continue
+        if name.casefold() in names and names[name.casefold()] != name:
+            problems.append('case-aliased texture filenames')
+            continue
+        names[name.casefold()] = name
+        path = checked_path(directory / name)
+        if not path.is_file():
+            problems.append(f'texture {name} missing')
+        else:
+            actual = _sha(path)
+            if actual != row.get('sha256'):
+                problems.append(f'texture {name} hash mismatch')
+            texture_hashes[name] = actual
+    skinned, static = model.get('skinned_renderers') or [], model.get('static_renderers') or []
+    if not isinstance(skinned, list) or not isinstance(static, list):
+        return {}, problems + ['renderer collections must be lists']
+    vertex_total, texture_rows = 0, 0
     for renderer in skinned + static:
-        vertex_total += len(renderer.get('vertices') or [])
-        for material in renderer.get('materials') or []:
+        if not isinstance(renderer, dict) or not isinstance(renderer.get('vertices'), list):
+            problems.append('invalid renderer')
+            continue
+        vertex_total += len(renderer['vertices'])
+        materials = renderer.get('materials') or []
+        if not isinstance(materials, list):
+            problems.append('invalid material collection')
+            continue
+        for material in materials:
             if material is None:
                 continue
-            for texture in material.get('textures') or []:
-                if texture.get('file'):
-                    texture_rows += 1
+            textures = material.get('textures') if isinstance(material, dict) else None
+            if not isinstance(textures, list):
+                problems.append('invalid texture collection')
+                continue
+            for texture in textures:
+                if not isinstance(texture, dict) or 'error' in texture or not _texture_name(texture.get('file')):
+                    problems.append('failed or invalid model texture export')
+                    continue
+                texture_rows += 1
+                if texture['file'] not in texture_hashes:
+                    problems.append('model texture is not covered by the receipt')
     if vertex_total <= 0:
         problems.append('model carries no vertices')
-    texture_files = receipt.get('textures') or []
-    if not texture_files:
-        problems.append('receipt carries no textures')
-    for row in texture_files:
-        path = directory / row['file']
-        if not path.is_file():
-            problems.append(f"texture {row['file']} missing")
-        elif _sha(path) != row.get('sha256'):
-            problems.append(f"texture {row['file']} hash mismatch")
-    details = {'reference_id': reference, 'model_sha256': receipt.get('model_sha256'),
+    details = {'reference_id': reference, 'model_sha256': model_sha, 'receipt_sha256': _sha(receipt_path),
                'skinned_renderers': len(skinned), 'static_renderers': len(static),
                'vertex_total': vertex_total, 'texture_files': len(texture_files),
-               'texture_rows': texture_rows}
+               'texture_rows': texture_rows, 'texture_sha256': dict(sorted(texture_hashes.items()))}
     return details, problems
 
 
@@ -220,37 +257,31 @@ def run_dump(target='Ringtail', canonical=None, *, current_user_authorized=False
 def publish_cache(directory: Path, canonical: str) -> Path:
     """Copy the validated dump into the private local asset cache with a manifest."""
     canonical = validate_canonical(canonical)
-    root = oracle.REPO_ROOT
-    cache_parent = root.joinpath(*CACHE_ROOT)
-    refuse_reparse(cache_parent) if cache_parent.exists() else None
-    cache_parent.mkdir(parents=True, exist_ok=True)
-    parent_resolved = cache_parent.resolve()
-    cache_dir = cache_parent / canonical
-    try:
-        cache_dir.resolve().relative_to(parent_resolved)
-    except ValueError:
-        raise ValueError(f'cache path escapes the asset cache root: {canonical!r}')
-    if cache_dir.exists():
-        refuse_reparse(cache_dir)
-        shutil.rmtree(cache_dir)
-    cache_dir.mkdir()
-    refuse_reparse(cache_dir)
-    files = ['model.json', 'dump-receipt.json']
-    files += [p.name for p in sorted(directory.glob('tex-*.png'))]
-    for name in files:
-        shutil.copyfile(directory / name, cache_dir / name)
-    manifest = {
-        'schema': 'bridge-asset-cache-manifest',
-        'schema_version': 1,
-        'canonical_id': canonical,
-        'converter_version': CONVERTER_VERSION,
-        'source_game': 'SR2',
-        'source_run_id': directory.name,
-        'files': {name: _sha(cache_dir / name) for name in files},
-        'published_utc': datetime.utcnow().isoformat() + 'Z',
-    }
-    manifest_path = cache_dir / 'cache-manifest.json'
-    manifest_path.write_text(json.dumps(manifest, indent=2), encoding='utf-8')
+    directory = checked_tree(directory)
+    cache_dir = cache_path(oracle.REPO_ROOT / 'Lab' / 'AssetCache', 'sr2-to-sr1', canonical)
+    if directory == cache_dir or directory in cache_dir.parents or cache_dir in directory.parents:
+        raise ValueError('dump source and cache target overlap')
+    receipt = json.loads((directory / 'dump-receipt.json').read_text(encoding='utf-8'))
+    target = receipt.get('target') if isinstance(receipt, dict) else None
+    details, problems = _validate_dump(directory, target)
+    if problems:
+        raise ValueError('; '.join(problems))
+    cache_dir.parent.mkdir(parents=True, exist_ok=True)
+    files = ['model.json', 'dump-receipt.json', *details['texture_sha256']]
+    with tempfile.TemporaryDirectory(prefix='.mesh-', dir=cache_dir.parent) as temporary:
+        staging = Path(temporary)
+        for name in files:
+            shutil.copyfile(directory / name, staging / name)
+        copied, problems = _validate_dump(staging, target)
+        if problems or copied != details:
+            raise ValueError('dump changed during cache staging')
+        manifest = {'schema': 'bridge-asset-cache-manifest', 'schema_version': 1,
+                    'canonical_id': canonical, 'converter_version': CONVERTER_VERSION,
+                    'source_game': 'SR2', 'source_run_id': directory.name,
+                    'files': {name: _sha(staging / name) for name in files},
+                    'published_utc': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')}
+        (staging / 'cache-manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
+        publish_directory(staging, cache_dir)
     return cache_dir
 
 

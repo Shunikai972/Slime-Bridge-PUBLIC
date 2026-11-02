@@ -598,10 +598,8 @@ namespace SlimeBridge.SR2
                     plortType.groupType = templatePlort!.groupType;
                     plortType.Categories = templatePlort.Categories;
                     if (templatePlort.prefab == null) { result.Problems.Add("template plort prefab unavailable"); return result; }
-                    var plortClone = UnityEngine.Object.Instantiate(templatePlort.prefab);
+                    var plortClone = Sr2PrefabCloner.Clone(templatePlort.prefab);
                     plortClone.name = "SlimeBridgeImport_" + entry.canonical_id + "_plort";
-                    plortClone.SetActive(false);
-                    UnityEngine.Object.DontDestroyOnLoad(plortClone);
                     plortRetargeted = RetargetIdentifiables(plortClone, plortType);
                     plortType.prefab = plortClone;
                     result.Detail["plort_prefab_retargeted"] = plortRetargeted;
@@ -619,10 +617,8 @@ namespace SlimeBridge.SR2
                     result.Problems.Add("template prefab unavailable");
                     return result;
                 }
-                clone = UnityEngine.Object.Instantiate(templateDef.prefab);
+                clone = Sr2PrefabCloner.Clone(templateDef.prefab);
                 clone.name = "SlimeBridgeImport_" + entry.canonical_id;
-                clone.SetActive(false);
-                UnityEngine.Object.DontDestroyOnLoad(clone);
                 var retargeted = RetargetIdentifiables(clone, def);
                 def.prefab = clone;
 

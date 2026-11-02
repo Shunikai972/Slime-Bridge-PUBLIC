@@ -131,8 +131,10 @@ def build_generated_package(result, *, dependency_hashes=()):
 def validate_package(pkg):
     """Unified diagnostics for an untrusted package manifest (empty list = structurally valid)."""
     def problem(code, message, **details):
+        lineage = pkg.get('lineage') if isinstance(pkg, dict) else None
+        content_id = lineage.get('canonical_id') if isinstance(lineage, dict) else None
         return D.make(code, 'error', 'package', message, details=details,
-                      content_id=(pkg.get('lineage') or {}).get('canonical_id') if isinstance(pkg, dict) else None)
+                      content_id=content_id if isinstance(content_id, str) else None)
     issues = S.check(_SPEC, pkg)
     if issues:
         return [problem('PACKAGE_SCHEMA_INVALID', 'manifest does not match bridge-generated-package v1',
@@ -167,7 +169,10 @@ def validate_package(pkg):
             if plan.get('package_id') != target_package.get('package_id') or \
                     pkg['provenance']['phase1_package_id'] != target_package.get('package_id'):
                 out.append(problem('PLAN_PACKAGE_MISMATCH', 'registration plan built for another target package'))
-            if any(op.get('canonical_id') != lineage['canonical_id'] for op in plan.get('operations', [])):
+            operations = plan.get('operations', [])
+            if not isinstance(operations, list) or any(not isinstance(op, dict) for op in operations):
+                out.append(problem('REGISTRATION_PLAN_INVALID', 'registration operations must be a list of objects'))
+            elif any(op.get('canonical_id') != lineage['canonical_id'] for op in operations):
                 out.append(problem('FOREIGN_REGISTRATION', 'registration operation for another canonical id'))
             if plan.get('target_realm') != lineage['target_realm'] or \
                     target_package.get('canonical_id') != lineage['canonical_id']:
@@ -179,8 +184,10 @@ def validate_package(pkg):
 
 def installable(pkg):
     """A package can be deployed only if valid, not quarantined, materialized and registrable."""
+    if validate_package(pkg):
+        return False
     plan = pkg.get('registration_plan') or {}
-    return (not validate_package(pkg) and pkg['status'] != Status.QUARANTINED and pkg['materialized'] and
+    return (pkg['status'] != Status.QUARANTINED and pkg['materialized'] and
             plan.get('registrable') is True and not any(a['missing'] and a['required'] for a in pkg['artifacts']))
 
 

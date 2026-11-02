@@ -33,7 +33,13 @@ LIMIT = 99 * 1024 * 1024
 TRAILER = os.environ.get('SLIMEBRIDGE_PRIVATE_TRAILER', '')       # optional trailer, private repository commits only
 
 sys.path.insert(0, str(ROOT))
-from tools.release.sync_public import FORBIDDEN_TEXT  # noqa: E402
+try:
+    from tools.release.sync_public import FORBIDDEN_TEXT  # noqa: E402
+except ModuleNotFoundError as exc:
+    if exc.name != 'tools.release.sync_public':
+        raise
+    # Public checkouts omit the private distribution tool, but must still reject local paths.
+    FORBIDDEN_TEXT = re.compile(r'[A-Z]:[\\/]|/(?:Users|home)/', re.IGNORECASE)
 from tools.largo_models.build import describe  # noqa: E402
 
 

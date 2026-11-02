@@ -171,13 +171,23 @@ def restore_backup(snap_path):
     snap = Path(snap_path)
     refuse_reparse(snap)
     assert_no_other_game_processes()
-    report = save_guard.compare(snap)
-    result = save_guard.restore_originals(snap, report)
-    after = save_guard.compare(snap)
-    clean = all(not [f for f in r['modified'] + r['removed'] + r['added'] if not f.lower().endswith('.log')]
-                for r in after.values())
-    print(json.dumps({'restored': result, 'matches_backup': clean}, indent=2, default=str))
-    return 0 if clean else 1
+    directory = snap / ('restore-' + uuid.uuid4().hex)
+    directory.mkdir(exist_ok=False)
+    result = {'passed': True, 'validation_scope': 'restoration_only'}
+    # The shared finalizer preserves registry evidence and continues independent
+    # save rollback even if the registry export fails; it never deletes unbacked keys.
+    oracle.cleanup_steps(result, [
+        ('protected_finalizer', lambda: oracle._finalize_current_user(result, snap, [], directory)),
+    ])
+    changes = result.get('registry_changes')
+    registry_clean = (isinstance(changes, dict) and
+                      save_guard.registry_restoration_verified(changes, result.get('registry_restore'), changes))
+    result['passed'] = result.get('passed') is True and registry_clean
+    result['restored'] = result.get('save_restore')
+    result['matches_backup'] = result.get('saves_match_backup_after_restore') is True
+    (directory / 'restore-result.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
+    print(json.dumps(result, indent=2, default=str))
+    return 0 if result['passed'] else 1
 
 
 def main(argv=None):

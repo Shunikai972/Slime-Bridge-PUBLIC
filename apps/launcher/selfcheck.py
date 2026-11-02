@@ -5,6 +5,7 @@ Exit code 0 when the launcher, BridgeHost and the extractor can run; missing pre
 """
 import importlib
 import sys
+import tempfile
 from pathlib import Path
 
 from apps.launcher import extract, plugins
@@ -45,9 +46,9 @@ def run():
     try:
         lab = REPO_ROOT / 'Lab' / 'Launcher'
         lab.mkdir(parents=True, exist_ok=True)
-        probe = lab / '.write-test'
-        probe.write_text('ok', encoding='utf-8')
-        probe.unlink()
+        with tempfile.TemporaryFile(dir=lab) as probe:
+            probe.write(b'ok')
+            probe.flush()
         print(f'  [OK]   settings folder writable ({lab})')
     except OSError as exc:
         ok = False

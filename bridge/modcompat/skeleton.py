@@ -30,7 +30,7 @@ from bridge.core import diagnostics as D
 from bridge.core.paths import safe_relative
 
 from .analyzer import LOCAL_QUERIES, validate_report
-from .manifest import deploy_key_id, diag, printable
+from .manifest import diag, printable
 
 SKELETON_SCHEMA = 'bridge-mod-adapter-skeleton'
 RESULT_SCHEMA = 'bridge-mod-adapter-skeleton-result'
@@ -61,9 +61,11 @@ def _class_name(mod_id):
 
 
 def _folder(mod_id, realm):
-    slug = deploy_key_id(mod_id)
+    # Unlike deploy-unit keys, folders may preserve underscores. Do not collapse
+    # distinct ids such as a_b/a-b into one developer-owned output directory.
+    slug = mod_id
     if len(slug) > 100:
-        slug = f"{slug[:100]}-{hashlib.sha256(mod_id.encode('utf-8')).hexdigest()[:8]}"
+        slug = f"{slug[:40]}-{hashlib.sha256(mod_id.encode('utf-8')).hexdigest()}"
     return f'{slug}.{realm.lower()}'
 
 
@@ -250,14 +252,20 @@ def generate_adapter_skeleton(report, *, out_root, subdir='adapters'):
         if root.exists() and not root.is_dir():
             raise ValueError('output root is not a directory')
         targets = [root / PurePosixPath(rel) for rel in rels]
-        for path in targets:  # preflight: refuse before anything is written
+        for path, text in zip(targets, files.values()):  # refuse before anything is written
             refuse_links(root, path)
-            if path.exists() and (path.is_dir() or path.stat().st_nlink > 1):
+            if path.exists() and (not path.is_file() or path.stat().st_nlink > 1):
                 raise ValueError(f'refusing to replace {path.name}')
+            data = text.encode('utf-8')
+            if path.exists() and (path.stat().st_size != len(data) or path.read_bytes() != data):
+                # Includes adapter.json ownership and report binding, as well as
+                # hand-written edits. Changed templates need a fresh output root.
+                raise ValueError(f'occupied or modified adapter file: {path.name}')
         written = []
         for rel, path, text in zip(rels, targets, files.values()):
             data = text.encode('utf-8')
-            atomic_write(root, path, data)
+            if not path.exists():
+                atomic_write(root, path, data)
             written.append({'path': rel, 'sha256': hashlib.sha256(data).hexdigest(), 'size': len(data)})
     except (ValueError, OSError) as exc:
         return _result('REFUSED', [diag('SKELETON_WRITE_REFUSED', 'error', 'output location refused',

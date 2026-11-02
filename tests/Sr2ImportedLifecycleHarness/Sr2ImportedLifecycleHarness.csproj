@@ -7,6 +7,8 @@
     <Compile Include="../../mods/shared/PlayerContent.cs" Link="Shared/PlayerContent.cs" />
     <Compile Include="../../mods/shared/ImportedSpeciesSpec.cs" Link="Shared/ImportedSpeciesSpec.cs" />
     <Compile Include="../../mods/sr2-bridge/Sr2ImportedSpawner.cs" Link="Runtime/Sr2ImportedSpawner.cs" />
+    <Compile Include="../../mods/sr2-bridge/Sr2Png.cs" Link="Runtime/Sr2Png.cs" />
+    <Compile Include="../../mods/sr2-bridge/Sr2BakedColourProfiles.cs" Link="Runtime/Sr2BakedColourProfiles.cs" />
     <Compile Include="../../mods/sr2-bridge/Sr2ImportedModelLoader.cs" Link="Runtime/Sr2ImportedModelLoader.cs" />
     <Compile Include="../../mods/sr2-bridge/Sr2ImportedAnimation.cs" Link="Runtime/Sr2ImportedAnimation.cs" />
     <Compile Include="../../mods/sr2-bridge/Sr2ImportedVisualMarker.cs" Link="Runtime/Sr2ImportedVisualMarker.cs" />

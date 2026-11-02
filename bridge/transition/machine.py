@@ -106,14 +106,21 @@ class TransitionMachine:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(path, timeout=10, isolation_level=None)
-        self._db.row_factory = sqlite3.Row
-        self._db.execute('PRAGMA synchronous=FULL')
-        self.trust = dict(trust)
-        with self._tx() as db:
-            for statement in _SCHEMA:
-                db.execute(statement)
-            if db.execute("SELECT 1 FROM meta WHERE key='schema_version'").fetchone() is None:
-                db.execute("INSERT INTO meta VALUES ('schema_version', '1')")
+        try:
+            self._db.row_factory = sqlite3.Row
+            self._db.execute('PRAGMA synchronous=FULL')
+            self.trust = dict(trust)
+            with self._tx() as db:
+                for statement in _SCHEMA:
+                    db.execute(statement)
+                version = db.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()
+                if version is None:
+                    db.execute("INSERT INTO meta VALUES ('schema_version', '1')")
+                elif version[0] != '1':
+                    raise TransitionError('SCHEMA_UNSUPPORTED', 'only transition schema version 1 is supported')
+        except BaseException:
+            self._db.close()
+            raise
 
     def close(self):
         self._db.close()

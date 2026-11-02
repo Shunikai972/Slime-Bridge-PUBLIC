@@ -28,17 +28,12 @@ PLUGIN_FILES = ('SlimeBridge.SR2.dll', 'SlimeBridge.SR2.pdb')
 
 
 def snapshot_plugin():
-    return {name: ((PLUGIN_DEST / name).read_bytes() if (PLUGIN_DEST / name).is_file() else None) for name in PLUGIN_FILES}
+    return oracle.snapshot_plugins({'SR2': PLUGIN_DEST.parent})['SR2']['files']
 
 
 def restore_plugin(state):
-    for name, data in state.items():
-        path = PLUGIN_DEST / name
-        if data is None:
-            path.unlink(missing_ok=True)
-        else:
-            path.write_bytes(data)
-    return {name: (_sha(PLUGIN_DEST / name) if (PLUGIN_DEST / name).is_file() else None) for name in PLUGIN_FILES}
+    assert_no_other_game_processes()
+    return oracle.restore_plugins({'SR2': {'root': PLUGIN_DEST.parent, 'files': state}})['SR2']
 
 
 def run(save_group, timeout_s, current_user_authorized, *, portal=False, gate_cost=1000):
@@ -101,13 +96,12 @@ def run(save_group, timeout_s, current_user_authorized, *, portal=False, gate_co
     finally:
         try:
             host = started.pop('host', None)
-            result['stop_errors'] = oracle._stop_owned(started) if started else {}
-            if host is not None:
-                host.__exit__(None, None, None)
-            result['plugin_restored'] = restore_plugin(previous)
-            oracle._finalize_current_user(result, snap, ['SR2'], directory)
-            result['cleanup_completed'] = not any(result.get(k) for k in ('stop_errors', 'safety_error', 'registry_error',
-                                                  'restoration_skipped', 'registry_restore_skipped', 'save_restore_errors'))
+            oracle.cleanup_steps(result, [
+                ('stop_errors', lambda: oracle._stop_owned(started) if started else {}),
+                ('host_closed', lambda: host.__exit__(None, None, None) if host is not None else None),
+                ('plugin_restored', lambda: restore_plugin(previous)),
+                ('protected_finalizer', lambda: oracle._finalize_current_user(result, snap, ['SR2'], directory)),
+            ])
         finally:
             (directory / 'sr2-probe-oracle.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
             print(f'[sr2probe] evidence: {directory}', flush=True)

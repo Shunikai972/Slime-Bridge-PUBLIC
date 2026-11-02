@@ -42,22 +42,12 @@ def _sha(path):
 
 def snapshot_plugin():
     """Bytes of the plugin files currently deployed (restored afterwards); absent files are remembered as absent."""
-    state = {}
-    for name in PLUGIN_FILES:
-        path = PLUGIN_DEST / name
-        state[name] = path.read_bytes() if path.is_file() else None
-    return state
+    return oracle.snapshot_plugins({'SR1': PLUGIN_DEST.parents[2]})['SR1']['files']
 
 
 def restore_plugin(state):
-    for name, data in state.items():
-        path = PLUGIN_DEST / name
-        if data is None:
-            if path.is_file():
-                path.unlink()
-        else:
-            path.write_bytes(data)
-    return {name: (_sha(PLUGIN_DEST / name) if (PLUGIN_DEST / name).is_file() else None) for name in PLUGIN_FILES}
+    assert_no_other_game_processes()
+    return oracle.restore_plugins({'SR1': {'root': PLUGIN_DEST.parents[2], 'files': state}})['SR1']
 
 
 def deploy_plugin():
@@ -151,14 +141,12 @@ def run(layout_dir, ops, timeout_s, current_user_authorized, hold_s=3.0, new_gam
         raise
     finally:
         try:
-            result['stop_errors'] = oracle._stop_owned(started) if started else {}
-            result['log'] = log_excerpt(result['started_utc'])
-            result['plugin_restored'] = restore_plugin(previous_plugin)
-            oracle._finalize_current_user(result, snap, ['SR1'], directory)
-            if result.get('stop_errors'):
-                result['passed'] = False
-            result['cleanup_completed'] = not any(result.get(k) for k in ('stop_errors', 'safety_error', 'registry_error',
-                                                  'restoration_skipped', 'registry_restore_skipped', 'save_restore_errors'))
+            oracle.cleanup_steps(result, [
+                ('stop_errors', lambda: oracle._stop_owned(started) if started else {}),
+                ('log', lambda: log_excerpt(result['started_utc'])),
+                ('plugin_restored', lambda: restore_plugin(previous_plugin)),
+                ('protected_finalizer', lambda: oracle._finalize_current_user(result, snap, ['SR1'], directory)),
+            ])
         finally:
             (directory / 'sanctuary-oracle.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
             print(f'[sanctuary] evidence: {directory}', flush=True)

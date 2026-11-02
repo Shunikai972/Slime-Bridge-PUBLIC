@@ -11,8 +11,11 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
-from pathlib import Path
+import re
+import tempfile
+from pathlib import Path, PurePosixPath, PureWindowsPath
+
+from .cache_publication import PUBLICATION_LOCK, checked_path, checked_tree
 
 CHUNK = 8 * 1024 * 1024
 
@@ -25,28 +28,44 @@ def _marker(bundle: Path) -> dict:
 def unpack_bundle(bundle: Path, out_dir: Path) -> list[Path]:
     """Write every node of `bundle` into `out_dir` (named by its path inside the archive); returns the files.
     A bundle already unpacked (same size and time) is not unpacked again."""
+    with PUBLICATION_LOCK:
+        return _unpack_bundle(bundle, out_dir)
+
+
+def _filename(name):
+    if (not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', name) or
+            name.endswith('.') or PureWindowsPath(name).is_reserved()):
+        raise ValueError('unsafe unpacked bundle filename')
+    return name
+
+
+def _unpack_bundle(bundle, out_dir):
     from UnityPy.files import BundleFile
     from UnityPy.streams import EndianBinaryReader
 
-    bundle, out_dir = Path(bundle), Path(out_dir)
+    bundle, out_dir = Path(bundle), checked_tree(out_dir)
     # one flat folder for every bundle: a stream (`archive:/CAB-x/CAB-x.resS`) can point into another bundle's node, and UnityPy finds it
     # by file name next to the serialized file
     out_dir.mkdir(parents=True, exist_ok=True)
     done = out_dir / ('.unpacked-' + bundle.stem[:60] + '.json')
-    if done.is_file():
-        try:
-            state = json.loads(done.read_text(encoding='utf-8'))
-            if state.get('source') == _marker(bundle) and all((out_dir / n).is_file() for n in state['files']):
-                return [out_dir / n for n in state['files']]
-        except (OSError, ValueError, KeyError):
-            pass
-    if done.is_file():
-        try:
-            for stale in json.loads(done.read_text(encoding='utf-8')).get('files', []):
-                (out_dir / stale).unlink(missing_ok=True)
-        except (OSError, ValueError):
-            pass
-    temp = out_dir / ('.blocks-' + bundle.stem[:40] + '.tmp')
+    checked_path(done)
+    old_names = []
+    if done.exists():
+        if not done.is_file() or done.stat().st_size > 2 * 1024 * 1024:
+            raise ValueError('invalid unpacked bundle marker')
+        state = json.loads(done.read_text(encoding='utf-8'))
+        if not isinstance(state, dict) or not isinstance(state.get('files'), list) or len(state['files']) > 20000:
+            raise ValueError('invalid unpacked bundle file list')
+        old_names = [_filename(name) for name in state['files']]
+        if len({name.casefold() for name in old_names}) != len(old_names):
+            raise ValueError('duplicate unpacked bundle filename')
+        for name in old_names:
+            checked_path(out_dir / name)
+        if state.get('source') == _marker(bundle) and all((out_dir / name).is_file() for name in old_names):
+            return [out_dir / name for name in old_names]
+    descriptor, temp_name = tempfile.mkstemp(prefix='.blocks-', suffix='.tmp', dir=out_dir)
+    os.close(descriptor)
+    temp = Path(temp_name)
     names: list[str] = []
 
     class DiskBundle(BundleFile):
@@ -56,30 +75,70 @@ def unpack_bundle(bundle: Path, out_dir: Path) -> list[Path]:
             return _read_fs_to_disk(self, reader, temp)
 
         def read_files(self, reader, files):
+            plan, seen = [], set()
+            length = temp.stat().st_size
+            for node in files:
+                path = PurePosixPath(node.path.replace('\\', '/'))
+                if path.is_absolute() or '..' in path.parts:
+                    raise ValueError('unsafe bundle node path')
+                name = _filename(path.name)
+                if name.casefold() in seen:
+                    raise ValueError('duplicate flattened bundle node filename')
+                seen.add(name.casefold())
+                if (type(node.offset) is not int or type(node.size) is not int or node.offset < 0 or
+                        node.size < 0 or node.offset > length or node.size > length - node.offset):
+                    raise ValueError('bundle node extends beyond decompressed blocks')
+                target = checked_path(out_dir / name)
+                if target.exists() and not target.is_file():
+                    raise ValueError('bundle node target is not a file')
+                plan.append((node, target))
             with open(temp, 'rb') as blocks:
-                for node in files:
-                    target = out_dir / Path(node.path).name
+                for node, target in plan:
                     blocks.seek(node.offset)
                     left = node.size
-                    with open(target, 'wb') as out:
-                        while left > 0:
-                            piece = blocks.read(min(CHUNK, left))
-                            if not piece:
-                                break
-                            out.write(piece)
-                            left -= len(piece)
+                    pending = None
+                    try:
+                        with tempfile.NamedTemporaryFile(prefix='.node-', dir=out_dir, delete=False) as out:
+                            pending = Path(out.name)
+                            while left > 0:
+                                piece = blocks.read(min(CHUNK, left))
+                                if not piece:
+                                    raise ValueError('truncated decompressed bundle node')
+                                out.write(piece)
+                                left -= len(piece)
+                        checked_path(target)
+                        os.replace(pending, target)
+                    finally:
+                        if pending is not None:
+                            pending.unlink(missing_ok=True)
                     names.append(target.name)
 
-    reader = EndianBinaryReader(open(bundle, 'rb'))
     try:
-        DiskBundle(reader, None)
+        with open(bundle, 'rb') as stream:
+            reader = EndianBinaryReader(stream)
+            try:
+                DiskBundle(reader, None)
+            finally:
+                reader.dispose()
     finally:
-        reader.dispose()
-        try:
-            temp.unlink()
-        except OSError:
-            pass
-    done.write_text(json.dumps({'source': _marker(bundle), 'files': names}), encoding='utf-8')
+        temp.unlink(missing_ok=True)
+    published = {name.casefold(): out_dir / name for name in names}
+    for stale in old_names:
+        path = checked_path(out_dir / stale)
+        current = published.get(stale.casefold())
+        # On case-insensitive filesystems an old spelling can name the new node itself.
+        if current is None or not path.exists() or not path.samefile(current):
+            path.unlink(missing_ok=True)
+    marker_temp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', prefix='.marker-', dir=out_dir, delete=False) as stream:
+            marker_temp = Path(stream.name)
+            json.dump({'source': _marker(bundle), 'files': names}, stream)
+        checked_path(done)
+        os.replace(marker_temp, done)
+    finally:
+        if marker_temp is not None:
+            marker_temp.unlink(missing_ok=True)
     return [out_dir / n for n in names]
 
 
@@ -107,13 +166,19 @@ def _read_fs_to_disk(self, reader, temp: Path):
         reader.align_stream(16)
         self._uses_block_alignment = True
     start = reader.Position
+    data_end = reader.Length
     if self.dataflags & ArchiveFlags.BlocksInfoAtTheEnd:
-        reader.Position = reader.Length - compressed_size
+        data_end = reader.Length - compressed_size
+        if data_end < start:
+            raise ValueError('bundle metadata overlaps its header')
+        reader.Position = data_end
         info_bytes = reader.read_bytes(compressed_size)
         reader.Position = start
     else:
         info_bytes = reader.read_bytes(compressed_size)
     info_bytes = self.decompress_data(info_bytes, uncompressed_size, self.dataflags)
+    if len(info_bytes) != uncompressed_size:
+        raise ValueError('decoded bundle metadata size differs from its declaration')
     info = EndianBinaryReader(info_bytes, offset=start)
     info.read_bytes(16)
     blocks = [BlockInfo(info.read_u_int(), info.read_u_int(), info.read_u_short()) for _ in range(info.read_int())]
@@ -125,7 +190,15 @@ def _read_fs_to_disk(self, reader, temp: Path):
         reader.align_stream(16)
     with open(temp, 'wb') as out:
         for index, block in enumerate(blocks):
-            out.write(self.decompress_data(reader.read_bytes(block.compressedSize), block.uncompressedSize, block.flags, index))
+            if block.compressedSize > data_end - reader.Position:
+                raise ValueError('bundle payload exceeds its data region')
+            encoded = reader.read_bytes(block.compressedSize)
+            if len(encoded) != block.compressedSize:
+                raise ValueError('truncated compressed bundle block')
+            decoded = self.decompress_data(encoded, block.uncompressedSize, block.flags, index)
+            if len(decoded) != block.uncompressedSize:
+                raise ValueError('decoded bundle block size differs from its declaration')
+            out.write(decoded)
     return nodes, None
 
 

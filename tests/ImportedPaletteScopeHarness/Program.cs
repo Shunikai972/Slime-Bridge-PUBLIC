@@ -407,7 +407,7 @@ namespace UnityEngine
         public Transform transform => gameObject.transform;
         public T GetComponent<T>() where T : class => gameObject.GetComponent<T>();
         public T GetComponentInParent<T>() where T : class => gameObject.GetComponentInParent<T>();
-        public T GetComponentInChildren<T>(bool includeInactive) where T : class => gameObject.GetComponentInChildren<T>(includeInactive);
+        public T GetComponentInChildren<T>(bool includeInactive = false) where T : class => gameObject.GetComponentInChildren<T>(includeInactive);
     }
 
     public class Behaviour : Component
@@ -582,6 +582,11 @@ namespace UnityEngine
         }
         public int childCount => _children.Count;
         public Transform GetChild(int index) => _children[index];
+        public void SetParent(Transform value, bool worldPositionStays)
+        {
+            if (worldPositionStays) throw new NotSupportedException("world-space reparenting is outside this palette contract");
+            parent = value;
+        }
     }
 
     public struct Vector3
@@ -595,6 +600,13 @@ namespace UnityEngine
         public static Vector3 up => new Vector3(0f, 1f, 0f);
         public static Vector3 operator +(Vector3 left, Vector3 right) => new Vector3(left.x + right.x, left.y + right.y, left.z + right.z);
         public static Vector3 operator *(Vector3 value, float factor) => new Vector3(value.x * factor, value.y * factor, value.z * factor);
+    }
+
+    public struct Vector4
+    {
+        public float x, y, z, w;
+        public Vector4(float x, float y, float z, float w) { this.x = x; this.y = y; this.z = z; this.w = w; }
+        public static Vector4 zero => default;
     }
 
     public struct Quaternion
@@ -616,6 +628,7 @@ namespace UnityEngine
         public float a;
         public Color(float r, float g, float b, float a) { this.r = r; this.g = g; this.b = b; this.a = a; }
         public static Color clear => default;
+        public static Color yellow => throw new NotSupportedException("flame rendering is outside this palette contract");
         public static Color Lerp(Color a, Color b, float t) => new Color(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, a.a + (b.a - a.a) * t);
         public static bool operator ==(Color left, Color right) =>
             left.r == right.r && left.g == right.g && left.b == right.b && left.a == right.a;
@@ -655,21 +668,25 @@ namespace UnityEngine
         internal readonly Dictionary<int, Color> colors = new();
         internal readonly Dictionary<int, float> floats = new();
         internal readonly Dictionary<int, Texture> textures = new();
-        public bool isEmpty => colors.Count == 0 && floats.Count == 0 && textures.Count == 0;
-        public void Clear() { colors.Clear(); floats.Clear(); textures.Clear(); }
+        internal readonly Dictionary<int, Vector4> vectors = new();
+        public bool isEmpty => colors.Count == 0 && floats.Count == 0 && textures.Count == 0 && vectors.Count == 0;
+        public void Clear() { colors.Clear(); floats.Clear(); textures.Clear(); vectors.Clear(); }
+        public void SetVector(int id, Vector4 value) => vectors[id] = value;
+        public Vector4 GetVector(int id) => vectors.TryGetValue(id, out var value) ? value : default;
         public void SetColor(int id, Color value) => colors[id] = value;
         public Color GetColor(int id) => colors.TryGetValue(id, out var value) ? value : default;
         public void SetFloat(int id, float value) => floats[id] = value;
         public float GetFloat(int id) => floats.TryGetValue(id, out var value) ? value : 0f;
         public void SetTexture(int id, Texture value) => textures[id] = value;
         public Texture GetTexture(int id) => textures.TryGetValue(id, out var value) ? value : null;
-        internal bool Contains(int id) => colors.ContainsKey(id) || floats.ContainsKey(id) || textures.ContainsKey(id);
+        internal bool Contains(int id) => colors.ContainsKey(id) || floats.ContainsKey(id) || textures.ContainsKey(id) || vectors.ContainsKey(id);
     }
 
     public sealed class Material
     {
         public string name = "";
         public Shader shader;
+        public Color color { get => GetColor("_Color"); set => SetColor("_Color", value); }
         internal readonly HashSet<string> properties = new();
         internal readonly Dictionary<string, float> floats = new();
         internal readonly Dictionary<string, Color> colors = new();
@@ -706,6 +723,7 @@ namespace UnityEngine
         internal static int WideBlockWrites;
         internal static int SlotBlockWrites;
         public bool enabled = true;
+        public UnityEngine.Rendering.LightProbeUsage lightProbeUsage;
         public Material[] sharedMaterials { get => shared; set => shared = value; }
 
         public bool HasPropertyBlock()
@@ -753,6 +771,7 @@ namespace UnityEngine
             foreach (var pair in source.colors) destination.colors[pair.Key] = pair.Value;
             foreach (var pair in source.floats) destination.floats[pair.Key] = pair.Value;
             foreach (var pair in source.textures) destination.textures[pair.Key] = pair.Value;
+            foreach (var pair in source.vectors) destination.vectors[pair.Key] = pair.Value;
         }
     }
 
@@ -762,6 +781,11 @@ namespace UnityEngine
         public static void LogWarning(object message) => Console.WriteLine("[harness] warn: " + message);
         public static void LogError(object message) => Console.WriteLine("[harness] error: " + message);
     }
+}
+
+namespace UnityEngine.Rendering
+{
+    public enum LightProbeUsage { Off, BlendProbes, UseProxyVolume, CustomProvided }
 }
 
 namespace UnityEngine.SceneManagement
@@ -836,6 +860,8 @@ namespace SlimeBridge.SR1
 
     internal static class ImportedModelLoader
     {
+        // Current loader defaults; model only the CPU ambient-block boundary, not lighting.
+        internal static float LookAmbient = 1.2f, LookCool = 0.5f;
         internal sealed class ImportedModel
         {
             public GameObject Root = null;
@@ -880,6 +906,9 @@ namespace SlimeBridge.SR1
         internal static int Owned;
         internal void Own(Material material) { Owned++; }
     }
+
+    // Presence/type surface only; no flame-rendering behaviour is exercised here.
+    internal sealed class ImportedFlameAura : MonoBehaviour { internal Color Tint; }
 
     internal static class ImportedRubberBone
     {

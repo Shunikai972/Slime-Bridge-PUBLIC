@@ -58,7 +58,7 @@
     SB.net.hydrate($('#head'));
   }
   function renderSide() {
-    $('#side').innerHTML = `<nav class="nav" aria-label="Main">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${k === page ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k === 'debug' ? 'recovery' : k === 'credits' ? 'star' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>`;
+    $('#side').innerHTML = `<nav class="nav" aria-label="Main">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${!S ? 'disabled aria-disabled="true"' : ''} ${k === page ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k === 'debug' ? 'recovery' : k === 'credits' ? 'star' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>`;
   }
   function renderChars() {
     const N = SB.NEWS || {}, pick = re => (N.slimes || []).find(u => re.test(u));
@@ -128,14 +128,19 @@
     schedulePoll(); startCarousel();
   }
   function renderAll() { renderHead(); renderSide(); renderRibbon(); renderChars(); renderView(true); }
+  function validState(value) {
+    const object = x => !!x && typeof x === 'object' && !Array.isArray(x);
+    return object(value) && object(value.preferences) && object(value.host) && typeof value.host.state === 'string' &&
+      Array.isArray(value.installations) && object(value.games) && object(value.games.SR1) && object(value.games.SR2);
+  }
   async function refresh(keep = true) {
-    S = await safe(() => api.get_state(), S);
+    S = await safe(async () => { const state = await api.get_state(); if (!validState(state)) throw new Error('Launcher state unavailable'); return state; }, S);
     if (S) { applyPrefs(); renderHead(); renderRibbon(); renderView(keep); }
   }
   async function loadLinks() { const r = await safe(() => api.travel_links()); L.links = r && r.ok ? r.links : []; if (page === 'options') renderView(true); }
   async function loadSettings() { const r = await safe(() => api.get_settings()); if (r) { L.settings = r; if (page === 'options') renderView(true); } }
   async function loadProfiles() { const r = await safe(() => api.profiles_state()); if (r) { L.profiles = r; if (page === 'profiles') renderView(true); } }
-  async function loadModsInstalled() { const M = L.mods; if (!M) return; const r = await safe(() => api.mods_installed(M.realm)); if (r) { M.installed[M.realm] = r.ok ? r : { mods: [], pending: null }; if (page === 'mods') renderView(true); } }
+  async function loadModsInstalled() { const M = L.mods; if (!M) return; const realm = M.realm; const r = await safe(() => api.mods_installed(realm)); if (r && L.mods === M) { M.installed[realm] = r.ok ? r : { mods: [], pending: null }; if (page === 'mods' && M.realm === realm) renderView(true); } }
   async function loadModThumbs() { const M = L.mods; if (!M || !M.results) return; const todo = M.results.filter(m => m.thumbnail && !m.thumb); if (!todo.length) return;
     const data = await api.mods_thumbs(todo.map(m => m.thumbnail)).catch(() => []); todo.forEach((m, i) => { m.thumb = data[i] || null; }); if (page === 'mods') renderView(true); }
   function watchModDownload() { const tick = async () => { await loadModsInstalled(); const p = L.mods.installed[L.mods.realm] && L.mods.installed[L.mods.realm].pending;
@@ -149,7 +154,7 @@
   }
   async function loadSanct() { const r = await safe(() => api.sanctuary_state()); if (r) { L.sanct = r; if (page === 'assets') renderView(true); } }
   async function loadMp() { const r = await safe(() => api.mp_state()); if (r) { L.mp = r; if (page === 'multiplayer') renderView(true); } }
-  function go(name) { if (!SB.pages[name]) return; menu = null; page = name; location.hash = '#/' + name; renderHead(); renderView(false); }
+  function go(name) { if (!S || !SB.pages[name]) return; menu = null; page = name; location.hash = '#/' + name; renderHead(); renderView(false); }
 
   /* ----- carousel ----- */
   const car = { idx: 0, timer: 0 };
@@ -158,8 +163,10 @@
     $$('.slide', el).forEach((s, k) => s.classList.toggle('on', k === car.idx)); $$('.dots button', el).forEach((d, k) => d.classList.toggle('on', k === car.idx));
   }
   function startCarousel() {
-    clearInterval(car.timer); car.idx = 0;
+    clearInterval(car.timer);
     if (page !== 'home' || document.documentElement.classList.contains('reduce-motion')) return;
+    const el = $('#carousel'); if (!el || !+el.dataset.count) return;
+    setSlide(car.idx);
     car.timer = setInterval(() => { if (!document.hidden && !$('#carousel:hover')) setSlide(car.idx + 1); }, 6500);
   }
 
@@ -172,15 +179,22 @@
     }
     if (!bg.firstChild) bg.innerHTML = SB.Scene.background();
   }
+  let newsRefreshFinished = false, newsRefreshAttempt = 0;
   async function loadNews() {
     const cached = await api.news_cached().catch(() => null);
-    if (cached) SB.NEWS = cached;
-    SB.newsLoading = !(SB.NEWS && SB.NEWS.items && SB.NEWS.items.length);
+    if (cached && !SB.NEWS) {
+      SB.NEWS = cached;
+      SB.newsLoading = !newsRefreshFinished && !(cached.items && cached.items.length);
+    }
     return cached;
   }
   async function refreshNews(manual) {
+    const attempt = ++newsRefreshAttempt;
+    newsRefreshFinished = false;
     SB.newsLoading = true; if (manual && (page === 'home' || page === 'news')) renderView(true);
     const fresh = await api.news_refresh().catch(() => null);
+    if (attempt !== newsRefreshAttempt) return;
+    newsRefreshFinished = true;
     SB.newsLoading = false;
     if (fresh) {
       SB.NEWS = fresh; await applyBackdrop(); renderChars();
@@ -235,7 +249,7 @@
     noop: () => {},
     'open-url': async a => { const r = await safe(() => api.open_url(a)); if (r && !r.ok) toast(t('err.URL_NOT_ALLOWED'), 'warn'); },
     'news-refresh': () => refreshNews(true),
-    slide: a => { setSlide(car.idx + +a); startCarousel(); car.idx = Math.max(0, car.idx); },
+    slide: a => { setSlide(car.idx + +a); startCarousel(); },
     'slide-to': a => { setSlide(+a); },
     'profile-menu': (a, el, e) => { if (e && e.target.closest('.menu')) return; menu = menu === 'profile' ? null : 'profile'; renderHead(); },
     'play-menu': () => { menu = menu === 'play' ? null : 'play'; renderDock(); },
@@ -318,8 +332,9 @@
     'update-check': async () => { L.update = await safe(() => api.update_check()); renderView(true); if (L.update && L.update.ok && !L.update.update) toast(t('upd.uptodate'), 'good'); },
     'update-apply': async () => { if (L.update && L.update.frozen === false) { toast(t('upd.source'), 'warn'); return; } toast(t('upd.busy'), 'info'); const r = await safe(() => api.update_apply()); if (r && r.ok) toast(t('upd.restarting', { v: r.version }), 'good'); else toast(t('upd.err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
     'mods-realm': a => { SB.local.mods.realm = a; SB.local.mods.results = null; renderView(true); loadModsInstalled(); A['mods-search'](); },
-    'mods-search': async () => { const M = SB.local.mods, q = $('#mods-q'); if (q) M.query = q.value; M.busy = true; renderView(true);
-      const r = await safe(() => api.mods_search(M.realm, M.query, 0)); M.busy = false; M.results = r && r.ok ? r.mods : []; if (r && !r.ok) toast(t('mods.err') + ' (' + r.error + ')', 'bad'); renderView(true); loadModThumbs(); },
+    'mods-search': async () => { const M = SB.local.mods, q = $('#mods-q'); if (q) M.query = q.value; const realm = M.realm, epoch = M.searchEpoch = (M.searchEpoch || 0) + 1; M.busy = true; renderView(true);
+      const r = await safe(() => api.mods_search(realm, M.query, 0)); if (SB.local.mods !== M || M.realm !== realm || M.searchEpoch !== epoch) return;
+      M.busy = false; M.results = r && r.ok ? r.mods : []; if (r && !r.ok) toast(t('mods.err') + ' (' + r.error + ')', 'bad'); renderView(true); loadModThumbs(); },
     'mod-install': async a => { const M = SB.local.mods, mod = (M.results || []).find(m => String(m.id) === String(a)); if (!mod) return;
       const r = await safe(() => api.mods_install(M.realm, mod)); if (!r) return;
       if (r.ok && r.installed) { toast(t('mods.done', { name: mod.name }), 'good'); loadModsInstalled(); }
@@ -346,6 +361,7 @@
     const el = e.target.closest('[data-act]');
     if (menu && !e.target.closest('.menu, [data-act="profile-menu"], [data-act="play-menu"]')) { menu = null; renderHead(); renderDock(); }
     if (!el || el.disabled) return;
+    if (!S && !['win-min', 'win-max', 'win-close', 'open-url'].includes(el.dataset.act)) return;
     const fn = A[el.dataset.act]; if (fn) { e.preventDefault(); fn(el.dataset.arg, el, e); }
   });
   document.addEventListener('input', e => {
@@ -370,17 +386,34 @@
     if ((window.pywebview && window.pywebview.api) || SHOT) return;
     await Promise.race([new Promise(r => window.addEventListener('pywebviewready', r, { once: true })), sleep(1800)]);
   }
+  function startupCall(call, timeout = 12000) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Launcher startup timed out')), timeout);
+      Promise.resolve().then(call).then(resolve, reject).finally(() => clearTimeout(timer));
+    });
+  }
   async function boot() {
     if (SHOT) document.documentElement.classList.add('shot');
     SB.setLang((navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en');
     $('#bg').innerHTML = SB.Scene.background(); SB.Scene.parallax($('#bg')); SB.Art.trackEyes();
+    renderHead(); renderSide(); renderRibbon(); renderChars();
     const splash = SB.loading.open({ id: 'splash', steps: [t('boot.1')] }), started = Date.now();
     await backendReady(); splash.progress(18, t('boot.1'));
-    await loadNews(); splash.refreshArt();
-    S = await safe(() => api.get_state());
-    if (!S) return; splash.progress(38, t('boot.2')); applyPrefs();
+    try {
+      const state = await startupCall(() => api.get_state());
+      if (!validState(state)) throw new Error('Launcher state unavailable');
+      S = state;
+    } catch (error) {
+      splash.fail(SB.lang === 'fr' ? 'Le launcher ne répond pas. Tu peux réessayer.' : 'The launcher is not responding. You can retry.');
+      const actions = splash.actions(`<button class="btn btn--sky" data-retry>${SB.lang === 'fr' ? 'Réessayer' : 'Retry'}</button>`);
+      actions.querySelector('[data-retry]').addEventListener('click', async () => { await splash.close(); boot(); }, { once: true });
+      return;
+    }
+    splash.progress(38, t('boot.2')); applyPrefs();
     const first = !localStorage.getItem('sb.detected');
-    if (!S.installations.length && first) { try { await api.autodetect(); } catch (e) { /* shown on the Games page */ } localStorage.setItem('sb.detected', '1'); S = await api.get_state(); }
+    if (!S.installations.length && first) {
+      startupCall(() => api.autodetect(), 30000).then(() => { localStorage.setItem('sb.detected', '1'); return refresh(); }).catch(() => {});
+    }
     safe(() => api.update_check()).then(u => { if (u && u.ok) { L.update = u; if (u.update) toast(t('upd.available', { v: u.latest }) + ' — ' + t('nav.options'), 'info'); } });
     splash.progress(62, t('boot.3'));
     const initial = location.hash.replace('#/', ''); if (SB.pages[initial]) page = initial;
@@ -390,7 +423,8 @@
     if (SHOT && new URLSearchParams(location.search).get('open') === 'splash') { splash.progress(64, t('boot.3')); return; }
     splash.done(t('boot.5'));
     await sleep(Math.max(0, (S.preferences.reduce_motion || SHOT ? 200 : 1800) - (Date.now() - started)));
-    if (SHOT) splash.el.remove(); else splash.close();
+    if (SHOT) splash.el.remove(); else await splash.close();
+    loadNews().then(() => { applyBackdrop(); if (page === 'home' || page === 'news') renderView(true); }).catch(() => {});
     const openParam = new URLSearchParams(location.search).get('open');
     if (SHOT && openParam === 'legal') SB.showLegal();
     if (SHOT && openParam === 'launch') A.launch('BOTH_SR1');

@@ -17,9 +17,11 @@ import tempfile
 import threading
 import uuid
 import zipfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
+
+from bridge.cache.fs import confined_root, refuse_links
 
 SCHEMA = 'slimebridge-largo-models'
 # the MODELS branch release of SlimeBridge (the author's finished largos, adapted for both games)
@@ -84,7 +86,7 @@ def _url_allowed(url):
 
 class ModelStore:
     def __init__(self, root, opener=urlopen):
-        self.root = Path(root)
+        self.root = confined_root(root)
         self._open = opener
 
     def installed(self):
@@ -133,6 +135,9 @@ class ModelStore:
 
     def download(self, entry, progress=None, cancelled=lambda: False):
         """Fetch ``entry`` (a validated manifest entry), verify SHA-256, unpack safely, install atomically."""
+        confined_root(self.root)
+        target = self.root / entry['id']
+        refuse_links(self.root, target)
         self.root.mkdir(parents=True, exist_ok=True)
         workdir = Path(tempfile.mkdtemp(prefix='.dl-', dir=self.root))
         try:
@@ -160,11 +165,16 @@ class ModelStore:
             meta = {'id': entry['id'], 'version': entry['version'], 'sha256': entry['sha256'], 'files': written,
                     'source': 'download'}
             (staging / '.sb-install.json').write_text(json.dumps(meta, indent=2), encoding='utf-8')
-            target = self.root / entry['id']
             old = self.root / f'.old-{entry["id"]}-{uuid.uuid4().hex[:6]}'
+            refuse_links(self.root, target)
             if target.exists():
                 os.replace(target, old)
-            os.replace(staging, target)
+            try:
+                os.replace(staging, target)
+            except OSError:
+                if old.exists():
+                    os.replace(old, target)
+                raise
             shutil.rmtree(old, ignore_errors=True)
             return meta
         finally:
@@ -173,7 +183,11 @@ class ModelStore:
     def remove(self, model_id):
         if not _ID.match(model_id):
             raise ModelError('bad model id')
-        shutil.rmtree(self.root / model_id, ignore_errors=True)
+        confined_root(self.root)
+        target = self.root / model_id
+        refuse_links(self.root, target)
+        if target.exists():
+            shutil.rmtree(target)
         return {'removed': model_id}
 
 
@@ -188,10 +202,19 @@ def _safe_unzip(archive, destination):
             raise ModelError('too many files in the archive')
         if sum(i.file_size for i in infos) > MAX_UNPACKED:
             raise ModelError('archive unpacks to more than the allowed size')
+        plan, seen = [], set()
         for info in infos:
             name = info.filename.replace('\\', '/')
             if name.startswith('/') or re.match(r'^[A-Za-z]:', name) or '..' in name.split('/'):
                 raise ModelError(f'unsafe path in archive: {info.filename!r}')
+            parts = name.split('/')
+            if any(not part or part in ('.', '..') or part.endswith((' ', '.')) or PureWindowsPath(part).is_reserved()
+                   or any(ord(c) < 32 or c in ':<>"|?*' for c in part) for part in parts):
+                raise ModelError(f'unsafe path in archive: {info.filename!r}')
+            key = name.casefold()
+            if key in seen:
+                raise ModelError('duplicate model archive path')
+            seen.add(key)
             if (info.external_attr >> 16) & 0o170000 == 0o120000:
                 raise ModelError(f'links are not allowed in archives: {info.filename!r}')
             if Path(name).suffix.lower() not in ALLOWED_SUFFIXES:
@@ -199,6 +222,8 @@ def _safe_unzip(archive, destination):
             target = (root / name).resolve()
             if root not in target.parents:
                 raise ModelError(f'unsafe path in archive: {info.filename!r}')
+            plan.append((info, target))
+        for info, target in plan:
             target.parent.mkdir(parents=True, exist_ok=True)
             with zf.open(info) as source, target.open('wb') as out:
                 shutil.copyfileobj(source, out, 1 << 16)

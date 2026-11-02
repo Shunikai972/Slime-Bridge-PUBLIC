@@ -9,6 +9,8 @@ namespace SlimeBridge.Shared
     public sealed class NativeMeshCache
     {
         public string CanonicalId = "", ModelSha256 = "", Directory = "";
+        // Snapshot identity also covers texture-only postpasses; do not reread the live directory.
+        public string ManifestSha256 { get; private set; } = "";
         public NativeMeshDocument Document = new NativeMeshDocument();
         public readonly Dictionary<string, byte[]> Textures = new Dictionary<string, byte[]>(StringComparer.Ordinal);
         public static NativeMeshCache Load(string repoRoot, string directory) => Load(repoRoot, directory, LabSpecPathGuard.OutRelativeRoot);
@@ -27,7 +29,7 @@ namespace SlimeBridge.Shared
                 !System.Text.RegularExpressions.Regex.IsMatch(id, @"^(slime|largo)\.[a-z0-9_.-]{1,80}$") ||
                 !manifest.TryGetValue("files", out var filesRaw) || !(filesRaw is Dictionary<string, object?> files))
                 throw new FormatException("invalid cache manifest v1");
-            var result = new NativeMeshCache {Directory = directory, CanonicalId = id};
+            var result = new NativeMeshCache {Directory = directory, CanonicalId = id, ManifestSha256 = Digest(raw)};
             var bytes = ReadVerified(directory, "model.json", 16 * 1024 * 1024, files);
             result.ModelSha256 = Digest(bytes);
             result.Document = NativeMeshParser.Parse(Encoding.UTF8.GetString(bytes).TrimStart((char)0xfeff));

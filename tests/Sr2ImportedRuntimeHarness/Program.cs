@@ -20,6 +20,14 @@ Manifest();
 var cache = NativeMeshCache.Load(repo, cacheDir);
 Check(cache.CanonicalId == "slime.rad" && cache.Document.Parts.Length == 1, "validated cache reads pure model");
 Check(cache.ModelSha256 == Digest("model.json"), "hash binds actual model bytes");
+string ManifestDigest(NativeMeshCache loaded) => (string)(typeof(NativeMeshCache).GetProperty("ManifestSha256")?.GetValue(loaded)
+    ?? throw new Exception("cache snapshot must expose the digest of the verified manifest bytes"));
+var firstManifest = Digest("cache-manifest.json");
+Check(ManifestDigest(cache) == firstManifest, "manifest digest binds the loaded cache snapshot");
+File.AppendAllText(Path.Combine(cacheDir, "cache-manifest.json"), " ");
+Check(ManifestDigest(cache) == firstManifest && ManifestDigest(NativeMeshCache.Load(repo,cacheDir)) != firstManifest,
+    "loaded manifest identity is immutable and never reread from the live cache directory");
+Manifest();
 void Refuse(Action action, string label) { try {action();} catch (FormatException) { passed++; return;} throw new Exception("accepted: " + label); }
 Manifest(hash: new string('0',64));
 Refuse(() => NativeMeshCache.Load(repo,cacheDir), "model digest mismatch");
@@ -31,6 +39,17 @@ Manifest();
 string textured = model.Replace("\"triangles\":[[0,1,2]]", "\"triangles\":[[0,1,2]],\"materials\":[{\"textures\":[{\"property\":\"_MainTex\",\"file\":\"mask.png\"}]}]");
 File.WriteAllText(Path.Combine(cacheDir,"model.json"), textured); Manifest();
 Refuse(() => NativeMeshCache.Load(repo,cacheDir), "texture not covered by manifest");
+void TextureManifest(byte value)
+{
+    File.WriteAllBytes(Path.Combine(cacheDir,"mask.png"), new byte[]{value});
+    File.WriteAllText(Path.Combine(cacheDir,"cache-manifest.json"), "{\"schema\":\"bridge-asset-cache-manifest\",\"schema_version\":1,\"canonical_id\":\"slime.rad\",\"files\":{\"model.json\":\"" + Digest("model.json") + "\",\"mask.png\":\"" + Digest("mask.png") + "\"}}");
+}
+TextureManifest(1);
+var firstTextureCache=NativeMeshCache.Load(repo,cacheDir);
+TextureManifest(2);
+var secondTextureCache=NativeMeshCache.Load(repo,cacheDir);
+Check(firstTextureCache.ModelSha256 == secondTextureCache.ModelSha256 && ManifestDigest(firstTextureCache) != ManifestDigest(secondTextureCache),
+    "texture-only changes invalidate cache colour identity even when model JSON is unchanged");
 File.WriteAllText(Path.Combine(cacheDir,"model.json"),model); Manifest();
 Check(NativeMeshVisualPolicy.InScope("body") && !NativeMeshVisualPolicy.InScope("source-effect"), "radioactive geometry is out of milestone");
 var eyes = new NativeMeshMaterial { Shader = "SR/AMP/Slime/Face/Eyes Glow" };

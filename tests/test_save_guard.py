@@ -240,7 +240,8 @@ class SaveGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             low, _ = self._setup(base)
-            with patch('tools.lab.save_guard.subprocess.run', side_effect=fake):
+            with patch('tools.lab.save_guard.subprocess.run', side_effect=fake), \
+                 patch('tools.lab.save_guard._registry_key_exists', side_effect=lambda _key: state['exists']):
                 snap = save_guard.snapshot(['SR1'], 'test', low=low, out_root=base / 'out')
                 manifest = json.loads((snap / 'manifest.json').read_text(encoding='utf-8'))
                 self.assertTrue(manifest['realms']['SR1']['registry_absent'])

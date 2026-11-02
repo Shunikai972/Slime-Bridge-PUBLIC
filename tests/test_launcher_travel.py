@@ -91,7 +91,9 @@ def plugin_reply(host, realm, event, carry=None):
 class CoordinatorTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
         self.host = BridgeHost(token=TOKEN).__enter__()
+        self.addCleanup(self.host.__exit__, None, None, None)
         self.proc = FakeHostProcess(self.host)
         self.launcher = FakeLauncher(self.proc)
         self.windows, self.clock = FakeWindows(), Clock()
@@ -104,9 +106,6 @@ class CoordinatorTests(unittest.TestCase):
                                               self.links, settings=lambda: self.settings, clock=self.clock,
                                               list_saves=lambda realm: [dict(e) for e in self.saves.get(realm, [])])
 
-    def tearDown(self):
-        self.host.__exit__(None, None, None)
-        self.tmp.cleanup()
 
     def state(self):
         return self.coord.poll()[-1]['state']
@@ -452,6 +451,7 @@ class LastSessionTests(unittest.TestCase):
 
     def test_a_completed_crossing_marks_the_destination_as_where_the_player_is(self):
         case = CoordinatorTests('test_one_world_per_save_when_linking_again')
+        self.addCleanup(case.doCleanups)
         case.setUp()
         import tempfile
         from apps.launcher.travel import LastSession

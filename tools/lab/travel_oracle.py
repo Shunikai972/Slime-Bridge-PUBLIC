@@ -113,11 +113,14 @@ def beats(host):
 def drive(host, coordinator, directory, label, timeout_s, timeline, choose=None):
     """Poll the coordinator until the newest crossing is terminal; screenshot each new state."""
     seen = set()
+    completed = {row.get('id') for row in timeline if row.get('state') in ('COMPLETE', 'ROLLED_BACK', 'FAILED')}
+    source = {'out': 'SR1', 'back': 'SR2', 'create': 'SR2'}.get(label)
     deadline = time.monotonic() + timeout_s
     last = None
     while time.monotonic() < deadline:
         crossings = coordinator.poll()
-        last = crossings[-1] if crossings else None
+        last = next((item for item in reversed(crossings) if item.get('id') not in completed
+                     and (source is None or item.get('from') == source)), None)
         if last is not None:
             state = last['state']
             if state == 'NEEDS_LINK' and (last['id'], 'answered') not in seen:
@@ -128,7 +131,7 @@ def drive(host, coordinator, directory, label, timeout_s, timeline, choose=None)
             if (last['id'], state) not in seen:
                 seen.add((last['id'], state))
                 shot = grab(directory, f'{label}-{state.lower()}')
-                timeline.append({'label': label, 'state': state, 'code': last.get('code'), 't': round(time.time(), 1), 'screen': shot,
+                timeline.append({'label': label, 'id': last['id'], 'state': state, 'code': last.get('code'), 't': round(time.time(), 1), 'screen': shot,
                                  'beats': beats(host), 'history': last['history'][-3:]})
                 print(f'[travel] {label}: {state} {last.get("code") or ""}', flush=True)
             if state in ('COMPLETE', 'ROLLED_BACK', 'FAILED'):
@@ -241,17 +244,17 @@ def run(layout_dir, timeout_s, current_user_authorized, scenario='both'):
         raise
     finally:
         try:
-            result['stop_errors'] = oracle._stop_owned(started) if started else {}
-            if host is not None:
-                host.__exit__(None, None, None)
-            result['sr1_log'] = log_lines(SR1_LOG, ('travel', 'sanctuary', 'SlimeBridge'))
-            result['sr2_log'] = log_lines(SR2_LOG, ('travel', 'SlimeBridge'))
-            result['plugins_restored'] = {'SR1': sanctuary_oracle.restore_plugin(previous['SR1']), 'SR2': sr2_probe_oracle.restore_plugin(previous['SR2'])}
-            oracle._finalize_current_user(result, snap, ['SR1', 'SR2'], directory)
-            if result.get('stop_errors'):
-                result['passed'] = False
-            result['cleanup_completed'] = not any(result.get(k) for k in ('stop_errors', 'safety_error', 'registry_error',
-                                                  'restoration_skipped', 'registry_restore_skipped', 'save_restore_errors'))
+            oracle.cleanup_steps(result, [
+                ('stop_errors', lambda: oracle._stop_owned(started) if started else {}),
+                ('host_closed', lambda: host.__exit__(None, None, None) if host is not None else None),
+                ('sr1_log', lambda: log_lines(SR1_LOG, ('travel', 'sanctuary', 'SlimeBridge'))),
+                ('sr2_log', lambda: log_lines(SR2_LOG, ('travel', 'SlimeBridge'))),
+                ('sr1_plugin_restored', lambda: sanctuary_oracle.restore_plugin(previous['SR1'])),
+                ('sr2_plugin_restored', lambda: sr2_probe_oracle.restore_plugin(previous['SR2'])),
+                ('protected_finalizer', lambda: oracle._finalize_current_user(result, snap, ['SR1', 'SR2'], directory)),
+            ])
+            result['plugins_restored'] = {realm: result.get(key) for realm, key in
+                                           (('SR1', 'sr1_plugin_restored'), ('SR2', 'sr2_plugin_restored'))}
         finally:
             (directory / 'travel-oracle.json').write_text(json.dumps(result, indent=2, default=str), encoding='utf-8')
             print(f'[travel] evidence: {directory}', flush=True)

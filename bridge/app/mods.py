@@ -7,7 +7,9 @@ through deploy plans built from ``to_deploy_unit``; nothing here touches a game 
 """
 
 from bridge.deploy.planner import plan_deploy
+from bridge.deploy.units import validate_unit
 from bridge.modcompat import analyzer as A
+from bridge.modcompat.manifest import deploy_key_id, diag, satisfies
 
 TONES = {'CONFIG_ONLY': 'good', 'CONTENT_ONLY': 'good', 'KNOWN_API_GAMEPLAY': 'info', 'HARMONY_PATCH': 'warn',
          'NATIVE_DEEP_PATCH': 'bad', 'UNKNOWN': 'muted', 'INVALID': 'bad'}
@@ -63,5 +65,24 @@ def enable_plan(journal, manifest, report, *, state='ENABLED'):
     if unit is None:
         return {'schema': 'bridge-deploy-plan', 'executable': False, 'operations': [], 'blockers': diagnostics,
                 'diagnostics': []}
-    return plan_deploy(journal.inventory(unit['realm']), [{'key': unit['key'], 'state': state, 'unit': unit}],
+    inventory = journal.inventory(unit['realm'])
+    if state == 'ENABLED':
+        # A catalogue report may resolve a newer version than the unit actually
+        # enabled in the journal. Deployment units retain keys, not constraints.
+        for dep in manifest['dependencies']:
+            if dep['optional'] or dep['kind'] != 'MOD':
+                continue
+            key = f"mod:{deploy_key_id(dep['id'])}:{unit['realm']}"
+            provider = inventory['units'].get(key)
+            if provider is None or provider['state'] != 'ENABLED':
+                continue  # the planner reports a missing enabled dependency
+            actual = provider['unit']
+            if validate_unit(actual) or satisfies(actual['version'], dep['constraint']) is not True:
+                diagnostics.append(diag('DEPENDENCY_VERSION_CONFLICT', 'error',
+                    'enabled dependency does not satisfy the required version', subject=manifest['id'],
+                    details={'dependency': dep['id'], 'constraint': dep['constraint']}))
+        if diagnostics:
+            return {'schema': 'bridge-deploy-plan', 'executable': False, 'operations': [],
+                    'blockers': diagnostics, 'diagnostics': []}
+    return plan_deploy(inventory, [{'key': unit['key'], 'state': state, 'unit': unit}],
                        history=journal.history())

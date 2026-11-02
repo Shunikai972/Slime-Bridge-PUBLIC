@@ -477,6 +477,7 @@ namespace SlimeBridge.SR1
             // path (spawn, rethrow, load, appearance rebuild) renders the validated material
             // palette; a clean visual is a pure no-op.
             ClearVisualPaletteBlocks(visual);
+            ApplyNeutralAmbient(visual);                       // after the clear: it lives in the renderer's block
             // Native squash/stretch (hop, vacpack pull) springs the visual's jiggle bones.
             try
             {
@@ -520,6 +521,44 @@ namespace SlimeBridge.SR1
         /// markings mask drives the body shader's _StripeTexture slot, and the baked face drives
         /// the eyes shader's _FaceAtlas slot. The converter materials stay in place when no native
         /// template is found (fail-open).</summary>
+        private static readonly int[] ShIds =
+        {
+            Shader.PropertyToID("unity_SHAr"), Shader.PropertyToID("unity_SHAg"), Shader.PropertyToID("unity_SHAb"),
+            Shader.PropertyToID("unity_SHBr"), Shader.PropertyToID("unity_SHBg"), Shader.PropertyToID("unity_SHBb"), Shader.PropertyToID("unity_SHC")
+        };
+
+        /// <summary>User largo renderers get their own neutral ambient light (a constant spherical harmonic) instead of the
+        /// scene's, which is the tinted sky; the sun and the other real lights still light them like everything else.</summary>
+        private static void ApplyNeutralAmbient(GameObject visual)
+        {
+            if (visual == null) return;
+            try
+            {
+                var renderers = new List<Renderer>();
+                CollectRenderersBounded(visual, renderers);
+                // a cool ambient balances the games' warm sunlight, which pulled every hue toward orange (measured)
+                var a = ImportedModelLoader.LookAmbient; var cool = ImportedModelLoader.LookCool;
+                float ar = a * (1f - 0.25f * cool), ag = a, ab = a * (1f + 0.35f * cool);
+                foreach (var renderer in renderers)
+                {
+                    if (renderer == null) continue;
+                    var ours = false;
+                    foreach (var material in renderer.sharedMaterials)
+                        if (material != null && material.name == "SlimeBridgeUserLargo") { ours = true; break; }
+                    if (!ours) continue;
+                    renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.CustomProvided;
+                    var block = new MaterialPropertyBlock();
+                    renderer.GetPropertyBlock(block);
+                    block.SetVector(ShIds[0], new Vector4(0f, 0f, 0f, ar));
+                    block.SetVector(ShIds[1], new Vector4(0f, 0f, 0f, ag));
+                    block.SetVector(ShIds[2], new Vector4(0f, 0f, 0f, ab));
+                    for (var i = 3; i < ShIds.Length; i++) block.SetVector(ShIds[i], Vector4.zero);
+                    renderer.SetPropertyBlock(block);
+                }
+            }
+            catch (Exception) { /* fail-open: the scene's ambient stays */ }
+        }
+
         private static void RebindNativeMaterials(GameObject instance, GameObject visual, string canonical)
         {
             if (instance == null || visual == null) return;

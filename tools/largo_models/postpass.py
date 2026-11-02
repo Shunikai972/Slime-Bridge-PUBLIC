@@ -71,25 +71,61 @@ def _body(model):
     return next(p for p in model['skinned_renderers'] if p['role'] == 'body')
 
 
+BODY_BONE = __import__('re').compile(r'(^|_)(BODY|BAND|BRIDGE)(_|$)', __import__('re').I)
+
+
+def _body_bones(model):
+    """The bones of the slime's body: the rigs call them BODY (BODY_L/BODY_R for twins), BAND_LOW/MID/HIGH, BRIDGE.
+    Wings, ears, rings, clouds and tails are left out (picking the heaviest bone chose a wing or a ring before)."""
+    names = [b['name'] for b in model['skeleton']['bones']]
+    found = [n for n in names if BODY_BONE.search(n) and 'ROOT' not in n.upper()]
+    return found
+
+
 def _anchor(model):
-    """The bone the body follows (most body weight) and, per body vertex, its weight on that bone."""
+    """The body's primary bone (its authored bounce drives the physics frame) and, per body vertex, its weight on the
+    body bones."""
     body = _body(model)
     weights = np.array(body['bone_weights'], dtype=float)
     palette = body['skin_bones']
-    totals = np.zeros(len(palette))
-    for k in range(4):
-        np.add.at(totals, weights[:, 4 + k].astype(int), weights[:, k])
-    pal = int(totals.argmax())
+    bodies = [n for n in _body_bones(model) if n in palette]
+    if bodies:
+        primary = next((n for n in bodies if n.upper().endswith('BODY')), bodies[0])
+        idx = {palette.index(n) for n in bodies}
+    else:
+        totals = np.zeros(len(palette))
+        for k in range(4):
+            np.add.at(totals, weights[:, 4 + k].astype(int), weights[:, k])
+        primary = palette[int(totals.argmax())]
+        idx = {palette.index(primary)}
     on = np.zeros(len(weights))
     for k in range(4):
-        on += np.where(weights[:, 4 + k].astype(int) == pal, weights[:, k], 0)
-    return palette[pal], on
+        on += np.where(np.isin(weights[:, 4 + k].astype(int), list(idx)), weights[:, k], 0)
+    return primary, on
 
 
 def _core(model):
-    verts = np.array(_body(model)['vertices'], dtype=float)
-    _, on = _anchor(model)
-    core = verts[on >= 0.6] if (on >= 0.6).sum() >= 50 else verts
+    """Bounds of the slime's body: vertices of every part (the mesh is split per material) held by the body bones. A twin
+    is measured on one of its two bodies."""
+    body = _body(model)
+    bodies = [n for n in _body_bones(model) if n in body['skin_bones']]
+    sides = {n for n in bodies if n.upper().endswith('_L')}
+    if sides and any(n.upper().endswith('_R') for n in bodies):
+        bodies = sorted(sides)
+    verts, core = [], []
+    for part in model['skinned_renderers']:
+        if part['skin_bones'] != body['skin_bones']:
+            continue
+        v = np.array(part['vertices'], dtype=float)
+        w = np.array(part['bone_weights'], dtype=float)
+        idx = [part['skin_bones'].index(n) for n in bodies]
+        on = sum(np.where(np.isin(w[:, 4 + k].astype(int), idx), w[:, k], 0) for k in range(4)) if idx else np.zeros(len(v))
+        verts.append(v)
+        core.append(v[on >= 0.6])
+    verts = np.concatenate(verts)
+    core = np.concatenate(core)
+    if len(core) < 50:
+        core = np.array(body['vertices'], dtype=float)
     return verts, np.percentile(core, 2, axis=0), np.percentile(core, 98, axis=0)
 
 
@@ -132,10 +168,12 @@ def add_jiggle(model: dict) -> dict:
         return {'jiggle': 'present'}
     body = _body(model)
     anchor_name, _ = _anchor(model)
-    chain, j = set(), names.index(anchor_name)
-    while j >= 0:
-        chain.add(j)
-        j = bones[j]['parent']
+    chain = set()
+    for start in [names.index(n) for n in (_body_bones(model) or [anchor_name])]:
+        j = start
+        while j >= 0:
+            chain.add(j)
+            j = bones[j]['parent']
     verts, lo, hi = _core(model)
     centre, half = (lo + hi) / 2, np.maximum((hi - lo) / 2, 1e-4)
     paths = _paths(bones)
@@ -191,30 +229,36 @@ def add_jiggle(model: dict) -> dict:
     chain_pal = {palette.index(names[i]) for i in chain if names[i] in palette}
     targets = {side: palette.index('bone_jiggle_top' if side == 'top' else f'bone_skin_{side}') for side, _ in JIGGLE}
     axes = np.array([a for _, a in JIGGLE])
-    moved, rows = 0, []
-    for v, row in zip(verts, body['bone_weights']):
-        pairs = [(row[k], int(row[4 + k])) for k in range(4) if row[k] > 0]
-        wa = sum(w for w, b in pairs if b in chain_pal)
-        if wa <= 0:
-            rows.append(row)
+    moved = 0
+    # every part that follows the body (its face, eyes, markings: separate meshes since they are reduced apart) gets the same
+    # springs, or it would come loose from the wobbling skin
+    for part in model['skinned_renderers']:
+        if part['skin_bones'] != palette:
             continue
-        moved += 1
-        d = (v - centre) / half
-        n = np.linalg.norm(d)
-        d = d / n if n > 1e-6 else np.array([0.0, 1.0, 0.0])
-        share = np.clip(axes @ d, 0, None) ** 2
-        best = np.argsort(-share)[:2]
-        share = share[best] / max(share[best].sum(), 1e-9)
-        pairs = [(w, b) for w, b in pairs if b not in chain_pal] + [(wa * s_, targets[JIGGLE[i][0]]) for s_, i in zip(share, best)]
-        pairs = sorted(pairs, reverse=True)[:4]
-        total = sum(w for w, _ in pairs)
-        pairs = [(w / total, b) for w, b in pairs]
-        while len(pairs) < 4:
-            pairs.append((0.0, pairs[0][1]))
-        ws = [round(w, 6) for w, _ in pairs]
-        ws[0] = round(1.0 - sum(ws[1:]), 6)
-        rows.append(ws + [b for _, b in pairs])
-    body['bone_weights'] = rows
+        rows = []
+        for v, row in zip(np.array(part['vertices'], dtype=float), part['bone_weights']):
+            pairs = [(row[k], int(row[4 + k])) for k in range(4) if row[k] > 0]
+            wa = sum(w for w, b in pairs if b in chain_pal)
+            if wa <= 0:
+                rows.append(row)
+                continue
+            moved += 1
+            d = (v - centre) / half
+            n = np.linalg.norm(d)
+            d = d / n if n > 1e-6 else np.array([0.0, 1.0, 0.0])
+            share = np.clip(axes @ d, 0, None) ** 2
+            best = np.argsort(-share)[:2]
+            share = share[best] / max(share[best].sum(), 1e-9)
+            pairs = [(w, b) for w, b in pairs if b not in chain_pal] + [(wa * s_, targets[JIGGLE[i][0]]) for s_, i in zip(share, best)]
+            pairs = sorted(pairs, reverse=True)[:4]
+            total = sum(w for w, _ in pairs)
+            pairs = [(w / total, b) for w, b in pairs]
+            while len(pairs) < 4:
+                pairs.append((0.0, pairs[0][1]))
+            ws = [round(w, 6) for w, _ in pairs]
+            ws[0] = round(1.0 - sum(ws[1:]), 6)
+            rows.append(ws + [b for _, b in pairs])
+        part['bone_weights'] = rows
     model['skinned_renderers'].remove(body)
     model['skinned_renderers'].insert(0, body)
     body['mesh_name'] = 'body'
@@ -261,6 +305,71 @@ def glow_textures(model: dict, cache: Path) -> int:
     return made
 
 
+# What the author sees is Blender's Material Preview (AgX view transform), which compresses saturation and highlights; the
+# games show texture colours as they are. Measured on the in-game close-ups against tools/largo_models/reference_render.py
+# (tools/largo_models/colour_check.py), the baked colours are graded toward that look before they reach the games.
+GRADE_SATURATION, GRADE_VALUE = 0.45, 0.9       # measured: mean deltaE 5-7 on the calibration largos (was 33-38)
+
+
+OVERRIDES = Path(__file__).with_name('grade_overrides.json')     # per-largo factors fitted by tools/largo_models/fit_grade.py
+
+
+def desired_grade(canonical: str) -> list:
+    """Base grade x this largo's measured correction: [saturation, value]."""
+    extra = {}
+    if OVERRIDES.is_file():
+        extra = json.loads(OVERRIDES.read_text(encoding='utf-8')).get(canonical, {})
+    return [round(GRADE_SATURATION * extra.get('saturation', 1.0), 4), round(GRADE_VALUE * extra.get('value', 1.0), 4)]
+
+
+def ensure_grade(model: dict, cache: Path, applied) -> list:
+    """Bring the textures to the desired grade from the one already applied (the two compose: saturation around the luma
+    and a value scale multiply). Returns the grade now applied."""
+    want = desired_grade(Path(cache).name)
+    have = applied or [1.0, 1.0]
+    s, v = want[0] / have[0], want[1] / have[1]
+    if abs(s - 1) > 1e-3 or abs(v - 1) > 1e-3:
+        grade_textures(model, cache, s, v)
+    return want
+
+
+def merge_alpha(model: dict, cache: Path) -> int:
+    """Clipped materials (_Cutoff): the converter baked their alpha apart; it becomes the albedo's alpha channel."""
+    from PIL import Image
+    merged = 0
+    for part in model['skinned_renderers']:
+        for m in part['materials']:
+            alpha = m.pop('alpha_merge', None)
+            if not alpha:
+                continue
+            albedo = next(t['file'] for t in m['textures'] if t['property'] == '_MainTex')
+            rgba = Image.open(cache / albedo).convert('RGBA')
+            if (cache / alpha).is_file():
+                rgba.putalpha(Image.open(cache / alpha).convert('L').resize(rgba.size))
+                rgba.save(cache / albedo)
+                (cache / alpha).unlink()
+            merged += 1
+    return merged
+
+
+def grade_textures(model: dict, cache: Path, saturation: float = None, value: float = None) -> int:
+    """Grade the baked colour and glow maps in place: saturation around the luma, then a value scale (sRGB space)."""
+    from PIL import Image
+    saturation = GRADE_SATURATION if saturation is None else saturation
+    value = GRADE_VALUE if value is None else value
+    files = sorted({t['file'] for part in model['skinned_renderers'] for m in part['materials'] for t in m.get('textures', [])
+                    if t['property'] in ('_MainTex', '_EmissionMap')})
+    for name in files:
+        image = Image.open(cache / name).convert('RGBA')
+        a = np.asarray(image, dtype=float)
+        rgb = a[..., :3]
+        luma = (rgb @ np.array([0.2126, 0.7152, 0.0722]))[..., None]
+        rgb = np.clip((luma + saturation * (rgb - luma)) * value, 0, 255)
+        a[..., :3] = rgb
+        Image.fromarray(a.astype(np.uint8), 'RGBA').save(cache / name)
+    return len(files)
+
+
 def rgba_textures(cache: Path) -> int:
     from PIL import Image
     changed = 0
@@ -287,7 +396,12 @@ def run(cache) -> dict:
     already = any(b['name'] == 'bone_core' for b in model['skeleton']['bones'])
     result = {'size': 'kept' if already else normalise_to_body(model)}
     result.update(add_jiggle(model))
-    result['glow_maps'] = glow_textures(model, cache)
+    result['alpha_merged'] = merge_alpha(model, cache)
+    report_path = cache / 'adapter-report.json'
+    previous = json.loads(report_path.read_text(encoding='utf-8')).get('postpass', {}) if report_path.is_file() else {}
+    applied = previous.get('grade') or ([GRADE_SATURATION, GRADE_VALUE] if previous.get('graded') else None)
+    result['grade'] = ensure_grade(model, cache, applied)
+    result['graded'] = True
     model_path.write_text(json.dumps(model, separators=(',', ':')), encoding='utf-8')
     result['rgba'] = rgba_textures(cache)
     report_path = cache / 'adapter-report.json'

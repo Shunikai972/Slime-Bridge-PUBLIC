@@ -30,6 +30,7 @@ namespace UnityEngine
         public T? TryCast<T>() where T : Object => this as T;
         public static readonly List<Object> Allocations = new();
         public Object() { Allocations.Add(this); }
+        public static void DontDestroyOnLoad(Object obj) { }
         public static void Destroy(Object obj)
         {
             if (obj.Destroyed) return;
@@ -55,6 +56,7 @@ namespace UnityEngine
         public readonly List<Component> Components = new();
         public readonly Transform transform;
         public bool activeSelf = true;
+        public int layer;
         public bool activeInHierarchy => activeSelf && (transform.parent == null || transform.parent.gameObject.activeInHierarchy);
         public GameObject(string name) { this.name=name; transform=new Transform {gameObject=this}; Components.Add(transform); }
         public void SetActive(bool value) { activeSelf=value; if(value && activeInHierarchy) foreach(var c in Components) c.GetType().GetMethod("OnEnable")?.Invoke(c,null); }
@@ -73,6 +75,8 @@ namespace UnityEngine
     {
         public Transform? parent;
         public readonly List<Transform> Children=new();
+        public int childCount => Children.Count;
+        public Transform GetChild(int index) => Children[index];
         public Vector3 localPosition,localScale=new(1,1,1);
         public Quaternion localRotation=new(0,0,0,1);
         public void SetParent(Transform? value,bool world) { parent?.Children.Remove(this);parent=value;parent?.Children.Add(this); }
@@ -82,11 +86,13 @@ namespace UnityEngine
             foreach(var piece in pieces)result=result?.Children.FirstOrDefault(t=>t.name==piece && !t.Destroyed); return result;
         }
     }
-    public struct Vector2 { public float x,y; public Vector2(float x,float y){this.x=x;this.y=y;} }
+    public struct Vector2 { public float x,y; public Vector2(float x,float y){this.x=x;this.y=y;} public static Vector2 one=>new(1,1); public static Vector2 zero=>new(0,0); }
     public struct Vector3 { public float x,y,z; public Vector3(float x,float y,float z){this.x=x;this.y=y;this.z=z;} }
     public struct Vector4 { public float x,y,z,w; public Vector4(float x,float y,float z,float w){this.x=x;this.y=y;this.z=z;this.w=w;} }
     public struct Quaternion { public float x,y,z,w; public Quaternion(float x,float y,float z,float w){this.x=x;this.y=y;this.z=z;this.w=w;} }
-    public struct Color { public float r,g,b,a; public Color(float r,float g,float b,float a){this.r=r;this.g=g;this.b=b;this.a=a;} }
+    public struct Color { public float r,g,b,a; public Color(float r,float g,float b,float a){this.r=r;this.g=g;this.b=b;this.a=a;} public static Color white=>new(1,1,1,1); public static Color black=>new(0,0,0,1); }
+    public struct Color32 { public byte r,g,b,a; public Color32(byte r,byte g,byte b,byte a){this.r=r;this.g=g;this.b=b;this.a=a;} }
+    public static class Mathf { public static float Clamp(float value,float min,float max)=>value<min?min:value>max?max:value; }
     public struct Matrix4x4 { private float[] values; public float this[int r,int c] {get => values[r*4+c];set{values??=new float[16];values[r*4+c]=value;} } }
     public struct BoneWeight { public float weight0,weight1,weight2,weight3;public int boneIndex0,boneIndex1,boneIndex2,boneIndex3; }
     public class Mesh : Object
@@ -117,7 +123,8 @@ namespace UnityEngine
     public class MeshFilter : Component { public Mesh sharedMesh; }
     public class SkinnedMeshRenderer : Renderer { public Il2CppReferenceArray<Transform> bones=new(0); public Transform rootBone; public Mesh sharedMesh; public bool updateWhenOffscreen; }
     public class LODGroup : Component { public bool enabled=true; }
-    public class Shader : Object { public readonly HashSet<string> Properties=new(); }
+    public class Shader : Object { public readonly HashSet<string> Properties=new(); public readonly Dictionary<string,int> PropertyFlags=new(); public static Shader? Find(string name)=>Allocations.OfType<Shader>().FirstOrDefault(s=>!s.Destroyed && s.name==name); }
+    public static class Resources { public static T[] FindObjectsOfTypeAll<T>() where T:Object=>Object.Allocations.OfType<T>().Where(o=>!o.Destroyed).ToArray(); }
     public class Material : Object
     {
         public Shader shader;
@@ -125,22 +132,40 @@ namespace UnityEngine
         public readonly Dictionary<string,Color> Colors=new();
         public readonly Dictionary<string,float> Floats=new();
         public readonly Dictionary<string,Texture2D> Textures=new();
+        public readonly HashSet<string> Keywords=new();
+        public readonly Dictionary<string,Vector2> TextureScales=new(),TextureOffsets=new();
         public Material(Shader shader) { this.shader=shader; }
-        public Material(Material source) { shader=source.shader; foreach(var p in source.Colors)Colors[p.Key]=p.Value;foreach(var p in source.Floats)Floats[p.Key]=p.Value;foreach(var p in source.Textures)Textures[p.Key]=p.Value; }
+        public Material(Material source) { shader=source.shader; renderQueue=source.renderQueue; foreach(var p in source.Colors)Colors[p.Key]=p.Value;foreach(var p in source.Floats)Floats[p.Key]=p.Value;foreach(var p in source.Textures)Textures[p.Key]=p.Value;Keywords.UnionWith(source.Keywords);foreach(var p in source.TextureScales)TextureScales[p.Key]=p.Value;foreach(var p in source.TextureOffsets)TextureOffsets[p.Key]=p.Value; }
         public bool HasProperty(string key) => shader.Properties.Contains(key);
+        // CPU contract follows the observed SR2 Unity 6000 Linear interop build: HDR flag 16
+        // does NOT change raw GetVector after SetColor(.25). Not a GPU colour-management model.
         public void SetColor(string key,Color value) {Colors[key]=value;}
+        public void SetVector(string key,Vector4 value) {Colors[key]=new(value.x,value.y,value.z,value.w);}
+        public Vector4 GetVector(string key) {var c=GetColor(key);return new(c.r,c.g,c.b,c.a);}
         public Color GetColor(string key) => Colors.TryGetValue(key,out var value) ? value : default;
         public void SetFloat(string key,float value){Floats[key]=value;}
+        public float GetFloat(string key)=>Floats.TryGetValue(key,out var value)?value:0;
+        public void EnableKeyword(string key)=>Keywords.Add(key);
+        public void DisableKeyword(string key)=>Keywords.Remove(key);
+        public bool IsKeywordEnabled(string key)=>Keywords.Contains(key);
         public void SetTexture(string key,Texture2D value){Textures[key]=value;}
-        public void SetTextureScale(string key,Vector2 value) { }
-        public void SetTextureOffset(string key,Vector2 value) { }
+        public void SetTextureScale(string key,Vector2 value) {TextureScales[key]=value;}
+        public void SetTextureOffset(string key,Vector2 value) {TextureOffsets[key]=value;}
     }
     public class MaterialPropertyBlock { public readonly Dictionary<string,Color> Colors=new(); public void SetColor(string key,Color value){Colors[key]=value;} public Color GetColor(string key)=>Colors[key]; }
     public enum TextureFormat { RGBA32 }
-    public enum FilterMode { Bilinear }
-    public enum TextureWrapMode { Clamp }
-    public class Texture2D : Object { public FilterMode filterMode;public TextureWrapMode wrapMode;public Texture2D(int w,int h,TextureFormat format,bool mip,bool linear){} }
-    public static class ImageConversion { public static bool LoadImage(Texture2D target,Il2CppStructArray<byte> bytes,bool unreadable) => true; }
+    public enum FilterMode { Bilinear,Trilinear }
+    public enum TextureWrapMode { Clamp,Repeat }
+    public class Texture2D : Object
+    {
+        public FilterMode filterMode;public TextureWrapMode wrapMode;
+        public readonly int Width,Height; public readonly bool Mipmaps,Linear;public readonly TextureFormat Format;
+        public Color32[] Pixels=Array.Empty<Color32>();public bool Applied,ApplyMipmaps,MadeUnreadable;
+        public Texture2D(int w,int h,TextureFormat format,bool mip,bool linear){Width=w;Height=h;Format=format;Mipmaps=mip;Linear=linear;}
+        public void SetPixels32(Il2CppStructArray<Color32> pixels){Pixels=pixels.ToArray();}
+        public void Apply(bool mipmaps,bool unreadable){Applied=true;ApplyMipmaps=mipmaps;MadeUnreadable=unreadable;}
+    }
+    public static class ImageConversion { public static int LoadImageCalls;public static bool LoadImage(Texture2D target,Il2CppStructArray<byte> bytes,bool unreadable) {LoadImageCalls++;return true;} }
     public static class Debug { public static void Log(string text) { } }
     public enum WrapMode { Loop,ClampForever }
     public enum PlayMode { StopAll }
@@ -168,6 +193,14 @@ namespace UnityEngine
 namespace UnityEngine.Rendering { public enum IndexFormat { UInt32 } }
 namespace Il2Cpp
 {
+    public class RubberBoneEffect : UnityEngine.Component
+    {
+        public class BoneEntry { public UnityEngine.Transform Trans;public float Intensity; }
+        public enum RubberType { SLIME }
+        public RubberType Presets;public float EffectIntensity,Gravity,Mass,Stiffness,Damping;
+        public Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<BoneEntry> Bones=new(0);
+        public UnityEngine.SkinnedMeshRenderer? SkinRenderer;
+    }
     public class IdentifiableType : UnityEngine.Object { }
     public class SlimeDefinition : IdentifiableType { public Il2Cpp.SlimeAppearance[] AppearancesDefault = System.Array.Empty<Il2Cpp.SlimeAppearance>(); }
     public class SlimeAppearance { public Il2Cpp.SlimeAppearanceStructure[] Structures = System.Array.Empty<Il2Cpp.SlimeAppearanceStructure>(); public Il2Cpp.SlimeFace? _face; }
@@ -181,4 +214,5 @@ namespace Il2Cpp
     public class SlimeAppearanceApplicator : UnityEngine.Component { public SlimeDefinition SlimeDefinition; }
 }
 namespace SlimeBridge.SR2 { internal static class Sr2ImportedAppearancePatch {internal static void Install() { }} }
+namespace MelonLoader { public static class MelonLogger { public static void Msg(string message)=>Console.WriteLine(message); } }
 namespace SlimeBridge.Shared { public static class RegistrySnapshotFormat { public static string Quote(string value) => System.Text.Json.JsonSerializer.Serialize(value); } }

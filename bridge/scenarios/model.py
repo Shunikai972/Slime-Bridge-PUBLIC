@@ -9,7 +9,7 @@ report comes from a provider trusted for every realm the scenario touches; a syn
 """
 
 from bridge.core import schema as S
-from bridge.verification.receipts import make_receipt
+from bridge.verification.receipts import make_receipt, validate_receipt
 
 AREAS = ('COUNTERPART', 'TRANSITION', 'CONTENT', 'MULTIPLAYER', 'DEPLOY', 'UPDATE', 'SYSTEM')
 _EVENT = r'[a-z_]+\.[a-z0-9_]+'
@@ -37,7 +37,7 @@ RUN_REPORT = S.obj({
     'provider': S.obj({'provider_id': S.string(max_length=128), 'provider_version': S.string(max_length=64)}),
     'realms': S.list_of(S.enum('SR1', 'SR2'), max_items=2, unique=True),
     'build_fingerprints': S.map_of(S.enum('SR1', 'SR2'), S.string(max_length=128)),
-    'session': S.optional(S.obj({'pid': S.integer(minimum=1), 'session_id': S.string(max_length=128)})),
+    'session': S.optional(S.obj({'pid': S.integer(minimum=1, maximum=2 ** 32 - 1), 'session_id': S.string(max_length=128)})),
     'observed_events': S.list_of(S.string(_EVENT), max_items=10000),
     'persisted_state': S.map_of(S.string(max_length=128), S.any_json()),
     'artifacts': S.map_of(S.string(r'[a-z0-9_.-]{1,64}'), S.sha256()),
@@ -121,6 +121,8 @@ def evaluate_run(scenario_doc, report, *, trust):
                                  provider=report['provider'], observed_at=report['finished_at'],
                                  session=report['session'], artifact_hashes=report['artifacts'])
                     for realm in scenario_doc['realms']]
+        if any(validate_receipt(receipt) for receipt in receipts):
+            return {'verdict': 'INVALID', 'reasons': ['INVALID_RECEIPT'], 'runtime': False, 'receipts': []}
     if verdict == 'PASSED' and not runtime:
         verdict = 'PASSED_SYNTHETIC'  # consistent, but not runtime evidence
     return {'verdict': verdict, 'reasons': reasons, 'runtime': runtime, 'receipts': receipts}

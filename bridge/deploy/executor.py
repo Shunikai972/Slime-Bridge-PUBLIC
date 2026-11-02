@@ -231,7 +231,8 @@ class DeployExecutor:
             self.fs.write(backup, before)
         with self.journal.tx() as db:
             db.execute('INSERT INTO steps VALUES (?,?,?,?,?,?,?,?)',
-                       (txn_id, seq, path, action, before and _sha(before), digest, backup, 'INTENT'))
+                       (txn_id, seq, path, action, _sha(before) if before is not None else None,
+                        digest, backup, 'INTENT'))
         if self.faults.check('deploy.crash_before_write', path=path):
             raise _Crash()
         if self.faults.check('deploy.write', path=path):
@@ -257,7 +258,7 @@ class DeployExecutor:
                 if self.faults.check('deploy.rollback_write', path=step['path']):
                     raise OSError('simulated rollback write failure')
                 current = self.fs.read(step['path'])
-                if (current and _sha(current)) == step['before_sha']:
+                if (_sha(current) if current is not None else None) == step['before_sha']:
                     pass  # already in its before-state (crash before the write, or a resumed rollback)
                 elif step['backup'] is not None:
                     data = self.fs.read(step['backup'])

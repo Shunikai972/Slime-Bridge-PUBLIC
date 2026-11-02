@@ -292,6 +292,7 @@ namespace SlimeBridge.Shared
                 case "DESTINATION_WRONG_SAVE": case "DESTINATION_BUSY":
                     return fr ? other + " est ouvert sur une autre partie : ferme-le, le portail le relancera sur la bonne." : other + " is open on another game: close it, the portal will start it on the right one.";
                 case "DESTINATION_UNAVAILABLE": return fr ? other + " est introuvable : choisis son dossier dans SlimeBridge." : other + " was not found: pick its folder in SlimeBridge.";
+                case "DESTINATION_PREPARATION_FAILED": return fr ? "Mets à jour le plugin de " + other + " dans SlimeBridge, puis réessaie le portail." : "Update the " + other + " plugin in SlimeBridge, then retry the portal.";
                 case "NEEDS_BACKUP_CONFIRMATION": return fr ? "Confirme une fois le rappel de sauvegarde dans SlimeBridge, puis réessaie." : "Confirm the backup reminder once in SlimeBridge, then try again.";
                 case "ANOTHER_CROSSING_ACTIVE": return fr ? "Un voyage est déjà en cours." : "A trip is already under way.";
                 case "TIMEOUT_PREPARING": return fr ? other + " n’a pas fini de charger à temps : réessaie." : other + " did not finish loading in time: try again.";

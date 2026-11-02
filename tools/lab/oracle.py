@@ -207,6 +207,8 @@ def run(realms: list[str], timeout_s: float, keep_running: bool, evidence_dir: P
                     re.fullmatch(r'[0-9a-f]{64}', spec['sha256']) is None or
                     not _implant_rel_ok(spec['rel'])):
                 raise ValueError('invalid implant specification')
+            if spec['realm'] not in protected_realms:
+                raise ValueError('Implant realm must belong to the guarded rollback scope')
     if 'SR2' in creation_realms and set(protected_realms) != {'SR1', 'SR2'}:
         raise ValueError('SR2 creation requires both source and target roots protected')
     protected_creation = ('SR2' in creation_realms or
@@ -290,6 +292,82 @@ def run(realms: list[str], timeout_s: float, keep_running: bool, evidence_dir: P
             _write_evidence(result, evidence_dir)
 
 
+def snapshot_plugins(roots):
+    """Remember only the launcher-owned plugin files in verified LAB installations."""
+    from apps.launcher import plugins
+    executables = {'SR1': 'SlimeRancher.exe', 'SR2': 'SlimeRancher2.exe'}
+    saved = {}
+    for realm, root in roots.items():
+        base = validate_lab_destination(Path(root) / executables[realm], LAB).parent
+        folder = plugins.destination(realm, base)
+        files = {}
+        for name in plugins.FILES[realm]:
+            target = validate_lab_destination(folder / name, LAB)
+            if target.exists() and (not target.is_file() or target.stat().st_nlink != 1):
+                raise ValueError(f'Plugin target is not a single-link regular file: {target}')
+            files[name] = target.read_bytes() if target.is_file() else None
+        saved[realm] = {'root': base, 'files': files}
+    return saved
+
+
+def restore_plugins(saved):
+    """Restore every independent plugin file, refusing all writes while games are live."""
+    from apps.launcher import plugins
+    targets = []
+    for realm, state in saved.items():
+        if realm not in plugins.FILES or set(state['files']) != set(plugins.FILES[realm]):
+            raise ValueError('Invalid plugin rollback state')
+        folder = plugins.destination(realm, state['root'])
+        for name, data in state['files'].items():
+            if data is not None and not isinstance(data, bytes):
+                raise ValueError('Invalid plugin rollback bytes')
+            targets.append((realm, folder / name, data))
+    assert_no_other_game_processes()
+    errors, restored = {}, {}
+    for realm, target, data in targets:
+        try:
+            target = validate_lab_destination(target, LAB)
+            if target.exists() and (not target.is_file() or target.stat().st_nlink != 1):
+                raise ValueError(f'Plugin target is not a single-link regular file: {target}')
+            if data is None:
+                target.unlink(missing_ok=True)
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+                if target.read_bytes() != data:
+                    raise RuntimeError('Plugin restore readback differs')
+            restored.setdefault(realm, {})[target.name] = hashlib.sha256(data).hexdigest() if data is not None else None
+        except Exception as ex:
+            errors[f'{realm}/{target.name}'] = f'{type(ex).__name__}: {ex}'
+    if errors:
+        raise RuntimeError(f'Failed plugin rollback: {errors}')
+    return restored
+
+
+def cleanup_steps(result, steps):
+    """Attempt every independent cleanup; never turn a failed run back into success."""
+    passed_before = result.get('passed') is True
+    fatal = None
+    for name, action in steps:
+        try:
+            result[name] = action()
+        except BaseException as ex:
+            result.setdefault('cleanup_errors', {})[name] = f'{type(ex).__name__}: {ex}'
+            if not isinstance(ex, Exception) and fatal is None:
+                fatal = ex
+    display = result.get('display_settings_restored') or {}
+    failed = (any(result.get(key) for key in ('cleanup_errors', 'stop_errors', 'safety_error', 'registry_error',
+              'restoration_skipped', 'registry_restore_skipped', 'save_restore_errors')) or
+              result.get('sources_untouched') is False or result.get('registry_restoration_verified') is False or
+              any(state not in ('reimported', 'removed-new-key') for state in result.get('registry_restore', {}).values()) or
+              not isinstance(display, dict) or
+              any(isinstance(value, str) and value.startswith('failed:') for value in display.values()))
+    result['cleanup_completed'] = not failed and result.get('saves_match_backup_after_restore') is True
+    result['passed'] = passed_before and result.get('passed') is True and result['cleanup_completed']
+    if fatal is not None:
+        raise fatal
+
+
 def _finalize_current_user(result: dict, snap: Path, realms: list[str], evidence_dir: Path) -> None:
     """Preserve evidence and restore files even if registry inspection fails."""
     try:
@@ -326,6 +404,11 @@ def _finalize_current_user(result: dict, snap: Path, realms: list[str], evidence
                     result['passed'] = False
                 else:
                     result['registry_restore'] = save_guard.restore_registry(snap, changes)
+                    result['registry_restoration_verified'] = save_guard.registry_restoration_verified(
+                        changes, result['registry_restore'], tuple(changes))
+                    if not result['registry_restoration_verified']:
+                        result['registry_error'] = 'Registry restoration is incomplete or could not be verified'
+                        result['passed'] = False
         result['sources_after'] = source_fingerprints(realms)
         result['sources_untouched'] = all(v['actual'] == v['expected'] for v in result['sources_after'].values())
         after = save_guard.compare(snap)
@@ -385,15 +468,9 @@ def _run_games(realms, timeout_s, keep_running, evidence_dir, require_status, cu
                             'store_path': Path(transfer_authority['store_path'])}
         transfer_authority['_runtime'] = transfer_runtime
     with BridgeHost(creation_realms=creation_realms, **host_kwargs) as host:
-        env = dict(os.environ, SLIMEBRIDGE_URL=host.url)
-        # Never inherit a previous oracle's lab autoload markers into an ordinary run.
-        env.pop('SLIMEBRIDGE_AUTOLOAD', None)
-        env.pop('SLIMEBRIDGE_LAB_EXE', None)
-        env.pop('SLIMEBRIDGE_LAB_DIAG_SAVES', None)
-        env.pop('SLIMEBRIDGE_LAB_SAVE_ID', None)
-        env.pop('SLIMEBRIDGE_LAB_GIVE', None)
-        env.pop('SLIMEBRIDGE_LAB_CREATE', None)
-        env.pop('SLIMEBRIDGE_OP_JOURNAL', None)
+        # Each run must explicitly arm its own native modes, never inherit another oracle's flags.
+        env = {key: value for key, value in os.environ.items() if not key.upper().startswith('SLIMEBRIDGE_')}
+        env['SLIMEBRIDGE_URL'] = host.url
         if require_status:
             env['SLIMEBRIDGE_AUTOLOAD'] = 'continue'
         try:
@@ -503,13 +580,14 @@ def _run_games(realms, timeout_s, keep_running, evidence_dir, require_status, cu
     return result
 
 
-def _require_control_image(realm: str, proc: subprocess.Popen) -> None:
+def _require_control_image(realm: str, proc: subprocess.Popen, expected=None) -> None:
+    target = GAMES[realm] if expected is None else validate_lab_destination(expected, LAB)
     image = process_image_path(proc.pid)
-    if image is None or os.path.normcase(str(image)) != os.path.normcase(str(GAMES[realm].resolve())):
+    if image is None or os.path.normcase(str(image)) != os.path.normcase(str(target.resolve())):
         raise RuntimeError('owned child PID no longer matches its verified LAB executable')
 
 
-def _stop_owned(started: dict) -> dict[str, str]:
+def _stop_owned(started: dict, expected=None) -> dict[str, str]:
     """Attempt to stop EVERY owned child; one failure must not strand the others.
 
     Unknown or mismatched PID images fail closed even with a retained Popen handle.
@@ -520,13 +598,14 @@ def _stop_owned(started: dict) -> dict[str, str]:
         try:
             if proc.poll() is None:
                 # A retained handle does not replace the exact PID + LAB image prerequisite.
-                _require_control_image(realm, proc)
+                target = expected[realm] if expected is not None else None
+                _require_control_image(realm, proc, target)
                 try:
                     proc.terminate()
                     proc.wait(timeout=20)
                 except (OSError, subprocess.TimeoutExpired):
                     if proc.poll() is None:
-                        _require_control_image(realm, proc)
+                        _require_control_image(realm, proc, target)
                         proc.kill()
                     proc.wait(timeout=20)
                 print(f'[oracle] stopped {realm} pid={proc.pid}', flush=True)

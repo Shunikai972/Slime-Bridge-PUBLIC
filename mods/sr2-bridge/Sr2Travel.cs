@@ -19,13 +19,14 @@ namespace SlimeBridge.SR2
         internal void RequestCrossing(string portalId, string saveId) => _transport.RequestCrossing(portalId, saveId);
         private readonly bool _destinationMode;
         private bool _held, _arrived;
-        private float _focusedSince = -1f;
 
-        public bool Held => _held;
+
+        public bool Held => _held || _throttle.Active;
 
         private Sr2TravelRealm(string url, string token, bool destinationMode)
         {
             _destinationMode = destinationMode;
+            if (destinationMode) _throttle.MuteAudio();
             _transport = new HttpTravelTransport(url, token, "SR2", () => (double)Time.realtimeSinceStartup);
             _transport.CrossingFailed = () => TravelNotice.Post(TravelText.Failure("HOST_UNREACHABLE", "SR1"));
             _agent = new TravelAgent(_transport, this, text => MelonLoader.MelonLogger.Msg(text));
@@ -55,19 +56,15 @@ namespace SlimeBridge.SR2
 
         internal void Tick()
         {
+            if (_destinationMode && !_arrived) _throttle.MuteAudio();
+            _throttle.Maintain();
             var notice = TravelNotice.Take();
             if (notice != null) _overlay.ShowHint(notice, 6f);
             if (_destinationMode && !_arrived && WorldReady() && !_overlay.IsCovering && !_held)
                 _overlay.CoverNow(TravelText.Arriving(), TravelText.Waiting("SR2"));
-            if (_held)
-            {
-                if (Application.isFocused) { if (_focusedSince < 0f) _focusedSince = Time.realtimeSinceStartup; }
-                else _focusedSince = -1f;
-            }
             _agent.Tick((double)Time.realtimeSinceStartup);
-            if (_held && _focusedSince >= 0f && Time.realtimeSinceStartup - _focusedSince > 4f)
+            if (_held && _throttle.ReturnedByHand(Application.isFocused, Time.realtimeSinceStartup))
             {
-                _focusedSince = -1f;
                 MelonLoader.MelonLogger.Msg("travel: the player returned to this window by hand; resuming");
                 Resume(null);
             }
@@ -82,14 +79,27 @@ namespace SlimeBridge.SR2
                 case "prepare_departure":
                     if (!WorldReady()) { done(false, "no_world"); return; }
                     var offer = Sr2Carry.Snapshot(message.CarryMode);
-                    _overlay.Close(TravelText.Departing(message.Destination.Length > 0 ? message.Destination : "SR1"), TravelText.Waiting(message.Destination), 1.7f, () => done(true, offer.Count > 0 ? offer.Count + " kinds offered" : "", offer));
+                    _overlay.Close(TravelText.Departing(message.Destination.Length > 0 ? message.Destination : "SR1"), TravelText.Waiting(message.Destination), 0.8f, () =>
+                    {
+                        try
+                        {
+                            // Covered departure is recoverable standby, not a completed item transfer.
+                            _throttle.Apply(true);
+                            done(true, offer.Count > 0 ? offer.Count + " kinds offered" : "", offer);
+                        }
+                        catch (Exception)
+                        {
+                            _throttle.Restore();
+                            done(false, "departure_standby_failed");
+                        }
+                    });
                     break;
                 case "hold":
                     if (!WorldReady()) { done(false, "no_world"); return; }
                     _overlay.CoverNow(TravelText.Parked("SR2"), TravelText.Waiting("SR2"));
                     var removed = message.Carry.Count > 0 ? Sr2Carry.Remove(message.Carry) : new System.Collections.Generic.Dictionary<string, int>();
                     _throttle.Apply(!string.Equals(message.Policy, "THROTTLE", StringComparison.Ordinal));
-                    _held = true; _focusedSince = -1f;
+                    _held = true;
                     done(true, removed.Count != message.Carry.Count ? "carry mismatch" : "", removed);
                     break;
                 case "resume":
@@ -105,7 +115,7 @@ namespace SlimeBridge.SR2
                     _held = false; _arrived = true;
                     var placed = Sr2ReturnPortalHook.PlacePlayer?.Invoke() ?? false;
                     if (!_overlay.IsCovering) { done(true, placed ? "portal" : "in_place", accepted); return; }
-                    _overlay.Open(2.2f, () => done(true, placed ? "portal" : "in_place", accepted));
+                    _overlay.Open(1.1f, () => done(true, placed ? "portal" : "in_place", accepted));
                     break;
                 default:
                     done(false, "unknown_kind");
@@ -116,7 +126,7 @@ namespace SlimeBridge.SR2
         private void Resume(TravelDone? done)
         {
             _throttle.Restore();
-            _held = false;
+            _held = false; _arrived = true;
             if (!_overlay.IsCovering) { done?.Invoke(true, ""); return; }
             _overlay.Open(1.2f, () => done?.Invoke(true, ""));
         }

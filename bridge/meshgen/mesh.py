@@ -15,6 +15,7 @@ from . import vec as V
 SUBSYSTEM = 'meshgen'
 ROUND_DIGITS = 6
 _MAX_EXAMPLES = 5
+_FLOAT32_MAX = 3.4028234663852886e38  # Attribute storage used by export_gltf._Bin.floats.
 
 
 @dataclass
@@ -191,15 +192,21 @@ def validate_mesh(parts, *, subject='mesh', max_extent=100.0, degenerate_area=1e
         if not isinstance(part, MeshPart):
             out.append(_diag('MESH_INVALID', 'error', 'not a MeshPart', subject))
             continue
-        out.extend(_validate_part(part, f'{subject}/{part.name}', max_extent, degenerate_area,
-                                  normal_tolerance, max_degenerate_fraction, check_winding,
-                                  max_inverted_fraction))
+        try:
+            out.extend(_validate_part(part, f'{subject}/{part.name}', max_extent, degenerate_area,
+                                      normal_tolerance, max_degenerate_fraction, check_winding,
+                                      max_inverted_fraction))
+        except OverflowError:
+            out.append(_diag('MESH_NUMERIC_OUT_OF_RANGE', 'error', 'vertex arithmetic exceeds numeric range', subject))
     return out
 
 
 def _finite_tuple(value, size):
-    return (isinstance(value, tuple) and len(value) == size and
-            all(isinstance(c, (int, float)) and math.isfinite(c) for c in value))
+    try:
+        return (isinstance(value, tuple) and len(value) == size and
+                all(isinstance(c, (int, float)) and math.isfinite(c) and abs(c) <= _FLOAT32_MAX for c in value))
+    except OverflowError:
+        return False
 
 
 def _validate_part(part, subject, max_extent, degenerate_area, normal_tolerance,

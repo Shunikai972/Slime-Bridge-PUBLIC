@@ -11,6 +11,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from pathlib import Path
@@ -51,8 +52,9 @@ def _system(out):
     lab = REPO_ROOT / 'Lab'
     try:
         lab.mkdir(parents=True, exist_ok=True)
-        probe = lab / '.diag-write'
-        probe.write_text('ok', encoding='utf-8'); probe.unlink()
+        with tempfile.TemporaryFile(dir=lab) as probe:
+            probe.write(b'ok')
+            probe.flush()
         writable = 'yes'
     except OSError as exc:
         writable = f'NO ({exc})'

@@ -39,7 +39,7 @@ def evaluate_world_ready(report, *, expected, trust):
             fail('WORLD_READY_WRONG_' + key.upper(), f'{key} differs from the expected endpoint')
     if report['session'] != expected['session']:
         fail('WORLD_READY_WRONG_SESSION', 'report from another process/session')
-    for key in ('scene_settled', 'player_usable', 'bridge_synchronized'):
+    for key in ('process_running', 'load_callback_returned', 'scene_settled', 'player_usable', 'bridge_synchronized'):
         if report[key] is not True:
             fail('WORLD_READY_' + key.upper() + '_FALSE', f'{key} not attested')
     if report['evidence'] != 'RUNTIME_OBSERVATION':

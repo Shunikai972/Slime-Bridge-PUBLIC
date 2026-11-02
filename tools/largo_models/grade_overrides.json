@@ -1,0 +1,98 @@
+{
+ "largo.angler.mosaic": {
+  "saturation": 0.9681,
+  "value": 0.9228
+ },
+ "largo.angler.quantum": {
+  "saturation": 0.9464,
+  "value": 0.9636
+ },
+ "largo.angler.rad": {
+  "saturation": 0.9093,
+  "value": 1.0332
+ },
+ "largo.batty.mosaic": {
+  "saturation": 1.1612,
+  "value": 1.2322
+ },
+ "largo.batty.quantum": {
+  "saturation": 1.351,
+  "value": 1.3345
+ },
+ "largo.batty.rad": {
+  "saturation": 1.2033,
+  "value": 1.2122
+ },
+ "largo.cotton.mosaic": {
+  "saturation": 1.0509,
+  "value": 0.9368
+ },
+ "largo.cotton.quantum": {
+  "saturation": 1.1078,
+  "value": 1.0183
+ },
+ "largo.cotton.rad": {
+  "saturation": 0.8743,
+  "value": 0.9232
+ },
+ "largo.flutter.mosaic": {
+  "saturation": 0.9814,
+  "value": 1.0177
+ },
+ "largo.flutter.quantum": {
+  "saturation": 1.3117,
+  "value": 1.0543
+ },
+ "largo.flutter.rad": {
+  "saturation": 1.0247,
+  "value": 0.9374
+ },
+ "largo.hyper.mosaic": {
+  "saturation": 1.0121,
+  "value": 1.0473
+ },
+ "largo.hyper.quantum": {
+  "saturation": 1.0698,
+  "value": 1.0365
+ },
+ "largo.hyper.rad": {
+  "saturation": 0.9932,
+  "value": 0.9173
+ },
+ "largo.mosaic.ringtail": {
+  "saturation": 1.0621,
+  "value": 1.2546
+ },
+ "largo.mosaic.sloomber": {
+  "saturation": 0.902,
+  "value": 1.1408
+ },
+ "largo.mosaic.twin": {
+  "saturation": 0.9401,
+  "value": 1.3115
+ },
+ "largo.quantum.ringtail": {
+  "saturation": 1.2217,
+  "value": 0.9316
+ },
+ "largo.quantum.sloomber": {
+  "saturation": 0.9668,
+  "value": 1.0079
+ },
+ "largo.quantum.twin": {
+  "saturation": 1.4089,
+  "value": 0.774
+ },
+ "largo.rad.ringtail": {
+  "saturation": 0.9909,
+  "value": 1.0135
+ },
+ "largo.rad.sloomber": {
+  "saturation": 1.2804,
+  "value": 1.0371
+ },
+ "largo.rad.twin": {
+  "saturation": 1.0244,
+  "value": 1.1129
+ }
+}

@@ -60,7 +60,7 @@
     },
     "rule": "R6",
     "unit_status": {
-      "SR1": "EXPERIMENTAL",
+      "SR1": "PENDING_ADAPTER",
       "SR2": "PENDING_ADAPTER"
     }
   },

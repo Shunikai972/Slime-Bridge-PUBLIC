@@ -7,27 +7,33 @@ import stat
 from pathlib import Path, PurePosixPath
 
 _SEGMENT = re.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$')
+_RESERVED = {'CON', 'PRN', 'AUX', 'NUL'} | {
+    f'{prefix}{number}' for prefix in ('COM', 'LPT') for number in range(1, 10)
+}
 
 
 def safe_relative(rel):
-    """True for a canonical relative POSIX path without '..', '.', empty, drive or backslash parts."""
+    """Canonical portable artifact path, rejecting Win32 aliases rather than normalizing them."""
     if not isinstance(rel, str) or not rel or '\\' in rel or ':' in rel or len(rel) > 1024:
         return False
     pure = PurePosixPath(rel)
     return (not pure.is_absolute() and pure.as_posix() == rel and
-            all(part not in ('.', '..') and _SEGMENT.fullmatch(part) for part in pure.parts))
+            all(part not in ('.', '..') and _SEGMENT.fullmatch(part) and not part.endswith('.') and
+                part.split('.', 1)[0].upper() not in _RESERVED for part in pure.parts))
 
 
 def resolve_confined(root, rel):
-    """Path for ``rel`` under ``root`` or None if unsafe or any component is a symlink."""
+    """Path for ``rel`` under ``root`` or None if unsafe or any component is a link/junction."""
     if not safe_relative(rel):
         return None
     current = Path(root)
-    if current.is_symlink():
+    # Inspect the lexical ancestors too: resolving first would hide a linked root.
+    absolute = current.absolute()
+    if any(part.is_symlink() or part.is_junction() for part in (absolute, *absolute.parents)):
         return None
     for part in PurePosixPath(rel).parts:
         current = current / part
-        if current.is_symlink():
+        if current.is_symlink() or current.is_junction():
             return None
     return current
 

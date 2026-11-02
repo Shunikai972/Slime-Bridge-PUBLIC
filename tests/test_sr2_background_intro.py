@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +71,38 @@ def prepare(work):
         'synthetic_only': True, 'native_runtime_verified': False}, indent=2), encoding='utf-8')
 
 
+def run_intro(command, work, *, timeout=600):
+    """Run the managed process itself, so a timeout also releases its mapped files.
+
+    The unchanged 971-check matrix makes thousands of durable journal writes. A retained
+    assembly completed in 197 seconds while sampled in FlushToDisk; 180 seconds is not
+    a reliable watchdog under concurrent storage load. Keep the watchdog bounded without
+    changing the assertions, matrix size, journal durability or production safety gates.
+    """
+    started = time.monotonic()
+    completed = None
+    timed_out = False
+    output = ''
+    try:
+        completed = subprocess.run(command, cwd=ROOT, env=dict(os.environ), stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', timeout=timeout)
+        output = completed.stdout
+        return completed
+    except subprocess.TimeoutExpired as exc:
+        timed_out = True
+        output = exc.stdout or ''
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', errors='replace')
+        raise
+    finally:
+        (work / 'run.log').write_text(output, encoding='utf-8')
+        (work / 'run-execution.json').write_text(json.dumps({
+            'command': command, 'cwd': str(ROOT), 'timeout_seconds': timeout,
+            'elapsed_seconds': time.monotonic() - started, 'timed_out': timed_out,
+            'exit_code': completed.returncode if completed is not None else None,
+            'synthetic_only': True, 'native_runtime_verified': False}, indent=2), encoding='utf-8')
+
+
 class SR2BackgroundIntroTests(unittest.TestCase):
     def test_owned_background_native_intro(self):
         dotnet = os.environ.get('INTRO_DOTNET') or shutil.which('dotnet')
@@ -83,11 +116,8 @@ class SR2BackgroundIntroTests(unittest.TestCase):
                 stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', timeout=180)
             (work / 'build.log').write_text(build.stdout, encoding='utf-8')
             self.assertEqual(build.returncode, 0, 'COMPILATION FAILURE, not behavioral RED: ' + build.stdout)
-            command = [dotnet, 'run', '--project', str(work / 'Intro.csproj'), '-c', 'Release', '--no-build', '--',
-                os.environ.get('INTRO_MODE', 'all')]
-            run = subprocess.run(command, cwd=ROOT, env=dict(os.environ), stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', timeout=180)
-            (work / 'run.log').write_text(run.stdout, encoding='utf-8')
+            command = [dotnet, str(work / 'bin/Release/net10.0/Intro.dll'), os.environ.get('INTRO_MODE', 'all')]
+            run = run_intro(command, work)
             (work / 'execution.json').write_text(json.dumps({'build_command': build_command,
                 'build_exit_code': build.returncode, 'command': command, 'exit_code': run.returncode,
                 'cwd': str(ROOT), 'explicit_env': {key: os.environ.get(key) for key in

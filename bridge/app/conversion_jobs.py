@@ -225,6 +225,7 @@ class ConversionJobs:
         env = sc.child_env()
         for key in ('TEMP', 'TMP', 'TMPDIR', 'DOTNET_CLI_HOME'):
             env[key] = str(scratch)
+        env['DOTNET_ADD_GLOBAL_TOOLS_TO_PATH'] = 'false'
         env['PYTHONUNBUFFERED'] = '1'
         return env
 

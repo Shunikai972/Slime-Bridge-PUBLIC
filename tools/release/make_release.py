@@ -69,6 +69,7 @@ def dirty():
 
 def dotnet():
     env = dict(os.environ)
+    env['DOTNET_ADD_GLOBAL_TOOLS_TO_PATH'] = 'false'
     home = Path(env.get('DOTNET_ROOT') or Path.home() / '.dotnet')
     if (home / 'dotnet.exe').is_file():
         env['DOTNET_ROOT'] = str(home)

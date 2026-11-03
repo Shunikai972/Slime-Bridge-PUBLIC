@@ -110,6 +110,7 @@ def child_env(root, base=None):
     env = dict(os.environ if base is None else base)
     for key in ('TEMP', 'TMP', 'TMPDIR', 'DOTNET_CLI_HOME'):
         env[key] = str(scratch)
+    env['DOTNET_ADD_GLOBAL_TOOLS_TO_PATH'] = 'false'
     env['PYTHONUNBUFFERED'] = '1'
     env['PYTHONDONTWRITEBYTECODE'] = '1'
     existing = env.get('PYTHONPATH')
@@ -216,10 +217,11 @@ class HostController:
         return self.state()
 
     def stop(self):
-        """Stop the BridgeHost this controller owns; another session's host is left untouched."""
-        state = self.state()
-        if not state['owned']:
-            return {**state, 'stopped': False}
+        """Stop only this controller's own child. It never stops a process merely found in a record."""
+        if self._child is None:
+            return {**self.state(), 'stopped': False}
+        # The retained Popen handle establishes ownership even if the status record
+        # was removed or replaced. A different generation's record is left alone.
         generation = self._generation
         self._terminate_child()
         self._unlink_record(generation)
@@ -355,8 +357,13 @@ class HostController:
         return match.group(0) if match else None
 
     def _log_bytes(self, path, limit=65536):
+        if limit <= 0:
+            return b''
         try:
-            return path.read_bytes()[-limit:]
+            with path.open('rb') as stream:
+                stream.seek(0, os.SEEK_END)
+                stream.seek(max(0, stream.tell() - limit))
+                return stream.read(limit)
         except OSError:
             return b''
 
@@ -365,15 +372,16 @@ class HostController:
 
     def _terminate_child(self):
         """Terminate the exact child handle this controller started (never a PID lookup)."""
-        child, self._child, self._generation = self._child, None, None
-        if child is None or child.poll() is not None:
-            return
-        child.terminate()
-        try:
-            child.wait(timeout=STOP_TIMEOUT)
-        except subprocess.TimeoutExpired:
-            child.kill()
-            child.wait(timeout=STOP_TIMEOUT)
+        child = self._child
+        if child is not None and child.poll() is None:
+            child.terminate()
+            try:
+                child.wait(timeout=STOP_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait(timeout=STOP_TIMEOUT)
+        # Keep the owned handle available for a retry if terminate/kill/wait fails.
+        self._child, self._generation = None, None
 
     def _unlink_record(self, generation=None):
         record = self._record()

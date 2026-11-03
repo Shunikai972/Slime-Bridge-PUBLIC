@@ -3,6 +3,18 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.2] - 2026-11-03
+
+### Fixed
+- BridgeHost shutdown uses the child process actually started by the launcher, even if its status record disappears.
+  It leaves another session's process and status record alone.
+- A failed shutdown retains the owned process handle and shutdown credentials so another attempt can complete cleanup.
+- Child environments disable the .NET SDK's automatic global-tools PATH modification.
+
+### Changed
+- Reading the end of a host log now reads only the requested bytes rather than loading the entire log into memory.
+- Game plugin version metadata is synchronized with this maintenance release; portal, rendering and gameplay logic is unchanged.
+
 ## [0.2.1] - 2026-11-02
 
 ### Fixed

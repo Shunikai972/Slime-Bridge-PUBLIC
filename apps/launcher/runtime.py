@@ -144,8 +144,8 @@ class HostProcess:
     def stop(self):
         child, token = self._child, self._token
         status = self._read_status() if child is not None else {}
-        self._child, self._token = None, None
         if child is None:
+            self._token = None
             return {'stopped': False}
         if child.poll() is None:
             # Let the real interpreter close its files before the Windows venv redirector exits.
@@ -156,6 +156,8 @@ class HostProcess:
             except subprocess.TimeoutExpired:
                 child.kill()
                 child.wait(timeout=5)
+        # Do not lose ownership or credentials before the owned process has exited.
+        self._child, self._token = None, None
         for leftover in (self.token_file, self.status_file):
             leftover.unlink(missing_ok=True)
         return {'stopped': True}

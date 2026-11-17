@@ -13,8 +13,8 @@
    "family": "mosaic",
    "partner": "angler",
    "file": "models/mosaic_angler/mosaic_angler.glb",
-   "size": 50209684,
-   "sha256": "27e863ff0078a47f420cbb5894d1cfe5330d66d0d3b2eaa10c6aacf8a66d52ca",
+   "size": 32720676,
+   "sha256": "f133b965abdf1ac4dc9eda6bfb3af6b414dcce031af6031bf51faf64d7afd601",
    "metadata_scrubbed": 0
   },
   {
@@ -28,8 +28,8 @@
    "family": "mosaic",
    "partner": "batty",
    "file": "models/mosaic_batty/mosaic_batty.glb",
-   "size": 23298496,
-   "sha256": "830741ce7da72a8363a4bfbae053e551730aa9e8142b6d36fe7e9f2043e954a4",
+   "size": 21584448,
+   "sha256": "8c5ee53e0a56aaba13ee842dd943c1027890c179281930e819b05de6eb1ac3fe",
    "metadata_scrubbed": 1
   },
   {
@@ -43,8 +43,8 @@
    "family": "mosaic",
    "partner": "cotton",
    "file": "models/mosaic_cotton/mosaic_cotton.glb",
-   "size": 81487716,
-   "sha256": "d60dca62d2777c2eea7844fe995d198ad2fbfd5b6551735ccc7c52324874358d",
+   "size": 49249092,
+   "sha256": "70e7b190be5dd0a3a1260d2192e306de842c96a12fdfc3637ec9ef01644ac11c",
    "metadata_scrubbed": 0
   },
   {
@@ -58,8 +58,8 @@
    "family": "mosaic",
    "partner": "flutter",
    "file": "models/mosaic_flutter/mosaic_flutter.glb",
-   "size": 71872112,
-   "sha256": "1397b62140920dbd0b0ccde28663c56980ab689cb5c951bcfbe0b73e3f3dafe4",
+   "size": 32245548,
+   "sha256": "8adff0c5445f00725a2d9413b12c2c1109ef801e1c033e91b3030fd72a231341",
    "metadata_scrubbed": 0
   },
   {
@@ -88,8 +88,8 @@
    "family": "mosaic",
    "partner": "ringtail",
    "file": "models/mosaic_ringtail/mosaic_ringtail.glb",
-   "size": 30810720,
-   "sha256": "51c360aa830b11babab0b400393d92958b571d7a7f73343779834dfe1547841a",
+   "size": 18804772,
+   "sha256": "cd76485566daba7af5113dc3d2b0f9257f71fd4a173ec9c2e4207c7425183e4e",
    "metadata_scrubbed": 0
   },
   {
@@ -103,8 +103,8 @@
    "family": "mosaic",
    "partner": "slumber",
    "file": "models/mosaic_slumber/mosaic_slumber.glb",
-   "size": 30749192,
-   "sha256": "d2bfc20023495b9091e79dfbfb46b8e49632464e8d67f652271d82d5fe4da1ce",
+   "size": 19535644,
+   "sha256": "5f30102da5692816e19232dc8859cbb60380dd6e31e1d3d6592309f2fc30c630",
    "metadata_scrubbed": 0
   },
   {
@@ -118,8 +118,8 @@
    "family": "mosaic",
    "partner": "twin",
    "file": "models/mosaic_twin/mosaic_twin.glb",
-   "size": 72660796,
-   "sha256": "570f27bdc60b08b4a9051f8455a43442abc0ad108f1e447fb9d5d72013e19685",
+   "size": 32436748,
+   "sha256": "3c14ed3e46927b5057bc3e70601ab7339d181106d180c49fee21e0ce384816ad",
    "metadata_scrubbed": 0
   },
   {
@@ -133,8 +133,8 @@
    "family": "quantum",
    "partner": "angler",
    "file": "models/quantum_angler/quantum_angler.glb",
-   "size": 48775596,
-   "sha256": "00a60ae417b38866018c2143bcd6484822c22582e4a934c517bc9a093bd49de5",
+   "size": 28899820,
+   "sha256": "a56a0fc3c6acf295af3ee9363ca2f6f0cbf152f4022b0a659d3282531949c83a",
    "metadata_scrubbed": 0
   },
   {
@@ -148,8 +148,8 @@
    "family": "quantum",
    "partner": "batty",
    "file": "models/quantum_batty/quantum_batty.glb",
-   "size": 39731672,
-   "sha256": "621eb6235ca8206aa4eb20272db4482f7b972bf3baffea2f3fabc1462fc2d61b",
+   "size": 24280752,
+   "sha256": "ce3e3f59447e414296cdff1094d37b52e171244a94ae05e9f0e52fcc723a089e",
    "metadata_scrubbed": 0
   },
   {
@@ -163,8 +163,8 @@
    "family": "quantum",
    "partner": "cotton",
    "file": "models/quantum_cotton/quantum_cotton.glb",
-   "size": 34275052,
-   "sha256": "b2de17281c0f3113480b0b3e1da9b51788a3fbc3c02f254902fd6fb0f866da99",
+   "size": 18658200,
+   "sha256": "5aa9ee2461bd910083e718178a603f1e9c658b26a88ef5d164d680d53e3c64c2",
    "metadata_scrubbed": 0
   },
   {
@@ -178,8 +178,8 @@
    "family": "quantum",
    "partner": "flutter",
    "file": "models/quantum_flutter/quantum_flutter.glb",
-   "size": 38373068,
-   "sha256": "15c283756947bd3927dc673b786735b81138411790156ab6de6036bc233a2b15",
+   "size": 18720420,
+   "sha256": "aa7d0a41db7295d4d1f7b77d6348790ecea91152b9068a505e7d1b0a2bceff17",
    "metadata_scrubbed": 0
   },
   {
@@ -208,8 +208,8 @@
    "family": "quantum",
    "partner": "ringtail",
    "file": "models/quantum_ringtail/quantum_ringtail.glb",
-   "size": 41949224,
-   "sha256": "6084ab416aa010b1112291f3eb49eb8379f3fc948090bbe39230aba92dafbd32",
+   "size": 16981748,
+   "sha256": "d4188d2a18769509fb50bba4d308d5461356d9e0e16a6af6f6afb4a4e9d4fcff",
    "metadata_scrubbed": 0
   },
   {
@@ -223,8 +223,8 @@
    "family": "quantum",
    "partner": "slumber",
    "file": "models/quantum_slumber/quantum_slumber.glb",
-   "size": 29480872,
-   "sha256": "335f206b32c92b698b52519f0792692e880d5eb5f31fe902584c81e363651c43",
+   "size": 15614440,
+   "sha256": "2814e05fd4f9f85026b77bc2898718d4bf73d1a614d559aa625ddd1f32902027",
    "metadata_scrubbed": 0
   },
   {
@@ -253,8 +253,8 @@
    "family": "rad",
    "partner": "angler",
    "file": "models/rad_angler/rad_angler.glb",
-   "size": 54787036,
-   "sha256": "a5b38ba404ff565fbc5eaf64395fcec4c628c63d6205445595dc212a25a3538c",
+   "size": 39930116,
+   "sha256": "ebd4619d678ff2be12bcf5cafb7c74664321cc2d8e82cb0f73577557bb857d4f",
    "metadata_scrubbed": 0
   },
   {
@@ -283,8 +283,8 @@
    "family": "rad",
    "partner": "cotton",
    "file": "models/rad_cotton/rad_cotton.glb",
-   "size": 38604948,
-   "sha256": "adc58fa16ec2a75d6c31f3b87b2ede4b2d2af22b7214d5905161bd7a47976c39",
+   "size": 29090868,
+   "sha256": "e10444b417a3a344b17e61b07379ee012098573450fd67bf8e427b4be0d6c00f",
    "metadata_scrubbed": 0
   },
   {
@@ -328,8 +328,8 @@
    "family": "rad",
    "partner": "ringtail",
    "file": "models/rad_ringtail/rad_ringtail.glb",
-   "size": 60801856,
-   "sha256": "7a6e194b4823e8f01b167ab14e0f308cdadfeb5256cb75b0723a2ae16f2c7cbb",
+   "size": 43949256,
+   "sha256": "271f2fd72e03fe3c81e5165bc1364cb633124ce4e5d4ce97d8f51228b48581be",
    "metadata_scrubbed": 0
   },
   {
@@ -343,8 +343,8 @@
    "family": "rad",
    "partner": "slumber",
    "file": "models/rad_slumber/rad_slumber.glb",
-   "size": 15606400,
-   "sha256": "1e2a63a37f577e5b98c2cfe8d9bc4ca6393510739eb96148bb27ac40df38cc6a",
+   "size": 10348104,
+   "sha256": "aca68285ad0d607acf9aa7170726e38f5351cafe3b3dec936dafe537647a73d3",
    "metadata_scrubbed": 2
   },
   {

@@ -30,6 +30,7 @@ def test_capture_cleanup_attempts_every_restore_after_native_failures():
             '<NoWarn>CS0219</NoWarn><NuGetAudit>false</NuGetAudit></PropertyGroup></Project>', encoding='utf8')
         (work / 'NuGet.Config').write_text('<configuration><packageSources><clear /></packageSources></configuration>', encoding='utf8')
         result = subprocess.run([dotnet, 'run', '--project', str(work / 'Cleanup.csproj'), '-c', 'Release'],
+                                env=dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false'),
                                 capture_output=True, text=True, encoding='utf8', errors='replace', timeout=120)
         print('linked capture SHA256', hashlib.sha256(source.encode('utf8')).hexdigest())
         print(result.stdout)

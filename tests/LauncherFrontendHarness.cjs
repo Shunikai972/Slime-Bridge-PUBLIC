@@ -7,7 +7,7 @@ const marker = '  SB.app = { refresh, go, get state() { return S; } };';
 assert.equal(source.split(marker).length, 2, 'production export marker drifted');
 const elements = new Map();
 const element = selector => {
-  if (!elements.has(selector)) elements.set(selector, { innerHTML:'',scrollTop:0,dataset:{count:'3'},querySelectorAll:()=>[],classList:{contains:()=>false,toggle:()=>{}},value:'' });
+  if (!elements.has(selector)) elements.set(selector, { innerHTML:'',scrollTop:0,dataset:{count:'3'},querySelector:s=>element(selector+' '+s),querySelectorAll:()=>[],classList:{contains:()=>false,toggle:()=>{}},value:'' });
   return elements.get(selector);
 };
 const SB = { local:{assets:{job:null},mods:{realm:'SR2',installed:{},results:null}}, ui:{$:element,$$:()=>[],esc:String,toast:()=>{},modal:()=>{},sleep:()=>Promise.resolve(),confetti:()=>{}},Art:{slime:()=>'',icon:()=>'',glyph:()=>''},t:x=>x,pages:{home:{render:()=>''}} };

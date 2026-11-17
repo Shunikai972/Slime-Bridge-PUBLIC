@@ -98,6 +98,8 @@ namespace SlimeBridge.Shared
             var message = _transport.Next(now);
             if (message != null) Handle(message, now);
             else if (_current == null && _realm.Held && now - _transport.LastContact > HeldWithoutHostSeconds) AutoResume(now);
+            // A synchronous hold/resume must not wait for another 4-FPS standby frame to report.
+            if (_hasResult && _current != null) Finish(now);
         }
 
         private void Handle(TravelMessage message, double now)
@@ -176,7 +178,7 @@ namespace SlimeBridge.Shared
         private TravelMessage? _latest;
         private double _lastContact;
         private readonly Func<double> _clock;
-        internal double PollSeconds = 0.5, SlowPollSeconds = 2.0;
+        internal double PollSeconds = 0.05, SlowPollSeconds = 0.5;
         /// <summary>Called (from a worker thread) when a crossing request could not reach BridgeHost.</summary>
         internal Action? CrossingFailed = null;
         internal bool Slow { get; set; }
@@ -270,6 +272,10 @@ namespace SlimeBridge.Shared
             request.Method = method;
             request.Headers[HttpRequestHeader.Authorization] = "Bearer " + _token;
             request.Proxy = null; request.Timeout = timeoutMs; request.ReadWriteTimeout = timeoutMs;
+            // These are tiny authenticated loopback messages. Waiting for a 100-Continue
+            // response or coalescing TCP writes adds latency to every handshake step.
+            request.ServicePoint.Expect100Continue = false;
+            request.ServicePoint.UseNagleAlgorithm = false;
             return request;
         }
 

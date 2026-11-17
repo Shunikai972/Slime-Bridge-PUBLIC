@@ -30,6 +30,11 @@ EXCLUDED_FILES = {'requirements-dev.txt'}
 FORBIDDEN = re.compile(r'\.(assets|bundle|resS|resource|unity3d|assetbundle|sav|save|glb|gltf|fbx|obj|blend|dds|png|jpe?g|tga|'
                        r'psd|exr|wav|ogg|mp3|bank|sbmesh|exe|zip|7z|rar)$', re.IGNORECASE)
 ALLOWED_ART = {'apps/launcher/ui/img/pink-cotton-artist.png', 'apps/launcher/ui/img/app-icon.ico', 'apps/launcher/ui/img/find-games.png', 'apps/launcher/ui/img/play-sr1.png', 'apps/launcher/ui/img/play-sr2.png', 'apps/launcher/ui/img/need-games.gif'}   # original artwork drawn for SlimeBridge (see sync_public)
+ALLOWED_ART.update('apps/launcher/ui/img/largos/' + name for name in (
+    'quantum_cotton.png', 'quantum_slumber.png', 'rad_angler.png', 'rad_batty.png',
+    'rad_cotton.png', 'rad_flutter.png', 'rad_hyper.png', 'rad_ringtail.png',
+    'rad_slumber.png', 'rad_twin.png', 'unknown.png',
+))
 ALLOWED_BINARIES = {'plugins/SR1/SlimeBridge.SR1.dll', 'plugins/SR2/SlimeBridge.SR2.dll', 'plugins/SRMP/SRMP.dll',
                     'plugins/SR1/SlimeBridge.SR1.pdb', 'plugins/SR2/SlimeBridge.SR2.pdb'}
 PLUGINS = {
@@ -83,14 +88,18 @@ def dotnet():
 
 
 def build_plugins(refs, stage):
+    from tools.release.build_boom_shader import build as build_boom_shader
+
+    shader_bundle = build_boom_shader()
     exe, env = dotnet()
     for realm, (project, prop, tfm, names) in PLUGINS.items():
         ref = Path(refs[realm]).resolve()
         print(f'== build {realm} plugin against {ref}')
+        resource_args = [f'-p:BoomShaderBundle={shader_bundle}'] if realm == 'SR1' else []
         # Deterministic build with the source root mapped to /_/ so no local path (user name, folders) ends up in the DLL/PDB.
-        proc = subprocess.run([exe, 'build', str(ROOT / project), '-c', 'Release', '-nologo', '-v', 'q', '--no-incremental',
+        proc = subprocess.run([exe, 'build', str(ROOT / project), '-c', 'Release', '-nologo', '-v', 'q', '--no-incremental', '--disable-build-servers',
                                f'-p:{prop}={ref}', '-p:Deterministic=true', '-p:ContinuousIntegrationBuild=true',
-                               f'-p:PathMap={ROOT}=/_/'],
+                               '-p:UseSharedCompilation=false', f'-p:PathMap={ROOT}=/_/'] + resource_args,
                               cwd=ROOT, env=env, capture_output=True, text=True, encoding='utf-8', errors='replace')
         if proc.returncode != 0:
             print((proc.stdout or '')[-4000:], (proc.stderr or '')[-2000:])

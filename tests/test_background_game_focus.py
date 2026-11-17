@@ -14,11 +14,13 @@ class BackgroundGameFocusTests(unittest.TestCase):
         from unittest import mock
         output = 'focus-policy checks=24 failures=0; OS focus/input not exercised'
         with mock.patch.object(subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, output)) as run, \
-                mock.patch.dict(os.environ, {'DOTNET_ROOT': 'C:/synthetic-dotnet'}):
+                mock.patch.dict(os.environ, {'DOTNET_ROOT': 'C:/synthetic-dotnet',
+                                             'DOTNET_ADD_GLOBAL_TOOLS_TO_PATH': 'true'}):
             self.test_fail_closed_focus_policy()
         command = run.call_args.args[0]
         self.assertIn('--disable-build-servers', command)
         self.assertIn('-p:UseSharedCompilation=false', command)
+        self.assertEqual(run.call_args.kwargs['env']['DOTNET_ADD_GLOBAL_TOOLS_TO_PATH'], 'false')
 
     def test_fail_closed_focus_policy(self):
         dotnet = os.environ.get('DOTNET_ROOT')
@@ -29,7 +31,8 @@ class BackgroundGameFocusTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='background-focus-') as temporary:
             environment = dict(os.environ)
             environment.update(TEMP=temporary, TMP=temporary, TMPDIR=temporary,
-                               DOTNET_CLI_HOME=temporary, DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
+                               DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
+                               DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
                                DOTNET_CLI_TELEMETRY_OPTOUT='1')
             result = subprocess.run([dotnet, 'run', '--project', str(project), '-c', 'Release',
                                      '--disable-build-servers', '-p:UseSharedCompilation=false'],

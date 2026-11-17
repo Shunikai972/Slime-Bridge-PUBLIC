@@ -119,8 +119,10 @@ def _checked_member(name, is_directory):
     return '/'.join(parts).casefold()
 
 
-def prepare(opener=urllib.request.urlopen, cache=CACHE):
+def prepare(opener=urllib.request.urlopen, cache=CACHE, progress=None):
     """Download + verify + unpack the latest standalone build; returns the folder holding the new SlimeBridge/."""
+    report = progress or (lambda _state: None)
+    report({'phase': 'checking', 'done': 0, 'total': 0})
     info = latest(opener)
     name = asset_name(info['version'])
     if name not in info['assets']:
@@ -149,12 +151,36 @@ def prepare(opener=urllib.request.urlopen, cache=CACHE):
     # Never remove an existing version directory (it may contain retained/user files).
     work = Path(tempfile.mkdtemp(prefix=info['version'] + '-', dir=cache))
     archive = work / name
+    digest = hashlib.sha256()
+    downloaded = 0
+    request = urllib.request.Request(info['assets'][name], headers={'User-Agent': 'SlimeBridge-updater',
+                                                                  'Accept': 'application/octet-stream'})
     try:
-        archive.write_bytes(_get(info['assets'][name], timeout=600, opener=opener, limit=MAX_ARCHIVE))
+        with opener(request, timeout=600) as response, archive.open('xb') as output:
+            headers = getattr(response, 'headers', {})
+            length = headers.get('Content-Length', '')
+            total = int(length) if str(length).isdigit() else 0
+            if total > MAX_ARCHIVE:
+                raise UpdateError('DOWNLOAD_TOO_LARGE')
+            report({'phase': 'download', 'done': 0, 'total': total})
+            while True:
+                block = response.read(1024 * 1024)
+                if not block:
+                    break
+                downloaded += len(block)
+                if downloaded > MAX_ARCHIVE:
+                    raise UpdateError('DOWNLOAD_TOO_LARGE')
+                output.write(block)
+                digest.update(block)
+                report({'phase': 'download', 'done': downloaded, 'total': total})
+            if total and downloaded != total:
+                raise UpdateError('DOWNLOAD_FAILED', 'incomplete response')
     except OSError as exc:
         raise UpdateError('DOWNLOAD_FAILED', str(exc)) from exc
-    if hashlib.sha256(archive.read_bytes()).hexdigest() != expected:
+    report({'phase': 'verify', 'done': downloaded, 'total': downloaded})
+    if digest.hexdigest() != expected:
         raise UpdateError('VERIFY_FAILED', name)
+    report({'phase': 'unpack', 'done': 0, 'total': 0})
     out = work / 'new'
     if name.endswith('.zip'):
         with zipfile.ZipFile(archive) as zf:
@@ -183,6 +209,7 @@ def prepare(opener=urllib.request.urlopen, cache=CACHE):
     folder = out / 'SlimeBridge'
     if not (folder / ('SlimeBridge.exe' if WINDOWS else 'SlimeBridge')).is_file():
         raise UpdateError('BAD_ARCHIVE', 'no launcher inside')
+    report({'phase': 'ready', 'done': downloaded, 'total': downloaded})
     return {'version': info['version'], 'folder': str(folder)}
 
 
@@ -195,19 +222,23 @@ def restart_into(new_folder, pid=None, popen=subprocess.Popen):
     if not getattr(sys, 'frozen', False):
         raise UpdateError('SOURCE_INSTALL', 'update a source checkout with git or a new source zip')
     pid = pid or os.getpid()
+    if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
+        raise UpdateError('BAD_PID')
     target = install_dir()
     script_dir = Path(tempfile.mkdtemp(prefix='slimebridge-update-'))
     if WINDOWS:
         script = script_dir / 'update.cmd'
-        # full System32 paths (PATH may not have them) and ping as the delay (timeout needs a console)
+        # Full System32 paths: retain the existing process-exit barrier. A measured
+        # PowerShell WaitForExit variant had higher startup cost on this host.
         script.write_text('\r\n'.join([
             '@echo off',
             'set "S=%SystemRoot%\\System32"',
             ':wait',
             f'"%S%\\tasklist.exe" /FI "PID eq {pid}" /NH 2>nul | "%S%\\find.exe" "{pid}" >nul && ("%S%\\PING.EXE" -n 2 127.0.0.1 >nul & goto wait)',
-            # /E adds and replaces files, never deletes: the player's Lab data stays; /IS /IT also replace files that
-            # look identical by size and time (VERSION 0.1.4 -> 0.1.5 has the same size)
-            f'"%S%\\Robocopy.exe" "{new_folder}" "{target}" /E /IS /IT /R:5 /W:1 /NFL /NDL /NJH /NJS /NP >nul',
+            # /E never deletes player data. /IS /IT /IM include identical, tweaked and NTFS
+            # change-time-only files: same size/mtime must not leave old executable or VERSION bytes.
+            f'"%S%\\Robocopy.exe" "{new_folder}" "{target}" /E /IS /IT /IM /R:5 /W:1 /NFL /NDL /NJH /NJS /NP >"%~dp0copy.log"',
+            'if errorlevel 8 exit /b 8',
             f'start "" "{target / "SlimeBridge.exe"}"',
         ]) + '\r\n', encoding='utf-8')
         # no DETACHED_PROCESS: cmd pipes do not run without a console; CREATE_NO_WINDOW gives it a hidden one
@@ -220,6 +251,7 @@ def restart_into(new_folder, pid=None, popen=subprocess.Popen):
             '#!/bin/sh',
             f'while kill -0 {pid} 2>/dev/null; do sleep 1; done',
             f'cp -a "{new_folder}/." "{target}/"',
+            '[ "$?" -eq 0 ] || exit 1',
             f'nohup "{target / "SlimeBridge"}" >/dev/null 2>&1 &',
         ]) + '\n', encoding='utf-8')
         script.chmod(0o755)

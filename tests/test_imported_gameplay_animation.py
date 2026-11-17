@@ -19,7 +19,8 @@ def run_dotnet(arguments):
         temp = Path(temporary)
         environment = dict(os.environ)
         environment.update(TEMP=str(temp), TMP=str(temp), TMPDIR=str(temp),
-                           DOTNET_CLI_HOME=str(temp / "dotnet-cli-home"), DOTNET_ROOT=str(DOTNET.parent),
+                           DOTNET_CLI_HOME=str(temp / "dotnet-cli-home"), DOTNET_ADD_GLOBAL_TOOLS_TO_PATH="false",
+                           DOTNET_ROOT=str(DOTNET.parent),
                            DOTNET_CLI_TELEMETRY_OPTOUT="1", DOTNET_SKIP_FIRST_TIME_EXPERIENCE="1",
                            DOTNET_NOLOGO="1")
         result = subprocess.run([str(DOTNET), *arguments, "--disable-build-servers",

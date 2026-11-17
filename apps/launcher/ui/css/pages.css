@@ -169,9 +169,12 @@ ul.clean { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; } 
 @media (max-width: 900px) { .play-cards { grid-template-columns: minmax(0, 1fr); } }
 
 /* Layout fixes: nothing hidden or cut at the launcher's real sizes (1320x840 default, 1040x680 minimum) */
-#side .nav { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; align-content: start; padding-bottom: 6px; }
-#side .nav::-webkit-scrollbar { display: none; }
-@media (max-height: 940px) { .nav { gap: 7px; } .nav-item { padding: 9px 16px; font-size: 17px; } .nav-item svg { width: 24px; height: 24px; } #side .peek { height: 120px; opacity: .9; } #side { padding-bottom: 96px; } }
+#side .nav { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #9edfff transparent; align-content: start; padding-bottom: 6px; overscroll-behavior: contain; }
+#side .nav::-webkit-scrollbar { width: 6px; }
+#side .nav::-webkit-scrollbar-thumb { background: #9edfff; border-radius: 8px; }
+.side-art { flex: none; height: 112px; display: grid; place-items: center; pointer-events: none; }
+.side-art img { max-width: 100%; height: 100%; object-fit: contain; }
+@media (max-height: 940px) { .nav { gap: 7px; } .nav-item { padding: 9px 16px; font-size: 17px; } .nav-item svg { width: 24px; height: 24px; } .side-art { height: 84px; } }
 @media (max-height: 780px) { .nav { gap: 5px; } .nav-item { padding: 7px 14px; font-size: 16px; } #side .peek { display: none; } #side { padding-bottom: 14px; } }
 .play-card .pc-body b { white-space: normal; line-height: 1.08; overflow: visible; }
 .dock-status > .ok { flex: 1 1 auto; }
@@ -184,6 +187,32 @@ ul.clean { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; } 
 .play-card .pc-actions { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
 .play-card .pc-both { font: 700 12px var(--font-body); color: var(--ink-soft); text-decoration: underline; text-underline-offset: 2px; padding: 0 4px; }
 .play-card .pc-both:hover { color: var(--ink); }
+.home-guides { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.play.stop { background: linear-gradient(180deg, #f98a9f, #d9496e); box-shadow: 0 7px 0 #96304f, 0 12px 26px rgba(160, 45, 85, .35); }
+.home-guide { display: flex; align-items: center; gap: 14px; min-width: 0; text-align: left; transition: transform .2s ease; }
+.home-guide:hover { transform: translateY(-3px); }
+.home-guide > img { width: 64px; height: 72px; object-fit: contain; flex: none; }
+.home-guide > span { display: grid; gap: 5px; flex: 1; min-width: 0; }
+.home-guide b { font: 600 21px var(--font-display); }
+.home-guide small { color: var(--ink-soft); line-height: 1.4; }
+.home-guide > svg { width: 20px; flex: none; }
+.largo-icon { width: 100%; height: 100%; object-fit: contain; display: block; }
+.extract-next-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0 22px; position: relative; }
+.extract-next-actions .btn { white-space: normal; height: auto; min-height: 44px; }
+.tutorial-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.tutorial-welcome { display: flex; align-items: center; gap: 24px; }
+.tutorial-welcome img { width: 140px; flex: none; }
+.tutorial-topic { position: relative; padding-left: 70px; }
+.tutorial-topic p, .tutorial-welcome p { color: var(--ink-soft); line-height: 1.6; }
+.tutorial-number { position: absolute; top: 22px; left: 20px; width: 34px; height: 34px; display: grid; place-items: center; background: var(--pink-l); color: var(--pink-d); border-radius: 50%; font: 600 22px var(--font-display); }
+.tutorial-reference { padding: 12px 0; border-bottom: 1px solid var(--panel-edge); }
+.tutorial-reference summary { cursor: pointer; font-weight: 800; }
+.tutorial-reference dt { font-weight: 800; margin-top: 16px; }
+.tutorial-reference dd { margin: 5px 0; color: var(--ink-soft); }
+.tutorial-reference dd small { display: block; margin-top: 4px; }
+@media (min-width: 1600px) and (min-height: 900px) { .home .home-top { height: clamp(360px, calc(100vh - 420px), 600px); } .home-guide { min-height: 128px; } .home-guide > img { width: 88px; height: 94px; } }
+@media (max-width: 1150px) { .home-guides { grid-template-columns: 1fr; } .home-guide > img { width: 48px; height: 54px; } }
+@media (max-width: 1000px) { .tutorial-grid { grid-template-columns: 1fr; } }
 
 /* Console page */
 .console-card { display: grid; gap: 10px; }

@@ -51,6 +51,17 @@
 !apps/launcher/ui/img/*.png
 !apps/launcher/ui/img/*.ico
 !apps/launcher/ui/img/*.gif
+!apps/launcher/ui/img/largos/quantum_cotton.png
+!apps/launcher/ui/img/largos/quantum_slumber.png
+!apps/launcher/ui/img/largos/rad_angler.png
+!apps/launcher/ui/img/largos/rad_batty.png
+!apps/launcher/ui/img/largos/rad_cotton.png
+!apps/launcher/ui/img/largos/rad_flutter.png
+!apps/launcher/ui/img/largos/rad_hyper.png
+!apps/launcher/ui/img/largos/rad_ringtail.png
+!apps/launcher/ui/img/largos/rad_slumber.png
+!apps/launcher/ui/img/largos/rad_twin.png
+!apps/launcher/ui/img/largos/unknown.png
 *.jpg
 *.tga
 *.wav

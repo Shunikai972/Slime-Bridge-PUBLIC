@@ -13,5 +13,5 @@ def test_covered_departure_enters_recoverable_standby_before_reporting_ready(rea
     assert '_throttle.Apply(true)' in departure
     assert 'public bool Held => _held || _throttle.Active;' in source
     assert 'departure_standby_failed' in departure
-    assert '0.8f' in departure
-    assert '_overlay.Open(1.1f' in source
+    assert '0.18f' in departure
+    assert '_overlay.Open(0.22f' in source

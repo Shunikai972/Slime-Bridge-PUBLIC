@@ -121,6 +121,8 @@ public class SlimeAppearance : ScriptableObject {
     public enum AppearanceSaveSet {CLASSIC, OTHER}
     public Sprite? Icon; public AppearanceSaveSet SaveSet;
     public object Face=new(); public object[] Structures=new object[]{new()};
+    public struct Palette { public UnityEngine.Color Top, Middle, Bottom, Ammo; }
+    public Palette ColorPalette;
 }
 public class SlimeDefinition : ScriptableObject {
     public SlimeAppearance[] AppearancesDefault=Array.Empty<SlimeAppearance>();

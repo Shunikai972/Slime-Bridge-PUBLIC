@@ -3,15 +3,22 @@ using UnityEngine;
 // Only the native boundary is synthetic; the registrar, spec parser, path/hash
 // guards, ownership code and selection ordering run from production source.
 public class Identifiable:Component {
-    public enum Id {NONE,TABBY_SLIME,TABBY_PLORT}
-    public Id id; public static HashSet<Id> SLIME_CLASS=new(),EATERS_CLASS=new(),PLORT_CLASS=new(),NON_SLIMES_CLASS=new();
+    public enum Id {NONE,TABBY_SLIME,TABBY_PLORT,PINK_SLIME}
+    public Id id; public static HashSet<Id> SLIME_CLASS=new(),LARGO_CLASS=new(),EATERS_CLASS=new(),PLORT_CLASS=new(),NON_SLIMES_CLASS=new();
     public static bool IsSlime(Id i)=>SLIME_CLASS.Contains(i); public static bool IsPlort(Id i)=>PLORT_CLASS.Contains(i);
+    public static bool IsLargo(Id i)=>LARGO_CLASS.Contains(i);
 }
-public class SlimeEat {public enum FoodGroup {MEAT,FRUIT,VEGGIES}}
+public class SlimeEat {
+    public enum FoodGroup {MEAT,FRUIT,VEGGIES,PLORTS,NONTARRGOLD_SLIMES}
+    // Same private static shape the registrar reaches by reflection in the real game.
+    private static Dictionary<FoodGroup,Identifiable.Id[]> foodGroupIds=new(){{FoodGroup.PLORTS,Array.Empty<Identifiable.Id>()},{FoodGroup.NONTARRGOLD_SLIMES,Array.Empty<Identifiable.Id>()}};
+    public static Identifiable.Id[] GetFoodGroupIds(FoodGroup g)=>foodGroupIds.GetValueOrDefault(g)??Array.Empty<Identifiable.Id>();
+}
 public class SlimeDiet {
+    public class EatMapEntry { public Identifiable.Id becomesId; }
     public SlimeEat.FoodGroup[] MajorFoodGroups=Array.Empty<SlimeEat.FoodGroup>();
     public Identifiable.Id[] Favorites=Array.Empty<Identifiable.Id>(),AdditionalFoods=Array.Empty<Identifiable.Id>(),Produces=Array.Empty<Identifiable.Id>();
-    public int FavoriteProductionCount; public List<object> EatMap=new(){new()};
+    public int FavoriteProductionCount; public List<EatMapEntry> EatMap=new(){new()};
 }
 public class SlimeDefinitions {
     public Dictionary<Identifiable.Id,SlimeDefinition> slimeDefinitionsByIdentifiable=new();
@@ -51,7 +58,7 @@ namespace UnityEngine {
         public void SetActive(bool active){}
         public T[] GetComponentsInChildren<T>(bool inactive)=>System.Array.Empty<T>();
     }
-    public struct Color {public static Color magenta=>new();}
+    public struct Color {public float r,g,b,a; public Color(float r,float g,float b,float a){this.r=r;this.g=g;this.b=b;this.a=a;} public static Color magenta=>new(1,0,1,1);}
     public static class Time {public static float realtimeSinceStartup;}
     public static class Debug {public static void Log(string text){} }
 }

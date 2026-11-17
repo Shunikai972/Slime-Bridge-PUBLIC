@@ -45,7 +45,7 @@ img { -webkit-user-drag: none; }
 .menu hr { border: 0; border-top: 2px dashed #d7ecf4; margin: 4px 6px; width: calc(100% - 12px); }
 
 /* ----- sidebar ----- */
-#side { position: relative; align-self: start; margin-top: 4px; height: calc(100% - 6px); display: flex; flex-direction: column; gap: 10px; padding: 22px 16px 16px; border-radius: 34px; background: var(--glass-dark); border: 3px solid rgba(170, 235, 255, .55);
+#side { position: relative; align-self: start; min-height: 0; margin-top: 4px; height: calc(100% - 6px); display: flex; flex-direction: column; gap: 10px; padding: 22px 16px 16px; border-radius: 34px; background: var(--glass-dark); border: 3px solid rgba(170, 235, 255, .55);
   box-shadow: 0 10px 30px rgba(8, 40, 70, .4), inset 0 2px 0 rgba(255, 255, 255, .2); backdrop-filter: blur(14px); overflow: hidden; }
 .nav { display: grid; gap: 10px; }
 .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-radius: 22px; color: #fff; font-family: var(--font-display); font-weight: 500; font-size: 19px; letter-spacing: .01em; text-align: left;

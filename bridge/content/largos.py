@@ -28,6 +28,7 @@ ID_TABLE = Path(__file__).with_name('largo_ids.json')
 LARGO_ID_BASE = 960000            # inside the reserved 900000-999999 range, above the species ids
 LARGO_ID_LIMIT = 999999
 TEMPLATE_LARGO = 'PINK_ROCK_LARGO'
+BOOM_TEMPLATE_LARGO = 'PINK_BOOM_LARGO'
 CATALOG = Path('StreamingAssets') / 'aa' / 'catalog.json'
 SPEC_FILE = 'import-spec-SR1.json'
 
@@ -79,13 +80,14 @@ def imported_species(spec_path: Path | None = None) -> set[str]:
             if e.get('status') == 'READY' and str(e.get('canonical_id', '')).startswith('slime.')}
 
 
-def _newest_species_spec() -> Path | None:
+def _newest_species_spec(spec_root: Path | None = None) -> Path | None:
     """Newest spec of the species themselves (the ones the Largo generator has not appended to)."""
-    specs = [p for p in sorted(SPEC_ROOT.glob('*/' + SPEC_FILE)) if not p.parent.name.endswith('-largos')]
-    if not specs:
+    root = Path(spec_root) if spec_root is not None else SPEC_ROOT
+    specs = [p for p in sorted(root.glob('*/' + SPEC_FILE)) if not p.parent.name.endswith('-largos')]
+    if not specs and root == SPEC_ROOT:
         from bridge.content import spec_seed
         spec_seed.ensure_specs(REPO_ROOT)
-        specs = [p for p in sorted(SPEC_ROOT.glob('*/' + SPEC_FILE)) if not p.parent.name.endswith('-largos')]
+        specs = [p for p in sorted(root.glob('*/' + SPEC_FILE)) if not p.parent.name.endswith('-largos')]
     return specs[-1] if specs else None
 
 
@@ -176,7 +178,10 @@ def largo_entry(row: dict, native_id: int, palette: dict | None = None) -> dict:
         'canonical_id': row['canonical'], 'display_name': row['display_name'], 'status': 'READY', 'blockers': [],
         'native_id': native_id, 'native_ref_id': 'SlimeDefinition.' + row['species'],
         'plort': {'canonical_id': '', 'display_name': '', 'native_id': 0, 'native_ref_id': '', 'template_native_ref': ''},
-        'template': {'slime_native_ref': TEMPLATE_LARGO, 'plort_native_ref': ''},
+        # A visual/definition clone cannot acquire BoomSlimeExplode from a diet parent.
+        # Preserve the native Boom actor behaviour instead of cloning a non-exploding Rock.
+        'template': {'slime_native_ref': BOOM_TEMPLATE_LARGO if 'boom' in row['parents'] else TEMPLATE_LARGO,
+                     'plort_native_ref': ''},
         'diet': {'major_food_groups': [], 'favorites': [], 'additional_foods': [], 'favorite_production_count': 2},
         'flags': {'can_largofy': False, 'visual_mode': 'imported-model', 'behavior_classification': 'largo'},
         'largo': {'parents': list(row['parents']), 'sr2_name': row['species']},
@@ -192,7 +197,7 @@ def publish_spec(cache_root: Path = REPO_ROOT / 'Lab' / 'AssetCache', sr2_dir: P
 
     The directory name ends in `-largos` and sorts after the species specs, so everything that picks "the newest spec" (the
     launcher's play, the LAB oracles) registers the Largos too. Species stay exactly as in the source spec."""
-    source = _newest_species_spec()
+    source = _newest_species_spec(spec_root)
     if source is None:
         raise ValueError('no species import spec to extend')
     spec = json.loads(source.read_text(encoding='utf-8'))
@@ -231,6 +236,11 @@ def kept_largos(current: set, cache_root: Path, spec_root: Path = SPEC_ROOT) -> 
             canonical = str(entry.get('canonical_id', ''))
             if canonical.startswith('largo.') and canonical not in seen and cache_ready(canonical, cache_root):
                 seen.add(canonical)
+                # Retained definitions from older catalogs need the same narrow template migration.
+                # Do not replace an explicitly selected family/custom template.
+                if ('boom' in entry.get('largo', {}).get('parents', []) and
+                        entry.get('template', {}).get('slime_native_ref') == TEMPLATE_LARGO):
+                    entry['template']['slime_native_ref'] = BOOM_TEMPLATE_LARGO
                 kept.append(entry)
     return kept
 
@@ -252,17 +262,21 @@ def refresh_spec(repo_root: Path = REPO_ROOT, sr2_dir: Path | None = None, sr1_d
         return {'changed': False, 'largos': 0, 'reason': 'game data or species spec not available'}
     newest = json.loads(specs[-1].read_text(encoding='utf-8')).get('entries', [])
     listed = {e['canonical_id'] for e in newest if str(e.get('canonical_id', '')).startswith('largo.')}
-    base = _newest_species_spec()
+    base = _newest_species_spec(spec_root)
+    if base is None:
+        return {'changed': False, 'largos': len(listed), 'reason': 'base species spec not available in requested home'}
     base_ids = {e['canonical_id'] for e in json.loads(base.read_text(encoding='utf-8')).get('entries', [])} if base else set()
     newest_base = {e['canonical_id'] for e in newest if not str(e.get('canonical_id', '')).startswith('largo.')}
-    wanted = {r['canonical'] for r in largo_roster(sr2_dir, sr1_dir) if r['status'] == 'READY' and cache_ready(r['canonical'], cache_root)}
+    wanted = {r['canonical'] for r in largo_roster(sr2_dir, sr1_dir, base) if r['status'] == 'READY' and cache_ready(r['canonical'], cache_root)}
     from bridge.content import user_largos
     wanted |= set(user_largos.user_canonicals(cache_root, 'sr2-to-sr1'))
     wanted |= {e['canonical_id'] for e in kept_largos(wanted, cache_root, spec_root)}
     templates = {e['canonical_id']: e.get('template', {}).get('slime_native_ref') for e in newest if str(e.get('canonical_id', '')).startswith('largo.')}
     stale_users = any(templates.get(c) != user_largos.SR1_TEMPLATE.get(user_largos.family(c) or '', templates.get(c))
                       for c in user_largos.user_canonicals(cache_root, 'sr2-to-sr1'))
-    if wanted == listed and newest_base == base_ids and not stale_users:
+    stale_boom = any('boom' in e.get('largo', {}).get('parents', []) and
+                     e.get('template', {}).get('slime_native_ref') == TEMPLATE_LARGO for e in newest)
+    if wanted == listed and newest_base == base_ids and not stale_users and not stale_boom:
         return {'changed': False, 'largos': len(wanted)}
     published = publish_spec(cache_root, sr2_dir, sr1_dir, spec_root, repo_root / 'Lab' / 'GeneratedContent' / 'largo-ids.json')
     return {'changed': True, 'largos': published['largos'], 'directory': published['directory']}

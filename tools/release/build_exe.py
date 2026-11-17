@@ -30,7 +30,7 @@ DATA_SKIP = re.compile(r'(__pycache__|\.pyc$|/bin/|/obj/|/\.venv/|/output[^/]*/|
 WINDOWS = sys.platform == 'win32'
 PLATFORM = 'win64' if WINDOWS else 'linux-x64'
 COLLECT_ALL = ('webview', 'UnityPy', 'TypeTreeGeneratorAPI', 'fmod_toolkit', 'texture2ddecoder', 'etcpak', 'astc_encoder',
-               'pygltflib', 'dnfile', 'lz4', 'brotli', 'archspec', 'tpk_ar') + (('clr_loader', 'pythonnet') if WINDOWS else ())
+               'pygltflib', 'dnfile', 'lz4', 'brotli', 'archspec', 'tpk_ar') + (('clr_loader', 'pythonnet', 'pycaw', 'comtypes') if WINDOWS else ())
 ICON = ROOT / 'apps' / 'launcher' / 'ui' / 'img' / 'app-icon.ico'   # the artist's pink + cotton slimes (exe, window, taskbar)
 TOP_FILES = ('README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'LICENSES.md', 'CHANGELOG.md', 'VERSION')
 

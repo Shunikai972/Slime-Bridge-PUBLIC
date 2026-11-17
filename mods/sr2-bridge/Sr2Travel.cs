@@ -79,7 +79,7 @@ namespace SlimeBridge.SR2
                 case "prepare_departure":
                     if (!WorldReady()) { done(false, "no_world"); return; }
                     var offer = Sr2Carry.Snapshot(message.CarryMode);
-                    _overlay.Close(TravelText.Departing(message.Destination.Length > 0 ? message.Destination : "SR1"), TravelText.Waiting(message.Destination), 0.8f, () =>
+                    _overlay.Close(TravelText.Departing(message.Destination.Length > 0 ? message.Destination : "SR1"), TravelText.Waiting(message.Destination), 0.18f, () =>
                     {
                         try
                         {
@@ -115,7 +115,7 @@ namespace SlimeBridge.SR2
                     _held = false; _arrived = true;
                     var placed = Sr2ReturnPortalHook.PlacePlayer?.Invoke() ?? false;
                     if (!_overlay.IsCovering) { done(true, placed ? "portal" : "in_place", accepted); return; }
-                    _overlay.Open(1.1f, () => done(true, placed ? "portal" : "in_place", accepted));
+                    _overlay.Open(0.22f, () => done(true, placed ? "portal" : "in_place", accepted));
                     break;
                 default:
                     done(false, "unknown_kind");

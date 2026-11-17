@@ -6,6 +6,7 @@ by the RegistryCaptureHarness against the same canonical hash. Synthetic data on
 
 import hashlib
 import json
+import os
 import subprocess
 import tempfile
 import unittest
@@ -94,7 +95,9 @@ class RegistryCaptureTests(unittest.TestCase):
             build.write_bytes(b'synthetic-csharp-build')
             project = Path(__file__).resolve().parent / 'RegistryCaptureHarness/RegistryCaptureHarness.csproj'
             result = subprocess.run(['dotnet', 'run', '--project', str(project), '-c', 'Release',
-                                     '--', str(root), str(build)], capture_output=True, text=True, timeout=120)
+                                     '--', str(root), str(build)],
+                                    env=dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false'),
+                                    capture_output=True, text=True, timeout=120)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             scan = load_capture(root, active_build=build, realm='SR1')
             self.assertEqual(scan['completeness'], 'COMPLETE')
@@ -107,6 +110,7 @@ class RegistryCaptureTests(unittest.TestCase):
             project = Path(__file__).resolve().parent / "RegistryCaptureHarness/RegistryCaptureHarness.csproj"
             result = subprocess.run(["dotnet", "run", "--project", str(project), "-c", "Release",
                                      "--", str(root), str(build), "unicode"],
+                                    env=dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH="false"),
                                     capture_output=True, text=True, timeout=120)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             scan = load_capture(root, active_build=build, realm="SR1")

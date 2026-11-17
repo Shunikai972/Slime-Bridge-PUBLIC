@@ -21,7 +21,8 @@ class SanctuaryHarnessTests(unittest.TestCase):
             layout_path = Path(temporary) / 'sanctuary-layout.json'
             layout_path.write_bytes(L.layout_bytes(L.build_layout(copy_kit())))
             command = [dotnet, 'run', '--project', str(HARNESS), '-c', 'Release', '--', str(layout_path)]
-            result = subprocess.run(command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            result = subprocess.run(command, cwd=ROOT, env=dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false'),
+                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                                     encoding='utf-8', errors='replace', timeout=240)
             self.assertEqual(result.returncode, 0, result.stdout)
             self.assertIn('failures=0', result.stdout)

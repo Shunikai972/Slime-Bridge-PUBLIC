@@ -23,6 +23,7 @@ namespace SlimeBridge.SR1
         private Camera? _camera;
         private Transform? _player;
         private float _yaw;
+        private float _distance = Distance;
 
         internal static bool Attach(GameObject actor, SceneContext scene, List<string> details, List<string> problems)
         {
@@ -36,13 +37,24 @@ namespace SlimeBridge.SR1
                 problems.Add("rest-pose framing yaw is not a finite angle in [-180, 180]");
                 return false;
             }
+            var distance = Distance;
+            var rawDistance = Environment.GetEnvironmentVariable("SLIMEBRIDGE_REST_POSE_DISTANCE");
+            if (!string.IsNullOrEmpty(rawDistance) &&
+                (!float.TryParse(rawDistance, NumberStyles.Float, CultureInfo.InvariantCulture, out distance) ||
+                 float.IsNaN(distance) || float.IsInfinity(distance) || distance < 2.4f || distance > 12f))
+            {
+                problems.Add("rest-pose distance is not finite in [2.4, 12]");
+                return false;
+            }
             var pin = actor.AddComponent<LabRestPosePin>();
             pin._player = scene.Player.transform;
             pin._yaw = yaw;
+            pin._distance = distance;
             pin._camera = Resolve(pin._player);
             if (pin._camera == null) { UnityEngine.Object.Destroy(pin); problems.Add("rest-pose framing found no active player camera"); return false; }
             details.Add("\"lab_rest_pose_pin\": true");
             details.Add("\"lab_rest_pose_yaw\": " + yaw.ToString("R", CultureInfo.InvariantCulture));
+            details.Add("\"lab_rest_pose_distance\": " + distance.ToString("R", CultureInfo.InvariantCulture));
             return true;
         }
 
@@ -71,7 +83,7 @@ namespace SlimeBridge.SR1
             if (toCamera.sqrMagnitude < 0.0001f) return;
             toCamera.Normalize();
             transform.SetPositionAndRotation(
-                view.position + view.forward * Distance - view.right * LeftOffset,
+                view.position + view.forward * _distance - view.right * (LeftOffset * _distance / Distance),
                 Quaternion.LookRotation(toCamera, Vector3.up) * Quaternion.Euler(0f, _yaw, 0f));
         }
     }

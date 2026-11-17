@@ -25,6 +25,8 @@ namespace SlimeBridge.Shared
         public readonly List<string> RequiredManifest = new List<string>();
         public string KitSha256 = "";
         public string UpdatedUtc = "";
+        private bool _manifestInitialized;
+        private bool ManifestInitialized => _manifestInitialized || RequiredManifest.Count > 0 || !string.IsNullOrEmpty(KitSha256);
 
         public static string SanitizeSaveKey(string? raw)
         {
@@ -38,12 +40,19 @@ namespace SlimeBridge.Shared
         /// <summary>Freeze the requirement list on first use; later layouts do not change a finished puzzle.</summary>
         public void EnsureManifest(IEnumerable<string> required, string kitSha256, bool dynamic)
         {
-            if (RequiredManifest.Count == 0 || dynamic)
+            var current = new List<string>(required);
+            var initialized = ManifestInitialized;
+            _manifestInitialized = initialized;
+            // One explicitly retired puzzle entry, not a general thaw of saved requirements.
+            // An old layout still containing Saber must not claim the visible statue was removed.
+            if (!current.Contains("SABER")) RequiredManifest.RemoveAll(slime => slime == "SABER");
+            if (!initialized || dynamic)
             {
                 RequiredManifest.Clear();
-                RequiredManifest.AddRange(required);
+                RequiredManifest.AddRange(current);
                 RequiredManifest.Sort(StringComparer.Ordinal);
                 KitSha256 = kitSha256;
+                _manifestInitialized = true;
             }
         }
 
@@ -59,13 +68,15 @@ namespace SlimeBridge.Shared
         /// <summary>Mark a statue filled. Returns false when it was already filled or is not part of the manifest.</summary>
         public bool FillStatue(string slime, bool required)
         {
-            if (required && RequiredManifest.Count > 0 && !RequiredManifest.Contains(slime)) return false;
+            if (required && ManifestInitialized && !RequiredManifest.Contains(slime)) return false;
             return FilledStatues.Add(slime);
         }
 
         public bool AllRequiredFilled()
         {
-            if (RequiredManifest.Count == 0) return false;
+            // An initialized puzzle whose last requirement was retired is complete;
+            // a fresh object with no puzzle is not. Persist that distinction across loads.
+            if (RequiredManifest.Count == 0) return ManifestInitialized;
             foreach (var slime in RequiredManifest)
                 if (!FilledStatues.Contains(slime)) return false;
             return true;
@@ -106,6 +117,7 @@ namespace SlimeBridge.Shared
             sb.Append("{\"schema\":\"bridge-sanctuary-progress\",\"schema_version\":").Append(SchemaVersion);
             sb.Append(",\"save_key\":").Append(Quote(SaveKey));
             sb.Append(",\"kit_sha256\":").Append(Quote(KitSha256));
+            sb.Append(",\"manifest_initialized\":").Append(ManifestInitialized ? "true" : "false");
             sb.Append(",\"gold_deposited\":").Append(GoldDeposited.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"gate_paid\":").Append(GatePaid ? "true" : "false");
             sb.Append(",\"portal_unlocked\":").Append(PortalUnlocked ? "true" : "false");
@@ -134,6 +146,12 @@ namespace SlimeBridge.Shared
             if (p.GoldDeposited < 0 || p.GoldDeposited > 100000) throw new FormatException("gold out of range");
             foreach (var item in J.Arr(root, "required", 256)) p.RequiredManifest.Add(J.AsStr(item, "required"));
             foreach (var item in J.Arr(root, "filled", 256)) p.FilledStatues.Add(J.AsStr(item, "filled"));
+            if (root.ContainsKey("manifest_initialized"))
+            {
+                p._manifestInitialized = J.Bool(root, "manifest_initialized");
+                if (!p._manifestInitialized && p.ManifestInitialized) throw new FormatException("uninitialized puzzle contains a frozen manifest");
+            }
+            else p._manifestInitialized = p.ManifestInitialized; // legacy schema1 sidecars
             if (p.PortalUnlocked && !p.AllRequiredFilled()) throw new FormatException("portal unlocked without every statue");
             return p;
         }

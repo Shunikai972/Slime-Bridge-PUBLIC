@@ -50,7 +50,7 @@ def prepare(work):
     unload = extract(bridge, unload_marker) if unload_marker in bridge else 'public override void OnSceneWasUnloaded(int index, string name) { }'
     (work / 'LifecycleBridge.cs').write_text('using System; using System.Threading; namespace SlimeBridge.SR2 {'
         'internal sealed class LabFocusDiagnostics { internal void Stop(string reason) {} } internal class LifecycleBase { public virtual void OnDeinitializeMelon() {} public virtual void OnSceneWasUnloaded(int index, string name) {} }'
-        'internal sealed class TravelStub { public void Unload() { } public void Tick() { } public void Gui() { } }\ninternal sealed class LifecycleBridge : LifecycleBase { TravelStub? _travel = null; InventoryAgent? _inventory; CancellationTokenSource? _stop = null; LabFocusDiagnostics? _focusDiagnostics = null; internal bool _focusDiagnosticAllowed = false; int _focusEpoch = 0;'
+        'internal sealed class TravelStub { public void Unload() { } public void Tick() { } public void Gui() { } } internal static class Sr2LabVacuumTrace { public static void Stop() { } }\ninternal sealed class LifecycleBridge : LifecycleBase { TravelStub? _travel = null; InventoryAgent? _inventory; CancellationTokenSource? _stop = null; LabFocusDiagnostics? _focusDiagnostics = null; internal bool _focusDiagnosticAllowed = false; int _focusEpoch = 0;'
         'internal LifecycleBridge(InventoryAgent inventory) { _inventory = inventory; }\n' + shutdown + '\n' + unload + '\n}}', encoding='utf-8')
     (work / 'lifecycle-extraction.json').write_text(json.dumps({'source_sha256': hashlib.sha256((ROOT / 'mods/sr2-bridge/BridgeMod.cs').read_bytes()).hexdigest(),
         'shutdown_verbatim': shutdown in bridge, 'unload_verbatim': unload in bridge,
@@ -84,7 +84,7 @@ def run_intro(command, work, *, timeout=600):
     timed_out = False
     output = ''
     try:
-        completed = subprocess.run(command, cwd=ROOT, env=dict(os.environ), stdout=subprocess.PIPE,
+        completed = subprocess.run(command, cwd=ROOT, env=dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false'), stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', timeout=timeout)
         output = completed.stdout
         return completed
@@ -112,7 +112,7 @@ class SR2BackgroundIntroTests(unittest.TestCase):
             work.mkdir(parents=True, exist_ok=True)
             prepare(work)
             build_command = [dotnet, 'build', str(work / 'Intro.csproj'), '-c', 'Release', '--no-incremental']
-            build = subprocess.run(build_command, cwd=ROOT, env=dict(os.environ), stdout=subprocess.PIPE,
+            build = subprocess.run(build_command, cwd=ROOT, env=dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false'), stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', timeout=180)
             (work / 'build.log').write_text(build.stdout, encoding='utf-8')
             self.assertEqual(build.returncode, 0, 'COMPILATION FAILURE, not behavioral RED: ' + build.stdout)

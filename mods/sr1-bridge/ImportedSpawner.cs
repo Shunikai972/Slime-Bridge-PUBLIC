@@ -469,6 +469,8 @@ namespace SlimeBridge.SR1
                 SetRenderersEnabled(visual, true);
                 SuppressPlaceholders(instance, visual, suppressedRenderers);
             }
+            if (!ImportedQuantumAppearance.EnsureBound(instance, canonical, out var quantumProblem))
+                UnityEngine.Debug.LogWarning("[SlimeBridge] Quantum appearance binding refused: " + quantumProblem);
             NeutralizeAppearanceRuntime(instance, out _);
             RebindNativeMaterials(instance, visual, canonical);
             // Fail-safe scope repair: spawns from before the palette-scope fix, rebuilt instances
@@ -554,6 +556,23 @@ namespace SlimeBridge.SR1
                     block.SetVector(ShIds[2], new Vector4(0f, 0f, 0f, ab));
                     for (var i = 3; i < ShIds.Length; i++) block.SetVector(ShIds[i], Vector4.zero);
                     renderer.SetPropertyBlock(block);
+                    // SR1's Vacuumable preserves an indexed block with _HeldInVac=0 after release.
+                    // Indexed blocks take precedence over the renderer-wide block, so each owned
+                    // baked-material slot must carry its custom ambient too. Preserve native held
+                    // state and all unrelated indexed properties; never touch a native material slot.
+                    var materials = renderer.sharedMaterials;
+                    for (var slot = 0; slot < materials.Length; slot++)
+                    {
+                        var material = materials[slot];
+                        if (material == null || material.name != "SlimeBridgeUserLargo") continue;
+                        var indexed = new MaterialPropertyBlock();
+                        renderer.GetPropertyBlock(indexed, slot);
+                        indexed.SetVector(ShIds[0], new Vector4(0f, 0f, 0f, ar));
+                        indexed.SetVector(ShIds[1], new Vector4(0f, 0f, 0f, ag));
+                        indexed.SetVector(ShIds[2], new Vector4(0f, 0f, 0f, ab));
+                        for (var i = 3; i < ShIds.Length; i++) indexed.SetVector(ShIds[i], Vector4.zero);
+                        renderer.SetPropertyBlock(indexed, slot);
+                    }
                 }
             }
             catch (Exception) { /* fail-open: the scene's ambient stays */ }
@@ -592,7 +611,9 @@ namespace SlimeBridge.SR1
                 }
                 // A Largo's placeholder is a native Largo whose body material carries its own species' patterns (Rock's stone texture,
                 // Tabby stripes ...): paint the imported Largo on the plain Pink slime's body material instead.
-                if (canonical.StartsWith("largo.", StringComparison.Ordinal)) bodyTemplate = PlainBodyTemplate() ?? bodyTemplate;
+                var boomTemplate = ImportedBoomVisual.Eligible(canonical, false, ImportedBodyLighting.SourceShader) &&
+                    instance.GetComponent<BoomSlimeExplode>() != null ? ImportedBoomVisual.NativeTemplate() : null;
+                if (canonical.StartsWith("largo.", StringComparison.Ordinal) && boomTemplate == null) bodyTemplate = PlainBodyTemplate() ?? bodyTemplate;
                 if (bodyTemplate == null && eyesTemplate == null) return;
                 var specTop = Color.clear;
                 var specMiddle = Color.clear;
@@ -608,6 +629,7 @@ namespace SlimeBridge.SR1
                 CollectRenderersBounded(visual, renderers);
                 // every spawned actor gets its own material instances; they are destroyed with the actor (they used to pile up)
                 var owner = visual.GetComponent<ImportedMaterialOwner>() ?? visual.AddComponent<ImportedMaterialOwner>();
+                var boomSlots = new List<ImportedBoomVisual.Slot>();
                 foreach (var renderer in renderers)
                 {
                     if (renderer == null) continue;
@@ -639,6 +661,7 @@ namespace SlimeBridge.SR1
                     // clone would paint them as opaque palette blobs. Unknown shaders (legacy
                     // caches) keep the legacy rebind.
                     if (partData != null && partData.SkipNativePaletteRebind) continue;
+                    var boomBody = boomTemplate != null && ImportedBoomVisual.Eligible(canonical, isFace, partData?.SourceShader ?? "");
                     for (var i = 0; i < shared.Length; i++)
                     {
                         var source = shared[i];
@@ -647,7 +670,8 @@ namespace SlimeBridge.SR1
                         var template = isFace ? (eyesTemplate ?? bodyTemplate) : (bodyTemplate ?? eyesTemplate);
                         // A body with no baked markings of its own must not inherit the placeholder species' stripes (Tabby's), which land on the
                         // imported mesh's UVs as a hard patch: it is painted on the plain Pink body material instead.
-                        if (!isFace && (partData == null || partData.Pattern == null)) template = PlainBodyTemplate() ?? template;
+                        if (!isFace && !boomBody && (partData == null || partData.Pattern == null)) template = PlainBodyTemplate() ?? template;
+                        if (boomBody) template = boomTemplate;
                         if (template == null) continue;
                         var clone = new Material(template) { name = isFace ? "SlimeBridgeNativeFace(Clone)" : "SlimeBridgeNativeBody(Clone)" };
                         var partTop = partData != null && partData.Top != Color.clear ? partData.Top : specTop;
@@ -655,7 +679,7 @@ namespace SlimeBridge.SR1
                         var partBottom = partData != null && partData.Bottom != Color.clear ? partData.Bottom : specBottom;
                         // A Largo's SR2 body shader spreads its colors over zones its parents' masks define; on the plain body they come out as a
                         // hard dark patch. Keep the zones but pull the bottom color toward the middle one so the blend stays smooth.
-                        if (!isFace && canonical.StartsWith("largo.", StringComparison.Ordinal)) partBottom = Color.Lerp(partMiddle, partBottom, 0.35f);
+                        if (!isFace && !boomBody && canonical.StartsWith("largo.", StringComparison.Ordinal)) partBottom = Color.Lerp(partMiddle, partBottom, 0.35f);
                         SetMaterialColor(clone, "_TopColor", partTop);
                         SetMaterialColor(clone, "_MiddleColor", partMiddle);
                         SetMaterialColor(clone, "_BottomColor", partBottom);
@@ -676,9 +700,11 @@ namespace SlimeBridge.SR1
                         }
                         shared[i] = clone;
                         owner.Own(clone);
+                        if (boomBody) boomSlots.Add(new ImportedBoomVisual.Slot { Renderer = renderer, Index = i });
                     }
                     renderer.sharedMaterials = shared;
                 }
+                ImportedBoomVisual.Bind(visual, instance, boomSlots);
             }
             catch (Exception) { /* keep the converter materials on any failure */ }
         }

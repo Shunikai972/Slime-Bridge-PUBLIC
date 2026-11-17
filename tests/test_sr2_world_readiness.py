@@ -38,7 +38,7 @@ def prepare(work):
         index = bridge.index(marker)
         pieces.append(bridge[bridge.rfind('\n', 0, index) + 1:bridge.index('\n', index)].rstrip('\r'))
     (work / 'Snapshot.cs').write_text('using System; using System.Diagnostics; using System.Threading;\n'
-        'namespace SlimeBridge.SR2 { internal sealed class LabFocusDiagnostics { internal void Stop(string reason) {} } internal class MelonStub { public virtual void OnDeinitializeMelon() {} } internal class TravelStub { public void Unload() { } public void Tick() { } public void Gui() { } } internal class BridgeMod : MelonStub { TravelStub? _travel = null; System.Threading.CancellationTokenSource? _stop = null; InventoryAgent? _inventory = null; LabFocusDiagnostics? _focusDiagnostics = null; internal bool _focusDiagnosticAllowed = false; int _focusEpoch = 0;\n' + '\n'.join(pieces) + '\n}}', encoding='utf-8')
+        'namespace SlimeBridge.SR2 { internal sealed class LabFocusDiagnostics { internal void Stop(string reason) {} } internal class MelonStub { public virtual void OnDeinitializeMelon() {} } internal class TravelStub { public void Unload() { } public void Tick() { } public void Gui() { } } internal static class Sr2LabVacuumTrace { public static void Stop() { } } internal class BridgeMod : MelonStub { TravelStub? _travel = null; System.Threading.CancellationTokenSource? _stop = null; InventoryAgent? _inventory = null; LabFocusDiagnostics? _focusDiagnostics = null; internal bool _focusDiagnosticAllowed = false; int _focusEpoch = 0;\n' + '\n'.join(pieces) + '\n}}', encoding='utf-8')
     (work / 'extraction.json').write_text(json.dumps({
         'source_sha256': hashlib.sha256((ROOT / 'mods/sr2-bridge/BridgeMod.cs').read_bytes()).hexdigest(),
         'pieces': [{'verbatim': piece in bridge, 'sha256': hashlib.sha256(piece.encode()).hexdigest()} for piece in pieces]}, indent=2), encoding='utf-8')
@@ -81,12 +81,12 @@ class SR2WorldReadinessTests(unittest.TestCase):
             prepare(work)
             mode = os.environ.get('READINESS_MODE', 'all')
             build_command = [dotnet, 'build', str(work / 'Readiness.csproj'), '-c', 'Release', '--no-incremental']
-            build = subprocess.run(build_command, cwd=ROOT, env=dict(os.environ), stdout=subprocess.PIPE,
+            build = subprocess.run(build_command, cwd=ROOT, env=dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false'), stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', timeout=180)
             (work / 'build.log').write_text(build.stdout, encoding='utf-8')
             self.assertEqual(build.returncode, 0, 'COMPILATION FAILURE, not behavioral RED: ' + build.stdout)
             command = [dotnet, 'run', '--project', str(work / 'Readiness.csproj'), '-c', 'Release', '--no-build', '--', mode]
-            result = subprocess.run(command, cwd=ROOT, env=dict(os.environ), stdout=subprocess.PIPE,
+            result = subprocess.run(command, cwd=ROOT, env=dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false'), stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', timeout=180)
             public_env = {key: os.environ.get(key) for key in ('TEMP', 'TMP', 'TMPDIR', 'DOTNET_CLI_HOME',
                 'DOTNET_ROOT', 'DOTNET_GENERATE_ASPNET_CERTIFICATE', 'DOTNET_SKIP_FIRST_TIME_EXPERIENCE',

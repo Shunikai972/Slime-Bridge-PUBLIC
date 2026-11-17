@@ -3,6 +3,7 @@ Usage: python tests/check_csharp_parity.py <dotnet.exe> <SbRuntime.Tests.dll> <p
 Not part of unittest discovery (needs the .NET SDK and built packages)."""
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -47,7 +48,8 @@ def python_numbers(pkg):
 
 
 def main(dotnet, dll, packages):
-    out = subprocess.run([dotnet, dll] + packages, capture_output=True, text=True)
+    out = subprocess.run([dotnet, dll] + packages, env=dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false'),
+                         capture_output=True, text=True)
     lines = [l for l in out.stdout.splitlines() if l.strip()]
     bad = [l for l in lines if l.startswith(('FAIL', 'NEGATIVE-FAIL'))]
     for l in bad:

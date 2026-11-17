@@ -71,7 +71,7 @@ function create(options={}){
   for(const n of ['i18n.js','ui.js','api.js','pages_home.js','pages_other.js','loading.js','app.js'])evalFile(n);
   return {clock,doc,SB,backend,calls,unknown,local,window,start:()=>doc.emit('DOMContentLoaded'),q:s=>doc.querySelector(s),click:el=>{assert.ok(el,'clicked element must exist');return el.emit('click',{},true);}};
 }
-function assertChrome(h){for(const id of ['head','side','ribbon','chars'])assert.ok(h.q('#'+id).innerHTML.length>0,id+' must render during boot');assert.match(h.q('#chars').innerHTML,/pink-cotton-artist\.png/);}
+function assertChrome(h){for(const id of ['head','side','ribbon','chars-back'])assert.ok(h.q('#'+id).innerHTML.length>0,id+' must render during boot');assert.ok(h.q('#side .side-art'));assert.match(h.q('#side').innerHTML,/pink-cotton-artist\.png/);}
 async function booted(h){const pending=await h.start();await h.clock.tick(4000);await Promise.all(pending);return h;}
 const cases={
   async 'normal-hung-optionals'(){const h=create({api:{news_cached:never,news_refresh:never,autodetect:never}});await booted(h);assertChrome(h);assert.equal(h.q('#splash'),null);assert.ok(h.SB.app.state);assert.match(h.q('#view').innerHTML,/play-choice/);assert.equal(h.calls.filter(x=>x.name==='autodetect').length,1);assert.equal(h.unknown.length,0);},

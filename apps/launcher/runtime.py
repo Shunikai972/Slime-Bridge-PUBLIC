@@ -166,14 +166,23 @@ class HostProcess:
 class GameLauncher:
     """Starts verified game executables; one process per realm at a time."""
 
-    def __init__(self, popen=subprocess.Popen):
+    def __init__(self, popen=subprocess.Popen, on_started=None):
         self._popen = popen
+        self._on_started = on_started
         self._children = {}
         self._executables = {}
+        self._closing = {}
 
     def running(self, realm):
         child = self._children.get(realm)
         return child is not None and child.poll() is None
+
+    def closing(self, realm):
+        child = self._children.get(realm)
+        if child is None or child.poll() is not None:
+            self._closing.pop(realm, None)
+            return False
+        return self._closing.get(realm) == child.pid
 
     def owns_image(self, pid, image):
         """A live owned child and its pinned launch image, not just an executable basename."""
@@ -208,7 +217,24 @@ class GameLauncher:
             raise RuntimeErrorWithCode('LAUNCH_FAILED', str(exc)) from exc
         self._children[realm] = child
         self._executables[realm] = exe.resolve()
+        self._closing.pop(realm, None)
+        if self._on_started is not None:
+            self._on_started(realm, child.pid)
         return {'realm': realm, 'pid': child.pid, 'already_running': False, 'exe': str(exe)}
+
+    def request_stop(self, realm, windows, image_for):
+        child = self._children.get(realm)
+        if child is None or child.poll() is not None:
+            self._closing.pop(realm, None)
+            return {'realm': realm, 'already_stopped': True, 'stopping': False}
+        if not self.owns_image(child.pid, image_for(child.pid)):
+            raise RuntimeErrorWithCode('PROCESS_NOT_OWNED', 'The game process image no longer matches its retained child.')
+        if self._closing.get(realm) != child.pid:
+            if not windows.request_close(child.pid):
+                raise RuntimeErrorWithCode('CLOSE_NOT_CONFIRMED', 'Windows did not accept a normal game close.')
+            self._closing[realm] = child.pid
+        # A queued WM_CLOSE is not proof of exit. Keep the original child and report pending.
+        return {'realm': realm, 'pid': child.pid, 'stopping': child.poll() is None, 'already_stopped': False}
 
     def status(self):
         return {realm: self.running(realm) for realm in EXECUTABLES}

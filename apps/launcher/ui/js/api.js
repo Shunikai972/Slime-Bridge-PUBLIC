@@ -113,6 +113,11 @@
     async plugin_install() { return { ok: true, state: 'current' }; },
     async loader_install() { return { ok: true, state: 'installed' }; },
     async game_repair() { return { ok: true }; },
+    async game_stop(target = 'BOTH') { // explicit browser preview only; never controls a process
+      const realms = target === 'BOTH' ? ['SR1', 'SR2'] : [target];
+      const games = realms.filter(r => S.games[r]).map(r => { S.games[r].running = false; return { realm: r, stopping: false, already_stopped: true }; });
+      return { ok: true, games, errors: [] };
+    },
     async diagnostics() { return { ok: true, text: 'SlimeBridge diagnostic (demo)' }; },
     async mods_search(realm, q) { return { ok: true, total: 2, mods: [{ id: 42, name: 'More Vaccables', summary: 'Vac more things (demo)', version: '1.3.4', author: 'Atmudia', downloads: 25330, url: 'https://www.nexusmods.com/slimerancher2/mods/42', thumbnail: null }, { id: 52, name: 'More Yolky Slimes', summary: 'Demo', version: '2.1.0', author: 'markekraus', downloads: 6266, url: 'https://www.nexusmods.com/slimerancher2/mods/52', thumbnail: null }] }; },
     async mods_installed(realm) { return { ok: true, folder: 'Mods', pending: null, mods: [{ key: 'file:Mods/SlimeBridge.SR2.dll', name: 'SlimeBridge.SR2', protected: true, files: [] }, { key: '42', name: 'More Vaccables', version: '1.3.4', nexus_id: 42, protected: false, files: ['Mods/MoreVaccables.dll'] }] }; },
@@ -123,6 +128,8 @@
     async console_poll() { return { ok: true, lines: [{ source: 'SR1', text: '[SlimeBridge] sanctuary built (demo)', kind: 'bridge' }, { source: 'SR2', text: '[SlimeBridge SR2 Core] return portal built (demo)', kind: 'bridge' }] }; },
     async update_check() { return { ok: true, current: '0.1.5', latest: '0.1.5', update: false, frozen: true }; },
     async update_apply() { return { ok: true, version: '0.1.5' }; },
+    async update_status() { return { ok: true, phase: 'ready', done: 0, total: 0 }; },
+    async update_restart_ack() { return { ok: true }; },
     async sanctuary_state() { return sanctState(); },
     async sanctuary_status() { return { ok: true, job: S.sanct.job ? { ...S.sanct.job } : null }; },
     async sanctuary_build() {

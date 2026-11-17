@@ -17,16 +17,17 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from apps.launcher import modmanager
-from apps.launcher import detect, extract, models, news, pack, plugins, sanctuary, savelist, travel, windows
+from apps.launcher import audio, detect, extract, models, news, pack, plugins, sanctuary, savelist, travel, windows
 from apps.launcher.installations import discover_manual
 from apps.launcher.main import KNOWN_MANUAL_SR1, KNOWN_MANUAL_SR2, available_installations
 from apps.launcher.runtime import EXECUTABLES, GameLauncher, HostProcess, RuntimeErrorWithCode
+from apps.launcher.updater import current_version
 from tools.lab.paths import LAB_GAMES, refuse_reparse, validate_lab_destination
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG = REPO_ROOT / 'Lab' / 'Launcher' / 'installations.json'
 UI = Path(__file__).resolve().parent / 'ui' / 'index.html'
-VERSION = '0.2-ui'
+VERSION = current_version()
 STORE_PAGES = {'SR1': 'https://store.steampowered.com/app/433340/', 'SR2': 'https://store.steampowered.com/app/1657630/'}
 CONFIG_DEFAULTS = {'manual_paths': [], 'detected_paths': [], 'legal_understood': False, 'language': 'auto', 'theme': 'day',
                    'reduce_motion': False, 'backup_ack': False, 'prefer_lab': False, 'selected': {},
@@ -52,7 +53,8 @@ _VALIDATORS = {
 }
 
 
-TRAVEL_TICK = 0.3                                              # seconds between two crossing steps
+TRAVEL_TICK = 0.05                                             # seconds between two crossing steps
+TRAVEL_IDLE_TICK = 0.25                                        # no active crossing: avoid busy-polling the host
 GUI = 'edgechromium' if sys.platform == 'win32' else 'gtk'      # pywebview backend per platform
 
 class LauncherAPI:
@@ -63,7 +65,15 @@ class LauncherAPI:
         self._known_paths = known_paths
         self._lab_games = lab_games
         self._window = None
-        self._launcher = GameLauncher(**({'popen': popen} if popen else {}))
+        self._launcher = GameLauncher(on_started=self._game_started, **({'popen': popen} if popen else {}))
+        self._audio = audio.GameAudio(self._verified_game_pid)
+        self._audio_front = None
+        self._audio_startup_deadline = 0.0
+        self._audio_startup_epoch = 0
+        self._audio_stop = threading.Event()
+        self._audio_thread = None
+        self._audio_policy_lock = threading.RLock()
+        self._audio_thread_lock = threading.Lock()
         self._host = HostProcess(Path(config_path).parent / 'host', **({'popen': host_popen} if host_popen else {}))
         self._opener = opener
         self._feed = news.NewsFeed(Path(config_path).parent / 'cache', **({'opener': news_opener} if news_opener else {}))
@@ -76,10 +86,14 @@ class LauncherAPI:
                                                 self._window_control(), travel.TravelLinks(Path(config_path).parent / 'travel-links.json'),
                                                 settings=lambda: self._settings()[1]['bridge'], list_saves=savelist.list_groups,
                                                 notify=lambda _transition: self._raise_window(), session=self._session,
-                                                prepare_destination=self._prepare_travel_destination)
+                                                prepare_destination=self._prepare_travel_destination,
+                                                select_audio_front=self._select_audio_front)
         self._downloads = None
         self._manifest = {'doc': None, 'error': None}
         self._lock = threading.Lock()
+        self._update_lock = threading.Lock()
+        self._update_progress = {'phase': 'idle', 'done': 0, 'total': 0}
+        self._update_restart_ack = threading.Event()
         self._travel_stop = threading.Event()
         self._travel_thread = None
         self._hidden_watch = None
@@ -223,21 +237,50 @@ class LauncherAPI:
         except updater.UpdateError as exc:
             return {'ok': False, 'error': exc.code, 'detail': exc.detail}
 
+    def update_status(self) -> dict:
+        return {'ok': True, **dict(self._update_progress)}
+
+    def update_restart_ack(self) -> dict:
+        """The page received the successful apply response; its restarting notice may now close."""
+        self._update_restart_ack.set()
+        return {'ok': True}
+
     def update_apply(self) -> dict:
         """Download + verify the latest standalone build, then restart into it (the window closes, the new one opens)."""
         from apps.launcher import updater
+        if not getattr(sys, 'frozen', False):
+            return {'ok': False, 'error': 'SOURCE_INSTALL'}
+        if not self._update_lock.acquire(blocking=False):
+            return {'ok': False, 'error': 'UPDATE_BUSY'}
+        try:
+            if self._update_progress.get('phase') == 'restarting':
+                return {'ok': False, 'error': 'UPDATE_BUSY'}
+            return self._apply_update(updater)
+        finally:
+            self._update_lock.release()
+
+    def _apply_update(self, updater) -> dict:
         if any(self._launcher.running(r) for r in ('SR1', 'SR2')):
             return {'ok': False, 'error': 'GAME_RUNNING'}
+        def progress(state):
+            self._update_progress = dict(state)
+        self._update_restart_ack.clear()
         try:
-            ready = updater.prepare()
+            ready = updater.prepare(progress=progress)
+            if any(self._launcher.running(r) for r in ('SR1', 'SR2')):
+                self._update_progress = {'phase': 'blocked', 'done': 0, 'total': 0}
+                return {'ok': False, 'error': 'GAME_RUNNING'}
             helper = updater.restart_into(ready['folder'])
+            self._update_progress = {'phase': 'restarting', 'done': 0, 'total': 0}
         except updater.UpdateError as exc:
+            self._update_progress = {'phase': 'error', 'done': 0, 'total': 0, 'error': exc.code}
             return {'ok': False, 'error': exc.code, 'detail': exc.detail}
         import threading
 
         def _quit():
-            import time
-            time.sleep(1.0)                    # let the page show "restarting"
+            # No presentation sleep after the page acknowledges the response. A closed or
+            # older page cannot strand the helper: the fallback remains bounded.
+            self._update_restart_ack.wait(timeout=0.5)
             try:
                 self.shutdown()
             finally:
@@ -455,6 +498,7 @@ class LauncherAPI:
         return {'version': VERSION, 'installations': rows, 'games': games, 'legal_understood': bool(data['legal_understood']),
                 'preferences': {k: (bool(data[k]) if k == 'nexus_api_key' else data[k]) for k in _VALIDATORS if k in data},   # never the key itself
                 'host': self._host.state(), 'tool': self._tool(data),
+                'audio': {'front': self._audio_front, **self._audio.last_status},
                 'paths': {'models': str(self._models_dir(data)), 'output': str(self._output_dir(data)),
                           'cache': str(self._cache_dir(data))},
                 'lab_isolation': 'Not configured — game launch disabled', 'platform': sys.platform,
@@ -466,7 +510,7 @@ class LauncherAPI:
         minimized). ``resume``: load the save the player was last in (that game only), straight from the game's menu."""
         if target not in ('SR1', 'SR2', 'BOTH', 'BOTH_SR1', 'BOTH_SR2'):
             raise ValueError('target must be SR1, SR2, BOTH, BOTH_SR1 or BOTH_SR2')
-        front = 'SR2' if target == 'BOTH_SR2' else 'SR1'
+        front = 'SR2' if target in ('SR2', 'BOTH_SR2') else 'SR1'
         if target.startswith('BOTH'):
             target = 'BOTH'
         data = self._load()
@@ -477,6 +521,11 @@ class LauncherAPI:
         if confirmed and remember and not data['backup_ack']:
             with self._edit_config() as current:
                 current['backup_ack'] = True
+        with self._audio_policy_lock:
+            self._audio_startup_epoch += 1
+            launch_epoch = self._audio_startup_epoch
+            self._audio_startup_deadline = time.monotonic() + 180 if target == 'BOTH' else 0.0
+            self._select_audio_front(front)
         realms = ((front, 'SR2' if front == 'SR1' else 'SR1') if target == 'BOTH' else (target,))
         warnings, errors, launched = [], [], []
         # The bridge (portals, travel, shared inventory) needs BridgeHost whichever game is started first.
@@ -508,7 +557,11 @@ class LauncherAPI:
             except RuntimeErrorWithCode as exc:
                 errors.append({'realm': realm, 'error': exc.code, 'detail': exc.detail})
         if target == 'BOTH' and len(launched) == 2:
-            self._keep_in_front(front)
+            self._keep_in_front(front, launch_epoch)
+        else:
+            with self._audio_policy_lock:
+                if launch_epoch == self._audio_startup_epoch:
+                    self._audio_startup_deadline = 0.0
         return {'ok': bool(launched) and not errors, 'launched': launched, 'errors': errors, 'warnings': warnings,
                 'host': self._host.state(), 'front': front if target == 'BOTH' else None}
 
@@ -526,17 +579,17 @@ class LauncherAPI:
         return {'ok': status['state'] == 'current' and bool(status['loader']),
                 'error': None if status['state'] == 'current' else 'PLUGIN_NOT_CURRENT'}
 
-    def _keep_in_front(self, front):
+    def _keep_in_front(self, front, epoch):
         """Both games were started: the chosen one stays in front, the other is minimized as soon as its window shows."""
         back = 'SR2' if front == 'SR1' else 'SR1'
 
-        def _arrange():
+        def _arrange_windows():
             control = self._window_control()
             front_pid = (self._launcher._children.get(front) or None)
             back_pid = (self._launcher._children.get(back) or None)
             deadline = time.time() + 180
             minimized = False
-            while time.time() < deadline and not minimized:
+            while time.time() < deadline and not minimized and epoch == self._audio_startup_epoch:
                 time.sleep(2.0)
                 try:
                     if back_pid is None or back_pid.poll() is not None:
@@ -545,14 +598,103 @@ class LauncherAPI:
                     if checked is not None and not list(checked(back_pid.pid)):
                         continue                                  # its window does not exist yet
                     for _ in range(2):                            # Unity rebuilds its window when it goes fullscreen
-                        control.minimize(back_pid.pid)
-                        if front_pid is not None and front_pid.poll() is None:
-                            control.focus(front_pid.pid)
+                        with self._audio_policy_lock:
+                            if epoch != self._audio_startup_epoch:
+                                return
+                            control.minimize(back_pid.pid)
+                            if epoch != self._audio_startup_epoch:
+                                return
+                            if front_pid is not None and front_pid.poll() is None:
+                                control.focus(front_pid.pid)
                         time.sleep(6.0)
                     minimized = True
                 except Exception:  # noqa: BLE001 - its window may not exist yet
                     minimized = False
-        threading.Thread(target=_arrange, name='slimebridge-front', daemon=True).start()
+        def _arrange():
+            try:
+                _arrange_windows()
+            finally:
+                with self._audio_policy_lock:
+                    if epoch == self._audio_startup_epoch:
+                        self._audio_startup_deadline = 0.0
+        with self._audio_policy_lock:
+            if epoch == self._audio_startup_epoch:
+                threading.Thread(target=_arrange, name='slimebridge-front', daemon=True).start()
+
+    def _verified_game_pid(self, pid):
+        if os.name != 'nt':
+            return False
+        from tools.lab.process_guard import process_image_path
+        return self._launcher.owns_image(pid, process_image_path(pid))
+
+    def _select_audio_front(self, front):
+        if front not in ('SR1', 'SR2'):
+            return
+        with self._audio_policy_lock:
+            self._audio_front = front
+            self._sync_game_audio()
+
+    def _sync_game_audio(self, follow_foreground=False):
+        with self._audio_policy_lock:
+            if (follow_foreground and time.monotonic() >= self._audio_startup_deadline and
+                    not any(t['state'] in travel.ACTIVE for t in self._travel.transitions)):
+                try:
+                    pid = getattr(self._travel._windows, 'foreground_pid', lambda: None)()
+                    for realm, child in tuple(self._launcher._children.items()):
+                        if child.pid == pid and child.poll() is None:
+                            self._audio_front = realm
+                except (windows.WindowError, OSError):
+                    pass  # a missing/rebuilt Unity window does not change the selected front
+            if self._audio_front is not None:
+                for realm, child in tuple(self._launcher._children.items()):
+                    if child.poll() is None:
+                        self._audio.set_muted(child.pid, realm != self._audio_front)
+            return self._audio.sync()
+
+    def _game_started(self, realm, pid):
+        # Runs after the image is pinned, before returning from launch: no heartbeat/window required.
+        self._sync_game_audio()
+        if os.name != 'nt':
+            return
+        def watch():
+            try:
+                while not self._audio_stop.wait(.05):
+                    # Retain one watcher until launcher shutdown. An idle child gap is
+                    # not retirement: a new launch can appear before a late audio session.
+                    if any(self._launcher.running(r) for r in EXECUTABLES):
+                        try:
+                            self._sync_game_audio(follow_foreground=True)
+                        except Exception as exc:
+                            self._audio.last_status = {'muted': 0, 'errors': [type(exc).__name__]}
+                            if self._audio_stop.wait(.25):
+                                break
+                    else:
+                        self._audio.sync()  # discard dead session keys; no endpoint enumeration when empty
+            finally:
+                self._audio.restore()
+        with self._audio_thread_lock:
+            if self._audio_thread is None or not self._audio_thread.is_alive():
+                self._audio_stop.clear()
+                self._audio_thread = threading.Thread(target=watch, name='slimebridge-audio', daemon=True)
+                self._audio_thread.start()
+
+    def game_stop(self, target='BOTH') -> dict:
+        if target not in ('SR1', 'SR2', 'BOTH'):
+            return {'ok': False, 'error': 'BAD_TARGET'}
+        from tools.lab.process_guard import process_image_path
+        with self._travel._lock:
+            if any(t['state'] in travel.ACTIVE for t in self._travel.transitions):
+                return {'ok': False, 'error': 'TRAVEL_ACTIVE'}
+            realms = ('SR1', 'SR2') if target == 'BOTH' else (target,)
+            results = []
+            control = self._window_control()
+            for realm in realms:
+                try:
+                    results.append(self._launcher.request_stop(realm, control, process_image_path))
+                except (RuntimeErrorWithCode, windows.WindowError, OSError) as exc:
+                    results.append({'realm': realm, 'error': getattr(exc, 'code', 'CLOSE_NOT_CONFIRMED')})
+            errors = [r for r in results if r.get('error')]
+            return {'ok': not errors, 'games': results, 'errors': errors}
 
     def host_start(self) -> dict:
         try:
@@ -668,12 +810,15 @@ class LauncherAPI:
             return
 
         def _loop():
-            while not self._travel_stop.wait(TRAVEL_TICK):
+            delay = TRAVEL_IDLE_TICK
+            while not self._travel_stop.wait(delay):
                 try:
-                    if self._host.state().get('state') == 'RUNNING':
-                        self._travel.poll()
+                    # poll() already checks the host state. A second snapshot here is
+                    # redundant; the fast cadence is needed only during a handshake.
+                    crossings = self._travel.poll()
+                    delay = TRAVEL_TICK if any(row['state'] in travel.ACTIVE for row in crossings) else TRAVEL_IDLE_TICK
                 except Exception:  # noqa: BLE001 - one bad tick must not stop travel
-                    pass
+                    delay = TRAVEL_IDLE_TICK
         self._travel_stop.clear()
         self._travel_thread = threading.Thread(target=_loop, name='slimebridge-travel', daemon=True)
         self._travel_thread.start()
@@ -684,11 +829,17 @@ class LauncherAPI:
     def shutdown(self) -> None:
         """Called when the window closes: stop the child processes this launcher started (never the games)."""
         self._travel_stop.set()
+        self._audio_stop.set()
+        if self._audio_thread is not None:
+            self._audio_thread.join(timeout=2)
         try:
             if self._extract is not None:
                 self._extract.cancel()
         finally:
-            self._host.stop()
+            try:
+                self._audio.restore()
+            finally:
+                self._host.stop()
 
     # ---- asset extraction ------------------------------------------------------------------------------------------
     def _tool(self, data=None) -> dict:

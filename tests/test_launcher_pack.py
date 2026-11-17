@@ -39,6 +39,10 @@ class PackTests(unittest.TestCase):
         seeder = patch('bridge.content.spec_seed.ensure_specs', return_value={'seeded': []})
         seeder.start()
         self.addCleanup(seeder.stop)
+        # Layout refresh targets REPO_ROOT/Lab by default; isolate PackTests from the real Lab directory.
+        refresher = patch('apps.launcher.pack.sanctuary.refresh_layout', return_value=None)
+        refresher.start()
+        self.addCleanup(refresher.stop)
 
     def test_only_the_lab_copy_is_a_lab_copy(self):
         with tempfile.TemporaryDirectory() as tmp:

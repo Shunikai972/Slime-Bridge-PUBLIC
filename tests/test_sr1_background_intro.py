@@ -21,7 +21,7 @@ class SR1BackgroundIntroTests(unittest.TestCase):
         cls.env = os.environ.copy()
         for key in ("TEMP", "TMP", "TMPDIR", "DOTNET_CLI_HOME"):
             cls.env[key] = cls.temp.name
-        cls.env.update(DOTNET_SKIP_FIRST_TIME_EXPERIENCE="1", DOTNET_CLI_TELEMETRY_OPTOUT="1", DOTNET_GENERATE_ASPNET_CERTIFICATE="false")
+        cls.env.update(DOTNET_ADD_GLOBAL_TOOLS_TO_PATH="false", DOTNET_SKIP_FIRST_TIME_EXPERIENCE="1", DOTNET_CLI_TELEMETRY_OPTOUT="1", DOTNET_GENERATE_ASPNET_CERTIFICATE="false")
         cls.project = ROOT / "tests/SR1BackgroundIntroHarness/SR1BackgroundIntroHarness.csproj"
         cls.out = Path(cls.temp.name) / "build"
         # Shared compiler servers outlive this fixture and map analyzers inside its TEMP.

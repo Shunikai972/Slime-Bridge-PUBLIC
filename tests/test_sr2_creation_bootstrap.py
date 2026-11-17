@@ -199,7 +199,7 @@ class SR2CreationBootstrapTests(unittest.TestCase):
                 '<Nullable>enable</Nullable><UseAppHost>false</UseAppHost><NuGetAudit>false</NuGetAudit>'
                 '</PropertyGroup></Project>', encoding='utf-8')
             (work / 'NuGet.Config').write_text('<configuration><packageSources><clear /></packageSources></configuration>', encoding='utf-8')
-            env = dict(os.environ, DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
+            env = dict(os.environ, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
                        DOTNET_GENERATE_ASPNET_CERTIFICATE='false', DOTNET_CLI_TELEMETRY_OPTOUT='1')
             result = subprocess.run([dotnet, 'run', '--project', str(work / 'flow.csproj'), '-c', 'Release'],
                 cwd=work, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=90,

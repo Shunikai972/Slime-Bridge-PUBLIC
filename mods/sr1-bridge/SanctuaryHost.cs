@@ -206,7 +206,14 @@ namespace SlimeBridge.SR1
             ZoneDirector.zones.TryGetValue(ZoneDirector.Zone.SEA, out sea);
             _progress = SanctuaryProgress.LoadOrCreate(_stateDirectory, _saveId, out var problem);
             if (problem != null) _events.Add("progress: " + problem);
+            var beforeManifest = _progress.ToJson();
             _progress.EnsureManifest(_layout.RequiredSlimes, _layout.KitSha256, _layout.DynamicRequirements);
+            var completedOnLoad = _progress.TryUnlockPortal();
+            if (completedOnLoad || beforeManifest != _progress.ToJson())
+            {
+                Persist();
+                _events.Add("sanctuary requirements updated on load" + (completedOnLoad ? " (portal unlocked)" : ""));
+            }
             var started = Time.realtimeSinceStartup;
             _builder = new SanctuaryBuilder(_layout, _native);
             _builder.Build(sea);

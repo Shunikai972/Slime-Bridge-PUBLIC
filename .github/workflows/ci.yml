@@ -28,5 +28,6 @@ jobs:
       - name: Tests
         env:
           TMPDIR: ${{ runner.temp }}
+          DOTNET_ADD_GLOBAL_TOOLS_TO_PATH: 'false'
           PYTHONDONTWRITEBYTECODE: '1'
         run: python -m unittest discover -s tests

@@ -74,7 +74,8 @@
     <div class="stack">
       <section class="panel"><h2>${t('upd.title')}</h2>
         <div class="setting"><div><div class="name">${t('upd.current', { v: (L.update && L.update.current) || '…' })}</div><div class="desc">${L.update ? (L.update.ok === false ? t('upd.offline') : (L.update.update ? t('upd.available', { v: L.update.latest }) : t('upd.uptodate'))) : t('upd.d')}</div></div>
-        ${L.update && L.update.update ? `<button class="btn btn--bridge" data-act="update-apply">${t('upd.apply', { v: L.update.latest })}</button>` : `<button class="btn" data-act="update-check">${t('upd.check')}</button>`}</div>
+        ${L.update && L.update.update ? `<button class="btn btn--bridge" data-act="update-apply" ${L.updateBusy ? 'disabled aria-busy="true"' : ''}>${L.updateBusy ? t('upd.busy') : t('upd.apply', { v: L.update.latest })}</button>` : `<button class="btn" data-act="update-check">${t('upd.check')}</button>`}</div>
+        ${L.updateBusy && L.updateProgress ? `<div id="update-progress" role="status" aria-live="polite" class="muted">${esc(t('upd.phase.' + L.updateProgress.phase))}${L.updateProgress.phase === 'download' ? ` · ${(L.updateProgress.done / 1048576).toFixed(1)} MiB${L.updateProgress.total > 0 ? ` / ${(L.updateProgress.total / 1048576).toFixed(1)} MiB` : ''}` : ''}</div>` : ''}
       </section>
       <section class="panel"><h2>${t('opt.launcher')}</h2>
         <div class="setting"><div class="name">${t('opt.language')}</div>${segment('pref', 'language', P.language, [['auto', 'Auto'], ['en', 'English'], ['fr', 'Français']])}</div>
@@ -257,6 +258,20 @@
 </section>`;
   }
 
-  SB.pages = Object.assign(SB.pages || {}, { credits: { render: credits }, mods: { render: mods }, multiplayer: { render: multiplayer }, options: { render: options }, about: { render: about }, debug: { render: debug } });
+  function tutorial(S) {
+    const topics = ['setup', 'island', 'settings', 'travel', 'models', 'safety'];
+    const links = {setup: 'games', island: 'assets', settings: 'options', travel: 'profiles', models: 'models', safety: 'recovery'};
+    const sections = (L.settings || {sections: []}).sections || [];
+    return `<section class="page tutorial"><div class="page-title"><h1>${t('nav.tutorial')}</h1><p>${t('tuto.sub')}</p></div>
+      <section class="panel tutorial-welcome"><img src="img/pink-cotton-artist.png" alt=""><div><h2>${t('tuto.welcome')}</h2><p>${t('tuto.intro')}</p></div></section>
+      <div class="tutorial-grid">${topics.map((topic, index) => `<article class="panel stack tutorial-topic"><span class="tutorial-number">${index + 1}</span><h2>${t('tuto.' + topic)}</h2>
+        <p>${t('tuto.' + topic + '_body')}</p><button class="btn btn--ghost btn--sm" data-act="go" data-arg="${links[topic]}">${t('tuto.open')} · ${t('nav.' + links[topic])}</button></article>`).join('')}</div>
+      <section class="panel stack"><h2>${t('tuto.reference')}</h2><p class="muted">${t('tuto.reference_body')}</p>
+        ${sections.map(sec => `<details class="tutorial-reference"><summary>${SB.has('sec.' + sec.section) ? t('sec.' + sec.section) : pretty(sec.section)}</summary><dl>
+          ${sec.fields.map(f => `<dt>${esc(optLabel(sec.section, f.key))}</dt><dd>${esc(optDesc(sec.section, f.key) || pretty(f.key))}${f.choices ? `<small>${t('tuto.choices')}: ${f.choices.map(v => esc(valLabel(sec.section, f.key, v))).join(' · ')}</small>` : ''}</dd>`).join('')}</dl></details>`).join('') || `<p class="muted">${t('common.loading')}</p>`}
+      </section></section>`;
+  }
+
+  SB.pages = Object.assign(SB.pages || {}, { tutorial: { render: tutorial }, credits: { render: credits }, mods: { render: mods }, multiplayer: { render: multiplayer }, options: { render: options }, about: { render: about }, debug: { render: debug } });
   SB.showLegal = showLegal;
 })(window.SB = window.SB || {});

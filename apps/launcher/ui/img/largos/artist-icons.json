@@ -1,0 +1,15 @@
+{
+  "icons": {
+    "quantum_cotton": "quantum_cotton.png",
+    "quantum_slumber": "quantum_slumber.png",
+    "rad_angler": "rad_angler.png",
+    "rad_batty": "rad_batty.png",
+    "rad_cotton": "rad_cotton.png",
+    "rad_flutter": "rad_flutter.png",
+    "rad_hyper": "rad_hyper.png",
+    "rad_ringtail": "rad_ringtail.png",
+    "rad_slumber": "rad_slumber.png",
+    "rad_twin": "rad_twin.png"
+  },
+  "placeholder": "unknown.png"
+}

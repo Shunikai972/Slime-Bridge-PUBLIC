@@ -25,11 +25,12 @@ class LayoutTests(unittest.TestCase):
         self.assertNotIn('TARR', by)
         self.assertFalse(by['GOLD']['required'])
         self.assertTrue(by['GOLD']['optional'])
-        for key in ('PUDDLE', 'SABER', 'FIRE'):
+        self.assertNotIn('SABER', by)
+        for key in ('PUDDLE', 'FIRE'):
             self.assertTrue(by[key]['hidden'], key)
             self.assertEqual(by[key]['placement'], 'alcove')
         self.assertEqual(set(layout['requirement_manifest']['required']),
-                         {'PINK', 'BOOM', 'ROCK', 'TABBY', 'CRYSTAL', 'FIRE', 'PUDDLE', 'SABER', 'HUNTER'})
+                         {'PINK', 'BOOM', 'ROCK', 'TABBY', 'CRYSTAL', 'FIRE', 'PUDDLE', 'HUNTER'})
         self.assertEqual(layout['requirement_manifest']['dynamic'], False)
 
     def test_synthesized_statues_clone_the_pink_template_and_carry_their_plort_colours(self):

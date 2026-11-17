@@ -38,7 +38,7 @@ def backend(*, accepts=False, raises=False):
     instance._user32 = SimpleNamespace(GetForegroundWindow=lambda: state['foreground'],
         GetWindowThreadProcessId=owner, IsIconic=lambda hwnd: state['iconic'],
         AttachThreadInput=attach, BringWindowToTop=lambda hwnd: True,
-        SetForegroundWindow=focus, ShowWindow=show, GetClassNameW=window_class)
+        SetForegroundWindow=focus, ShowWindow=show, ShowWindowAsync=show, GetClassNameW=window_class)
     return instance, state
 
 
@@ -66,6 +66,15 @@ def test_minimize_refuses_an_unapplied_showwindow_request():
     instance, state = backend()
     state['show_effect'] = False
     assert instance.minimize(123) is False
+
+
+def test_minimize_does_not_block_the_coordinator_on_a_frozen_games_ui_thread():
+    instance, state = backend()
+    def blocking_show(*_args):
+        raise AssertionError('Synchronous cross-process ShowWindow must not block the travel loop')
+    instance._user32.ShowWindow = blocking_show
+    assert instance.minimize(123) is True
+    assert state['iconic']
 
 
 def test_restore_refuses_a_window_that_remained_minimized():

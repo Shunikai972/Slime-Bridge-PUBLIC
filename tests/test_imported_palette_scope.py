@@ -72,7 +72,8 @@ def test_palette_scope_harness():
     dotnet = Path(os.environ.get('DOTNET_ROOT', str(Path.home() / '.dotnet'))) / 'dotnet.exe'
     with tempfile.TemporaryDirectory(prefix='palette-scope-', dir=os.environ.get('TMPDIR')) as temporary:
         environment = dict(os.environ, TEMP=temporary, TMP=temporary, TMPDIR=temporary,
-                           DOTNET_CLI_HOME=temporary, DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
+                           DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
+                           DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
                            DOTNET_CLI_TELEMETRY_OPTOUT='1')
         result = subprocess.run([str(dotnet), 'run', '--project',
                                  str(ROOT / 'tests/ImportedPaletteScopeHarness/ImportedPaletteScopeHarness.csproj'),

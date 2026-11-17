@@ -16,7 +16,7 @@ namespace SlimeBridge.SR1
     public sealed class BridgeEntry : ModEntryPoint
     {
         // Must stay a plain X.Y[.Z] integer string: SRML's ModVersion.Parse rejects suffixes like "-dev".
-        internal const string PluginVersion = "0.2.2";
+        internal const string PluginVersion = "0.2.3";
         private static readonly int Pid = Process.GetCurrentProcess().Id;
 
         private DateTime _nextHeartbeat = DateTime.MinValue;
@@ -469,6 +469,7 @@ namespace SlimeBridge.SR1
         public override void Unload()
         {
             _unloaded = true;
+            _importedOps?.Stop();
             _sanctuary?.Unload();
             _travel?.Unload();
             _inventory?.CancelBackgroundIntro();

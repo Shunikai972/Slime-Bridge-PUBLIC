@@ -19,7 +19,7 @@ namespace SlimeBridge.SR2
     /// </summary>
     public sealed class BridgeMod : MelonMod
     {
-        public const string PluginVersion = "0.2.2";
+        public const string PluginVersion = "0.2.3";
         private static readonly int Pid = Environment.ProcessId;
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { UseProxy = false })
         {
@@ -471,6 +471,7 @@ namespace SlimeBridge.SR2
         {
             CounterpartCreator.ClearWorldReadiness();
             LoggerInstance.Msg("SlimeBridge SR2 core " + PluginVersion + " loaded (pid " + Pid + ") t+" + Since());
+            Sr2LabVacuumTrace.Arm(OracleExecutableMatches());
             _capabilityProbe = CounterpartCapabilityProbe.TryCreate(message => LoggerInstance.Msg(message));
             var url = Environment.GetEnvironmentVariable("SLIMEBRIDGE_URL");
             var token = Environment.GetEnvironmentVariable("SLIMEBRIDGE_TOKEN");
@@ -502,6 +503,7 @@ namespace SlimeBridge.SR2
         /// <summary>The optional performance profile (launcher setting): applied once the game has settled, again when the quality level changes.</summary>
         public override void OnLateUpdate()
         {
+            Sr2LabVacuumTrace.LateTick();
             SlimeBridge.Shared.PerformanceTuner.Tick(UnityEngine.Time.realtimeSinceStartup, _perfLog ??= text => LoggerInstance.Msg(text));
         }
 
@@ -656,6 +658,7 @@ namespace SlimeBridge.SR2
 
         public override void OnDeinitializeMelon()
         {
+            Sr2LabVacuumTrace.Stop();
             _travel?.Unload();
             _focusDiagnosticAllowed = false;
             _focusEpoch++;

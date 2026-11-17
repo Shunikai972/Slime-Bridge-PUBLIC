@@ -118,7 +118,8 @@ class LastSession:
 
 class TravelCoordinator:
     def __init__(self, host, launcher, install_for, backup_acknowledged, windows, links, *, settings=None, opener=urlopen,
-                 clock=time.time, list_saves=None, notify=None, session=None, prepare_destination=None):
+                 clock=time.time, list_saves=None, notify=None, session=None, prepare_destination=None,
+                 select_audio_front=None):
         """``settings()`` -> dict with ``travel_save_mode`` and ``background_policy`` (optional)."""
         self._host, self._launcher, self._install_for = host, launcher, install_for
         self._acknowledged, self._windows, self._links = backup_acknowledged, windows, links
@@ -131,6 +132,7 @@ class TravelCoordinator:
         self._lock = threading.RLock()                 # polled by a background thread and by the window
         self._session = session
         self._prepare_destination = prepare_destination
+        self._select_audio_front = select_audio_front or (lambda realm: None)
         self.transitions = []
 
     # ---- host relay -------------------------------------------------------------------------------------------------
@@ -238,6 +240,10 @@ class TravelCoordinator:
             return False
 
     # ---- state machine ----------------------------------------------------------------------------------------------
+    def _game_closing(self, transition):
+        closing = getattr(self._launcher, 'closing', None)
+        return closing is not None and any(closing(realm) for realm in (transition['from'], transition['to']))
+
     def _begin(self, request):
         portal = request.get('portal_id')
         destination = DESTINATIONS.get(portal)
@@ -249,6 +255,10 @@ class TravelCoordinator:
         del self.transitions[:-KEEP]
         if destination is None or destination == transition['from']:
             return self._refuse(transition, 'UNKNOWN_PORTAL')
+        # Stop and poll use this coordinator's lock: queued portal requests cannot pass
+        # a previously accepted close intent while that retained child is still alive.
+        if self._game_closing(transition):
+            return self._refuse(transition, 'GAME_CLOSING')
         if any(t['state'] in ACTIVE and t is not transition for t in self.transitions):
             return self._refuse(transition, 'ANOTHER_CROSSING_ACTIVE')
         mode = (self._settings().get('travel_save_mode') or 'LINKED').upper()
@@ -342,13 +352,21 @@ class TravelCoordinator:
         return {'ok': True}
 
     def _start_destination(self, transition):
+        if self._game_closing(transition):
+            return self._refuse(transition, 'GAME_CLOSING')
         destination, installation = transition['to'], self._install_for(transition['to'])
-        if self._launcher.running(destination):
-            self._log(transition, f'{destination} is already running')
-        elif not installation:
+        running = self._launcher.running(destination)
+        if not running and not installation:
             return self._refuse(transition, 'DESTINATION_UNAVAILABLE')
-        elif not self._acknowledged():
+        if not running and not self._acknowledged():
             return self._refuse(transition, 'NEEDS_BACKUP_CONFIRMATION')
+        self._select_audio_front(transition['from'])
+        # Cover and park the source while plugin verification and process startup run,
+        # not after them. Preparation/launch failures still resume it through _refuse.
+        self._send(transition['from'], 'prepare_departure', transition, destination=destination, portal_id=transition['portal_id'],
+                   carry_mode=self._carry_mode())
+        if running:
+            self._log(transition, f'{destination} is already running')
         else:
             if self._prepare_destination is not None:
                 try:
@@ -367,9 +385,6 @@ class TravelCoordinator:
                 self._log(transition, f'starting {destination}')
             except Exception as exc:                                  # noqa: BLE001
                 return self._refuse(transition, 'LAUNCH_FAILED', type(exc).__name__)
-        # The source starts its portal animation at once and waits, covered, while the destination loads.
-        self._send(transition['from'], 'prepare_departure', transition, destination=destination, portal_id=transition['portal_id'],
-                   carry_mode=self._carry_mode())
         return transition
 
     def _carry_mode(self):
@@ -384,6 +399,7 @@ class TravelCoordinator:
 
     def _rollback(self, transition, code):
         source = transition['from']
+        self._select_audio_front(source)
         self._send(source, 'resume', transition, reason=code[:60])
         self._window(transition, 'restore', source)
         self._window(transition, 'focus', source)
@@ -422,6 +438,7 @@ class TravelCoordinator:
                     transition['waiting_foreground'] = True
                     return
                 transition.pop('waiting_foreground', None)
+                self._select_audio_front(dst)
                 offer = self._latest_carry(transition, src, 'departure_ready') if self._carry_mode() != 'NONE' else {}
                 transition['carry_offered'] = offer
                 extra = {'carry': offer} if offer else {}

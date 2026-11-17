@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,20 +14,21 @@ class LabFocusDiagnosticsTests(unittest.TestCase):
         dotnet = str(Path(dotnet_root) / 'dotnet.exe') if dotnet_root else shutil.which('dotnet')
         self.assertIsNotNone(dotnet, 'dotnet SDK required')
         project = ROOT / 'tests/LabFocusDiagnosticsHarness/LabFocusDiagnosticsHarness.csproj'
-        with tempfile.TemporaryDirectory(prefix='lab-focus-diagnostics-', dir=os.environ.get('TMPDIR')) as temporary:
-            environment = dict(os.environ)
-            environment.update(TEMP=temporary, TMP=temporary, TMPDIR=temporary,
-                               DOTNET_CLI_HOME=temporary, DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
-                               DOTNET_CLI_TELEMETRY_OPTOUT='1')
-            # A shared Roslyn server retains analyzer DLL handles inside this owned temporary root.
-            result = subprocess.run([dotnet, 'run', '--project', str(project), '-c', 'Release',
-                                     '--disable-build-servers', '-p:UseSharedCompilation=false'],
-                                    cwd=ROOT, env=environment, stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT, text=True, encoding='utf-8',
-                                    errors='replace', timeout=180)
-            self.assertEqual(result.returncode, 0, result.stdout)
-            self.assertIn('focus diagnostic checks=67 failures=0', result.stdout)
-            self.assertIn('no Unity/User32/input/CREATE exercised', result.stdout)
+        # SDK workload installation can keep a log open after the command exits. This
+        # harness has no temporary inputs: inherit the parent's service-lifetime paths
+        # instead of putting TEMP/TMP/CLI_HOME in a shorter-lived fixture directory.
+        environment = dict(os.environ)
+        environment.update(DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
+                           DOTNET_CLI_TELEMETRY_OPTOUT='1')
+        # Keep Roslyn/MSBuild servers disabled independently of SDK service lifetimes.
+        result = subprocess.run([dotnet, 'run', '--project', str(project), '-c', 'Release',
+                                 '--disable-build-servers', '-p:UseSharedCompilation=false'],
+                                cwd=ROOT, env=environment, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, encoding='utf-8',
+                                errors='replace', timeout=180)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn('focus diagnostic checks=67 failures=0', result.stdout)
+        self.assertIn('no Unity/User32/input/CREATE exercised', result.stdout)
 
     def test_diagnostic_cannot_authorize_or_mutate(self):
         text = (ROOT / 'mods/sr2-bridge/LabFocusDiagnostics.cs').read_text(encoding='utf-8')

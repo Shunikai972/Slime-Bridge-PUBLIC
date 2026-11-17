@@ -6,7 +6,7 @@
   SB.errors = [];
   window.addEventListener('error', e => SB.errors.push(String(e.message)));
   window.addEventListener('unhandledrejection', e => SB.errors.push(String(e.reason && e.reason.message || e.reason)));
-  const NAV = ['home', 'news', 'games', 'mods', 'assets', 'models', 'multiplayer', 'profiles', 'debug', 'options', 'credits'];   // 'recovery' lives in 'debug' now
+  const NAV = ['home', 'news', 'games', 'mods', 'assets', 'models', 'tutorial', 'multiplayer', 'profiles', 'debug', 'options', 'credits'];   // 'recovery' lives in 'debug' now
   const NAMES = { SR1: 'Slime Rancher', SR2: 'Slime Rancher 2' }, LOADERS = { SR1: 'SRML', SR2: 'MelonLoader' };
   const FAN_POLICY = 'https://www.slimerancher.com/fan-content-policy';
   let S = null, page = 'home', pollTimer = 0, busy = new Set(), menu = null;
@@ -58,13 +58,16 @@
     SB.net.hydrate($('#head'));
   }
   function renderSide() {
-    $('#side').innerHTML = `<nav class="nav" aria-label="Main">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${!S ? 'disabled aria-disabled="true"' : ''} ${k === page ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k === 'debug' ? 'recovery' : k === 'credits' ? 'star' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>`;
+    const side = $('#side'), top = side.querySelector('.nav')?.scrollTop || 0;
+    side.innerHTML = `<nav class="nav" tabindex="0" aria-label="${t('nav.navigation')}">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${!S ? 'disabled aria-disabled="true"' : ''} ${k === page ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k === 'debug' ? 'recovery' : k === 'credits' ? 'star' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>
+      <div class="side-art" aria-hidden="true"><img src="img/pink-cotton-artist.png" alt=""></div>`;
+    side.querySelector('.nav').scrollTop = top;
   }
   function renderChars() {
     const N = SB.NEWS || {}, pick = re => (N.slimes || []).find(u => re.test(u));
     const spot = (cls, style, re, fallback) => `<div class="ch ${cls}" style="${style}">${pick(re) ? `<img data-src="${esc(pick(re))}" data-w="480" data-h="480" data-fit="1" alt="">` : slime(fallback, { cls: 'idle' })}</div>`;
     // the pink + cotton pair is an artist's drawing that ships with the launcher (no generated art)
-    $('#chars').innerHTML = `<div class="ch c1 artist" style="left:12px;bottom:34px;width:236px"><img src="img/pink-cotton-artist.png" alt=""></div>`;
+    $('#chars').innerHTML = '';
     $('#chars-back').innerHTML = spot('c3', 'right:22px;top:46px;width:92px', /batty|flutter/i, 'batty');
     SB.net.hydrate($('#chars')); SB.net.hydrate($('#chars-back'));
   }
@@ -90,11 +93,11 @@
     const work = running ? `${t('job.' + job.phase) !== 'job.' + job.phase ? t('job.' + job.phase) : t('job.RUNNING')} ${job.done || 0}/${job.total || '…'}` : dling ? t('models.downloading', { id: esc(dl.current || '') }) : t('dock.no_dl');
     const path = isBoth(tg) ? t('dock.two') : (g[tg].primary ? g[tg].primary.root : '—');
     const pathTitle = isBoth(tg) ? ['SR1', 'SR2'].map(r => `${NAMES[r]}: ${g[r].primary ? g[r].primary.root : '—'}`).join('\n') : path;
-    const ready = st.tone !== 'bad';
+    const ready = st.tone !== 'bad', stop = (isBoth(tg) ? ['SR1', 'SR2'] : [tg]).some(r => g[r].running);
     $('#dock').innerHTML = `<div class="dock-row">
       <div class="dock-card"><label for="dock-game">${t('dock.game')}</label><select id="dock-game" class="dock-select" data-change="play-target">${[['SR1', NAMES.SR1], ['SR2', NAMES.SR2], ['BOTH_SR1', t('dock.both_sr1')], ['BOTH_SR2', t('dock.both_sr2')]].map(([v, label]) => `<option value="${v}" ${tg === v ? 'selected' : ''}>${label}</option>`).join('')}</select></div>
 
-      <div class="play ${ready ? '' : 'off'}"><button class="go" data-act="play" aria-label="Play">${glyph('play')}<span>${t('dock.play')}</span></button><button class="more" data-act="play-menu" aria-label="More" aria-haspopup="true">${glyph('chevD')}</button>
+      <div class="play ${stop ? 'stop' : ready ? '' : 'off'}"><button class="go" data-act="${stop ? 'game-stop' : 'play'}" data-arg="${isBoth(tg) ? 'BOTH' : tg}" aria-label="${t(stop ? 'games.stop' : 'dock.play')}">${glyph(stop ? 'stop' : 'play')}<span>${t(stop ? 'games.stop' : 'dock.play')}</span></button><button class="more" data-act="play-menu" aria-label="More" aria-haspopup="true">${glyph('chevD')}</button>
         ${menu === 'play' ? `<div class="menu" role="menu"><button data-act="launch" data-arg="BOTH_SR1">${glyph('play', 'gl mi')} ${t('dock.both_sr1')}</button><button data-act="launch" data-arg="BOTH_SR2">${glyph('play', 'gl mi')} ${t('dock.both_sr2')}</button><button data-act="launch" data-arg="SR1">${glyph('play', 'gl mi')} ${NAMES.SR1}</button><button data-act="launch" data-arg="SR2">${glyph('play', 'gl mi')} ${NAMES.SR2}</button><hr><button data-act="go" data-arg="games">${glyph('folder', 'gl mi')} ${t('nav.games')}</button></div>` : ''}</div></div>
       <div class="dock-status"><span class="ok"><i class="tick ${st.tone === 'good' ? '' : st.tone}">${glyph(st.tone === 'good' ? 'check' : 'close')}</i><span class="t" title="${esc(st.text)}">${esc(st.text)}</span></span>
         <div class="bar" style="--p:${(Math.max(0, Math.min(1, prog || 0)) * 100).toFixed(1)}%"><i></i></div><span>SlimeBridge ${esc(S.version)}</span><span>${work}</span>
@@ -116,7 +119,7 @@
     root.scrollTop = keep ? top : 0;
     SB.net.hydrate(root);
     renderSide(); renderDock();
-    if (page === 'options' && !L.settings) loadSettings();
+    if ((page === 'options' || page === 'tutorial') && !L.settings) loadSettings();
     if (page === 'options' && !L.links) loadLinks();
     if (page === 'models' && !L.models) loadModels();
     if (page === 'profiles' && !L.profiles) loadProfiles();
@@ -138,7 +141,7 @@
     if (S) { applyPrefs(); renderHead(); renderRibbon(); renderView(keep); }
   }
   async function loadLinks() { const r = await safe(() => api.travel_links()); L.links = r && r.ok ? r.links : []; if (page === 'options') renderView(true); }
-  async function loadSettings() { const r = await safe(() => api.get_settings()); if (r) { L.settings = r; if (page === 'options') renderView(true); } }
+  async function loadSettings() { const r = await safe(() => api.get_settings()); if (r) { L.settings = r; if (page === 'options' || page === 'tutorial') renderView(true); } }
   async function loadProfiles() { const r = await safe(() => api.profiles_state()); if (r) { L.profiles = r; if (page === 'profiles') renderView(true); } }
   async function loadModsInstalled() { const M = L.mods; if (!M) return; const realm = M.realm; const r = await safe(() => api.mods_installed(realm)); if (r && L.mods === M) { M.installed[realm] = r.ok ? r : { mods: [], pending: null }; if (page === 'mods' && M.realm === realm) renderView(true); } }
   async function loadModThumbs() { const M = L.mods; if (!M || !M.results) return; const todo = M.results.filter(m => m.thumbnail && !m.thumb); if (!todo.length) return;
@@ -292,6 +295,21 @@
         await refresh();
       } finally { busy.delete(a); }
     },
+    'game-stop': async a => {
+      if (busy.has('game-stop')) return;
+      const game = a === 'BOTH' ? t('dock.two') : NAMES[a];
+      if (!game || !window.confirm(t('games.stop_confirm', { game }))) return;
+      busy.add('game-stop');
+      try {
+        const result = await safe(() => api.game_stop(a));
+        if (result) {
+          if (result.error) toast(t('err.' + result.error), 'warn');
+          (result.errors || []).forEach(e => toast(`${NAMES[e.realm]}: ${t('err.' + e.error)}`, 'bad'));
+          if (result.ok) toast(t('games.stopping'), 'good');
+        }
+        await refresh();
+      } finally { busy.delete('game-stop'); }
+    },
     'host-start': async () => { menu = null; const r = await safe(() => api.host_start()); if (r && !r.ok) toast(`BridgeHost: ${r.error}`, 'bad'); await refresh(); },
     'host-stop': async () => { menu = null; await safe(() => api.host_stop()); await refresh(); },
 
@@ -330,7 +348,33 @@
     'pref-bool': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') !== 'true')); await refresh(); },
     'pref-bool-inv': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') === 'true')); await refresh(); },
     'update-check': async () => { L.update = await safe(() => api.update_check()); renderView(true); if (L.update && L.update.ok && !L.update.update) toast(t('upd.uptodate'), 'good'); },
-    'update-apply': async () => { if (L.update && L.update.frozen === false) { toast(t('upd.source'), 'warn'); return; } toast(t('upd.busy'), 'info'); const r = await safe(() => api.update_apply()); if (r && r.ok) toast(t('upd.restarting', { v: r.version }), 'good'); else toast(t('upd.err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad'); },
+    'update-apply': async () => {
+      if (L.updateBusy) return;
+      if (L.update && L.update.frozen === false) { toast(t('upd.source'), 'warn'); return; }
+      const attempt = L.updateAttempt = (L.updateAttempt || 0) + 1;
+      L.updateBusy = true; L.updateProgress = { phase: 'checking', done: 0, total: 0 }; renderView(true);
+      let polling = false;
+      const timer = setInterval(async () => {
+        if (polling || !L.updateBusy || L.updateAttempt !== attempt) return;
+        polling = true;
+        try {
+          const status = await api.update_status();
+          if (L.updateBusy && L.updateAttempt === attempt && status && status.ok) {
+            L.updateProgress = status;
+            // Preserve the page, focus and entry animation while only the byte counter changes.
+            const label = $('#update-progress');
+            if (label) label.textContent = t('upd.phase.' + status.phase) + (status.phase === 'download'
+              ? ` · ${(status.done / 1048576).toFixed(1)} MiB${status.total > 0 ? ` / ${(status.total / 1048576).toFixed(1)} MiB` : ''}` : '');
+          }
+        } catch (_) { /* a closing backend is not a new update failure */ }
+        finally { polling = false; }
+      }, 400);
+      try {
+        const r = await safe(() => api.update_apply());
+        if (r && r.ok) { toast(t('upd.restarting', { v: r.version }), 'good'); await safe(() => api.update_restart_ack()); }
+        else toast(t('upd.err') + (r && r.error ? ' (' + r.error + ')' : ''), 'bad');
+      } finally { clearInterval(timer); L.updateBusy = false; L.updateProgress = null; if (page === 'options') renderView(true); }
+    },
     'mods-realm': a => { SB.local.mods.realm = a; SB.local.mods.results = null; renderView(true); loadModsInstalled(); A['mods-search'](); },
     'mods-search': async () => { const M = SB.local.mods, q = $('#mods-q'); if (q) M.query = q.value; const realm = M.realm, epoch = M.searchEpoch = (M.searchEpoch || 0) + 1; M.busy = true; renderView(true);
       const r = await safe(() => api.mods_search(realm, M.query, 0)); if (SB.local.mods !== M || M.realm !== realm || M.searchEpoch !== epoch) return;

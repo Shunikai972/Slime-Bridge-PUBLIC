@@ -3,6 +3,7 @@
 
 # Launcher window (uses the Microsoft Edge WebView2 runtime that ships with Windows 10/11)
 pywebview==6.2
+pycaw==20260927; sys_platform == 'win32'
 
 # Reading your own Slime Rancher 1 / 2 installs (nothing is ever shipped or uploaded)
 UnityPy==1.25.4

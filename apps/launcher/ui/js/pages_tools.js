@@ -121,7 +121,7 @@
   <section class="panel">
     <h2>${t('assets.after')}</h2><p class="muted">${t('assets.after_body')}</p>
     <div class="mono ellipsis" title="${esc(S.paths.output)}">${t('assets.output')}: ${esc(S.paths.output)}</div>
-    <div class="row"><button class="btn btn--sky" data-act="install-cache" ${a.job && a.job.status === 'DONE' ? '' : 'disabled'}>${icon('download')} ${t('assets.install')}</button><button class="btn btn--ghost" data-act="folder" data-arg="output">${icon('folder')} ${t('assets.open_out')}</button><button class="btn btn--ghost" data-act="out-choose">${t('assets.out_change')}</button></div>
+    <div class="row extract-next-actions"><button class="btn btn--sky" data-act="install-cache" ${a.job && a.job.status === 'DONE' ? '' : 'disabled'}>${icon('download')} ${t('assets.install')}</button><button class="btn btn--ghost" data-act="folder" data-arg="output">${icon('folder')} ${t('assets.open_out')}</button><button class="btn btn--ghost" data-act="out-choose">${t('assets.out_change')}</button></div>
     <p class="faint small">${t('assets.privacy')}</p>
   </section></div>`;
   }

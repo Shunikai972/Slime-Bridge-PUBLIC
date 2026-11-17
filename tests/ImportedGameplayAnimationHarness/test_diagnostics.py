@@ -14,7 +14,7 @@ def test_native_inventory_pose_and_driver_diagnostic_contract():
     with tempfile.TemporaryDirectory(prefix="gameplay-diagnostics-", dir=SCRATCH) as temporary:
         env = dict(os.environ)
         env.update(TEMP=temporary, TMP=temporary, TMPDIR=temporary,
-                   DOTNET_CLI_HOME=temporary, DOTNET_ROOT=str(DOTNET_ROOT),
+                   DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH="false", DOTNET_ROOT=str(DOTNET_ROOT),
                    DOTNET_CLI_TELEMETRY_OPTOUT="1", DOTNET_SKIP_FIRST_TIME_EXPERIENCE="1",
                    DOTNET_NOLOGO="1")
         junction = Path(temporary) / "diagnostic-junction"
@@ -52,6 +52,7 @@ def test_readonly_driver_snapshot_contract():
     with tempfile.TemporaryDirectory(prefix="driver-diagnostics-", dir=SCRATCH) as temporary:
         env = dict(os.environ)
         env.update(TEMP=temporary, TMP=temporary, TMPDIR=temporary, DOTNET_CLI_HOME=temporary,
+                   DOTNET_ADD_GLOBAL_TOOLS_TO_PATH="false",
                    DOTNET_ROOT=str(DOTNET_ROOT), DOTNET_CLI_TELEMETRY_OPTOUT="1",
                    DOTNET_SKIP_FIRST_TIME_EXPERIENCE="1", DOTNET_NOLOGO="1")
         result = subprocess.run(

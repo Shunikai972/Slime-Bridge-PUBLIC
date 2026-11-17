@@ -23,10 +23,14 @@ chomper.StartChomp(new GameObject("food"),Identifiable.Id.NONE,false,false,()=>{
 Clip("Bite v4");
 chomper.BiteComplete();
 Check(completions==1 && chomper.NativeCompletionCalls==1,"actual Harmony suppressed/invented native completion");
+Clip("Bite v4"); // Native completion must not truncate the authored clip.
+var playback=visual.GetComponent<Animation>()!;
+playback["Bite v4"]!.time=1f; // Synthetic native Animation reaches this clip's actual endpoint.
+actor.Tick();
 Clip("Exact authored idle");
 var movement=actor.AddComponent<SlimeRandomMove>();
 movement.QueueJump(5);movement.Action();Clip("Pounce v4");
-var playback=visual.GetComponent<Animation>()!;playback["Pounce v4"]!.time=.4f;
+playback["Pounce v4"]!.time=.4f;
 movement.Action();Check(playback["Pounce v4"]!.time==.4f,"real Harmony reset pounce on non-jump Action");
 var plexer=actor.AddComponent<SlimeSubbehaviourPlexer>();
 plexer.Ground(null);plexer.Ground(new GameObject("ground").AddComponent<Collider>());Clip("Exact authored idle");

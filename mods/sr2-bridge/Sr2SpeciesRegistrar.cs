@@ -157,7 +157,23 @@ namespace SlimeBridge.SR2
         /// </summary>
         internal int EnsureAppearances()
         {
-            var directors = UnityEngine.Object.FindObjectsOfType<Il2Cpp.SlimeAppearanceDirector>();
+            var directors = new List<Il2Cpp.SlimeAppearanceDirector>();
+            var seen = new HashSet<IntPtr>();
+            void AddDirector(Il2Cpp.SlimeAppearanceDirector? candidate)
+            {
+                if (candidate == null || candidate.Pointer == IntPtr.Zero || !seen.Add(candidate.Pointer)) return;
+                directors.Add(candidate);
+            }
+            // SlimeAppearanceDirector is a ScriptableObject on SceneContext, so Object.FindObjectsOfType skips it.
+            try { AddDirector(Il2Cpp.SceneContext.Instance?.SlimeAppearanceDirector); }
+            catch (Exception) { }
+            try
+            {
+                var found = UnityEngine.Object.FindObjectsOfType<Il2Cpp.SlimeAppearanceDirector>();
+                if (found != null)
+                    foreach (var item in found) AddDirector(item);
+            }
+            catch (Exception) { }
             var applied = 0;
             foreach (var pair in _defs)
             {
@@ -166,10 +182,8 @@ namespace SlimeBridge.SR2
                 if (appearances == null || appearances.Length == 0) continue;
                 try { pair.Value.AppearancesDefault = appearances; }
                 catch (Exception) { continue; }
-                if (directors == null) continue;
                 foreach (var director in directors)
                 {
-                    if (director == null) continue;
                     try
                     {
                         if (!director.IsAppearanceUnlocked(pair.Value, appearances[0]))
@@ -779,6 +793,25 @@ namespace SlimeBridge.SR2
 
         private static bool RetargetIdentifiables(UnityEngine.GameObject clone, Il2Cpp.IdentifiableType def)
         {
+            if (def is Il2Cpp.SlimeDefinition slimeDefinition)
+            {
+                // The inactive reference clone has a separate serialized SlimeEat definition.
+                // Retarget it before native Awake builds drive/eat state, even without a visual cache.
+                // Plorts deliberately stay on the identity-only path below.
+                if (clone.activeInHierarchy) return false;
+                var eaters = clone.GetComponentsInChildren<Il2Cpp.SlimeEat>(true);
+                if (eaters == null || eaters.Length == 0) return false;
+                var bound = false;
+                foreach (var eater in eaters)
+                {
+                    if (eater == null) continue;
+                    eater.SlimeDefinition = slimeDefinition;
+                    if (eater.SlimeDefinition == null || eater.SlimeDefinition.Pointer != slimeDefinition.Pointer)
+                        return false;
+                    bound = true;
+                }
+                if (!bound) return false;
+            }
             var found = false;
             var identifiables = clone.GetComponentsInChildren<Il2Cpp.Identifiable>(true);
             if (identifiables != null)

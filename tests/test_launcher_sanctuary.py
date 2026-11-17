@@ -46,9 +46,9 @@ class JobTests(unittest.TestCase):
             state = job.snapshot()
             self.assertEqual(state['status'], 'DONE', state)
             self.assertEqual(state['progress'], 1.0)
-            self.assertEqual(state['result']['required'], 9)
+            self.assertEqual(state['result']['required'], 8)
             self.assertTrue(Path(state['result']['layout'], 'sanctuary-layout.json').is_file())
-            self.assertEqual(sanctuary.latest_layout(Path(tmp) / 'layouts')['required'], 9)
+            self.assertEqual(sanctuary.latest_layout(Path(tmp) / 'layouts')['required'], 8)
             kit = sanctuary.latest_kit(Path(tmp) / 'kits')
             self.assertEqual(kit['statues']['native'], 4)
             self.assertEqual(kit['statues']['synthesized'], 6)
@@ -81,6 +81,28 @@ class JobTests(unittest.TestCase):
             self.assertIn('SR1 data directory missing', state['error'])
             self.assertIsNone(sanctuary.latest_layout(Path(tmp) / 'layouts'))
 
+    def test_policy_bytes_alone_invalidate_generator_and_refresh_preserves_settings(self):
+        def publish(document, out):
+            out = Path(out)
+            out.mkdir(parents=True)
+            (out/'sanctuary-layout.json').write_bytes(layout_module.layout_bytes(document))
+        with tempfile.TemporaryDirectory() as tmp:
+            policy = Path(tmp) / 'policy.json'
+            policy.write_bytes(layout_module.EXCLUSIONS_FILE.read_bytes())
+            with patch.object(layout_module, 'EXCLUSIONS_FILE', policy):
+                self.run_job(tmp, config={'sr1_gold_plort_gate_cost': 17})
+                kits, layouts = Path(tmp)/'kits', Path(tmp)/'layouts'
+                before = layout_module.generator_id()
+                self.assertIsNone(sanctuary.refresh_layout(kits, layouts, publish))
+                policy.write_bytes(policy.read_bytes() + b' ')
+                self.assertNotEqual(layout_module.generator_id(), before)
+                rebuilt = sanctuary.refresh_layout(kits, layouts, publish)
+                self.assertIsNotNone(rebuilt)
+                fresh = json.loads((layouts/rebuilt/'sanctuary-layout.json').read_text())
+                self.assertEqual(fresh['config']['sr1_gold_plort_gate_cost'], 17)
+                self.assertNotIn('SABER', fresh['requirement_manifest']['required'])
+                self.assertIsNone(sanctuary.refresh_layout(kits, layouts, publish))
+
     def test_settings_reach_the_layout_and_old_runs_are_pruned(self):
         with tempfile.TemporaryDirectory() as tmp:
             import time
@@ -90,6 +112,23 @@ class JobTests(unittest.TestCase):
                 time.sleep(1.05)                                    # run folders are stamped to the second
             self.assertEqual(len(list((Path(tmp) / 'layouts').iterdir())), sanctuary.KEEP)
             self.assertEqual(sanctuary.latest_layout(Path(tmp) / 'layouts')['gold_cost'], 14)
+
+    def test_prune_keeps_the_fresh_run_even_when_older_folders_sort_after_it(self):
+        # Hand-named LAB folders (layout-polish..., layout-sr1-verify...) sort after layout-2026...: pruning by name
+        # removed the layout the launcher had just published.
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for age, name in enumerate(['layout-sr1-verify', 'layout-polish-b', 'layout-polish-a', 'layout-023-verify']):
+                (root / name).mkdir()
+                os.utime(root / name, (1000 + age, 1000 + age))
+            fresh = root / 'layout-20261117-175244'
+            fresh.mkdir()
+            sanctuary._prune(root, 'layout-', keep=3, current=fresh)
+            self.assertEqual(sorted(p.name for p in root.iterdir()),
+                             ['layout-023-verify', 'layout-20261117-175244', 'layout-polish-a'])
+            sanctuary._prune(root, 'layout-', keep=1, current=fresh)
+            self.assertEqual([p.name for p in root.iterdir()], ['layout-20261117-175244'])
 
 
 class InstallTests(unittest.TestCase):

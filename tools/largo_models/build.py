@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 BLENDER = Path(os.environ.get('SLIMEBRIDGE_BLENDER', r'C:\Program Files\Blender Foundation\Blender 5.2\blender.exe'))
 SCRIPT = Path(__file__).with_name('glb_to_cache.py')
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 # model folder name -> slug the games use for that species
 SLUG = {'slumber': 'sloomber'}
 DISPLAY = {'rad': 'Rad', 'quantum': 'Quantum', 'mosaic': 'Mosaic', 'slumber': 'Sloomber', 'cotton': 'Cotton', 'flutter': 'Flutter',
@@ -105,7 +105,7 @@ def package(out: Path, rows: list[dict], base_url: str) -> dict:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument('--models', default=r'`<local folder>` rancherlargo\modele finaux 1')
+    ap.add_argument('--models', default=r'`<local folder>` Bridge\Slime rancherlargo')
     ap.add_argument('--out', default=str(ROOT / 'Lab' / 'LargoModels'))
     ap.add_argument('--only', default='')
     ap.add_argument('--tris', type=int, default=14000)

@@ -20,7 +20,7 @@ namespace SlimeBridge.SR1
     internal sealed class LabImportedOps
     {
         private static readonly Regex OpPattern = new Regex(
-            @"\A(spawn|feed|diet|price|vac_add|vac_remove|release|query|save_roundtrip):((?:slime|plort)\.[a-z0-9_]+|largo\.[a-z0-9_]+\.[a-z0-9_]+)(?::([0-9]{1,2}))?\z",
+            @"\A(spawn|feed|twin_largofy|diet|price|vac_add|vac_remove|release|query|save_roundtrip):((?:slime|plort)\.[a-z0-9_]+|largo\.[a-z0-9_]+\.[a-z0-9_]+)(?::([0-9]{1,2}))?\z",
             RegexOptions.CultureInvariant);
 
         private readonly SpeciesRegistrar _registrar;
@@ -33,6 +33,8 @@ namespace SlimeBridge.SR1
         private float _nextWaitLog;
         private int _spawned;
         private bool _diagPending;
+        private LabTwinFeedProbe? _twinFeed;
+        internal void Stop() { _twinFeed?.Stop(); _twinFeed = null; }
         private float _diagDeadline;
         private readonly int _timelineSeconds;
         private readonly string _timelineTarget;
@@ -98,6 +100,7 @@ namespace SlimeBridge.SR1
             if (System.Threading.Thread.CurrentThread.ManagedThreadId != _mainThreadId) return;
             TickTimeline();
             TickFeed();
+            _twinFeed?.Tick();
             if (_diagPending)
             {
                 // The source-animation trace needs real elapsed frames; the diagnostic is written
@@ -391,6 +394,16 @@ namespace SlimeBridge.SR1
                             // LAB readback of the eat -> plort path: the species plus native carrots, reported 25 s later.
                             executed = !isPlort && AppendSpawn(game, scene, canonical, id, details, problems) && StartFeed(game, scene, canonical, id, details, problems);
                             break;
+                        case "twin_largofy":
+                            if (canonical != "slime.twin" || _twinFeed != null || count != 1)
+                            { problems.Add("natural feeding probe requires one fresh Twin and one request"); break; }
+                            executed = AppendSpawn(game, scene, canonical, id, details, problems);
+                            if (executed)
+                            {
+                                _twinFeed = LabTwinFeedProbe.TryStart(game, scene, id, _outDir, _runId, details, problems);
+                                executed = _twinFeed != null;
+                            }
+                            break;
                         case "spawn":
                             if (isPlort)
                             {
@@ -567,6 +580,9 @@ namespace SlimeBridge.SR1
             details.Add("\"definition_name\": " + RegistrySnapshotFormat.Quote(definition?.Name ?? ""));
             details.Add("\"spawn_index\": " + spawnIndex.ToString(CultureInfo.InvariantCulture));
             details.Add("\"spawn_path\": " + RegistrySnapshotFormat.Quote("native_instantiate_actor"));
+            LabSr1VacuumProbe.TryAttach(instance, canonical);
+            LabUserLargoMotionProbe.TryAttach(instance, canonical);
+            LabBoomCycleProbe.TryAttach(instance, canonical);
             _spawned = spawnIndex;
             return true;
         }

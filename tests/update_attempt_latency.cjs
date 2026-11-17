@@ -1,0 +1,20 @@
+const fs=require('fs'), assert=require('assert');
+const text=fs.readFileSync(process.argv[2],'utf8');
+const from=text.indexOf("    'update-apply': async () => {"), to=text.indexOf("    'mods-realm':",from);
+assert(from>=0 && to>from);
+const L={update:{frozen:true}}, timers=new Map();let nextTimer=0, finish, statusReply;
+let page='options';const renderView=()=>{},toast=()=>{},t=k=>k;
+const safe=async fn=>{try{return await fn();}catch(_){return undefined;}};
+const setInterval=fn=>{const id=++nextTimer;timers.set(id,fn);return id;},clearInterval=id=>timers.delete(id);
+const api={update_apply:()=>new Promise(resolve=>finish=resolve),update_status:()=>new Promise(resolve=>statusReply=resolve)};
+const action=eval('({'+text.slice(from,to)+'})')['update-apply'];
+(async()=>{
+ const first=action();const latePoll=timers.get(1)();
+ finish({ok:false,error:'OFFLINE'});await first;
+ const second=action();assert.equal(L.updateProgress.phase,'checking');
+ statusReply({ok:true,phase:'download',done:999999,total:1000000});await latePoll;
+ assert.equal(L.updateProgress.phase,'checking','stale first-attempt status must not overwrite retry state');
+ finish({ok:false,error:'OFFLINE'});await second;
+ assert.equal(timers.size,0);assert.equal(L.updateBusy,false);
+ console.log('PASS update-progress-attempt-epoch');
+})().catch(error=>{console.error(error);process.exitCode=1;});

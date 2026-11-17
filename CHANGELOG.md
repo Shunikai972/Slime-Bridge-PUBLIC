@@ -3,6 +3,27 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.3] - 2026-11-17
+
+### Fixed
+- Slime Rancher 2 imported Largos receive their appearance when the world loads, removing the errors and missing splats
+  seen on Angler Largos and the Quantum Ringtail Largo.
+- Cleaning up old island builds goes by age, and never removes the island that was just built.
+- Imported SR1 Quantum largos retain their owned appearance for native Quantum behaviour while placeholder rendering stays disabled.
+- Imported jump animations remain armed while native airborne observations continue, and still recover if observations stop.
+- Owned material ambient lighting is preserved across native vacuum hold and release.
+- Runtime content publication and player pointers stay within the requested installation's content root.
+- Launcher game shutdown, audio handover, navigation layout and supplied artwork handling have been tightened.
+- The launcher displays its actual release version instead of a fixed development label.
+
+### Changed
+- Windows builds embed the authored Boom shader while borrowing native game textures locally; no game textures are distributed.
+- Sanctuary mini accessories, layout and retirement migration have been updated while retaining existing progress.
+- Supplied Largo icons and transparent artwork are included by explicit file allowlists.
+
+### Verification limits
+- Full Blender colour fidelity, body-deformation parity, all old-save scenarios and all-platform rendering are not established.
+
 ## [0.2.2] - 2026-11-03
 
 ### Fixed

@@ -103,27 +103,15 @@ ${ft.front}
 </svg>`;
   }
 
-  /** A Largo: two bodies merged, dominant face; colours blend from parent a to parent b. */
+  /** Supplied final icon art only; unfinished designs use the artist's question mark. */
   function largo(a, b, o = {}) {
-    const A = get(a), B = get(b), g = nid('lg'), k = nid('lk'), s = nid('ls');
-    const fa = features(A.f, A.c), fb = features(B.f, B.c);
-    const wrap = (ft, tx) => `<g transform="translate(${tx} -12) scale(.7 1)">${ft}</g>`;
-    const cls = o.cls === undefined ? 'idle' : o.cls;
-    const face2 = `<g transform="translate(28 0) scale(1)">${face(B)}</g>`;
-    return `<svg class="slime ${cls}" viewBox="-20 -30 216 160" ${o.size ? `width="${o.size}"` : ''} style="overflow:visible;${o.delay ? `--hop-delay:${o.delay}s` : ''}" aria-hidden="true">
-<defs><linearGradient id="${g}" x1="0" x2="1"><stop offset="0" stop-color="${A.c[1]}"/><stop offset=".42" stop-color="${A.c[1]}"/><stop offset=".58" stop-color="${B.c[1]}"/><stop offset="1" stop-color="${B.c[1]}"/></linearGradient>
-<linearGradient id="${s}" x1="0" x2="1"><stop offset="0" stop-color="${A.c[2]}"/><stop offset="1" stop-color="${B.c[2]}"/></linearGradient>
-<clipPath id="${k}"><path d="${BODY_L}"/></clipPath></defs>
-<ellipse class="shadow" cx="88" cy="114" rx="76" ry="8" fill="#1d1448" opacity=".2"/>
-${wrap(fa.back, -2)}${wrap(fb.back, 78)}
-<path d="${BODY_L}" fill="url(#${g})" stroke="url(#${s})" stroke-width="3.4" stroke-linejoin="round"/>
-<g clip-path="url(#${k})"><path d="M0 0 H176 V120 H0Z" fill="url(#${s})" opacity="0"/>${wrap(fa.over, -2)}${wrap(fb.over, 78)}
-<path d="M10 92 Q88 124 166 92 L166 120 L10 120Z" fill="#000" opacity=".12"/>
-<ellipse cx="88" cy="26" rx="62" ry="12" fill="#fff" opacity=".18"/></g>
-${face2}
-<ellipse cx="44" cy="30" rx="18" ry="9" fill="#fff" opacity=".6" transform="rotate(-22 44 30)"/><circle cx="26" cy="50" r="3.6" fill="#fff" opacity=".75"/>
-${wrap(fa.front, -2)}${wrap(fb.front, 78)}
-</svg>`;
+    const alias = k => k === 'sloomber' ? 'slumber' : k;
+    const supplied = new Set(['quantum_cotton', 'quantum_slumber', 'rad_angler', 'rad_batty', 'rad_cotton',
+      'rad_flutter', 'rad_hyper', 'rad_ringtail', 'rad_slumber', 'rad_twin']);
+    const direct = `${alias(a)}_${alias(b)}`, reverse = `${alias(b)}_${alias(a)}`;
+    const key = supplied.has(direct) ? direct : supplied.has(reverse) ? reverse : 'unknown';
+    const size = Number(o.size), width = Number.isFinite(size) && size > 0 ? ` width="${size}"` : '';
+    return `<img class="largo-icon" src="img/largos/${key}.png"${width} alt="" draggable="false">`;
   }
 
   function plort(key, o = {}) {
@@ -226,6 +214,7 @@ ${deco ? `<g transform="translate(18 64)"><g class="float">${slime('pink', { siz
     star: 'M16 3 L20 12 L30 13 L22 20 L25 29 L16 24 L7 29 L10 20 L2 13 L12 12Z', link: 'M13 19 a5 5 0 0 1 0 -7 l3 -3 a5 5 0 0 1 7 7 l-2 2 M19 13 a5 5 0 0 1 0 7 l-3 3 a5 5 0 0 1 -7 -7 l2 -2',
     stop: 'M8 8 H24 V24 H8Z', plus: 'M16 6 V26 M6 16 H26', trash: 'M6 9 H26 M12 9 V5 H20 V9 M9 9 L10.5 27 H21.5 L23 9',
     mods: 'M9 4 h4 a2 2 0 1 1 4 0 h4 v6 a2 2 0 1 0 0 4 v6 h-6 a2 2 0 1 0 -4 0 h-6 v-6 a2 2 0 1 1 0 -4 Z',
+    tutorial: 'M4 6 Q10 3 16 7 Q22 3 28 6 V26 Q22 23 16 27 Q10 23 4 26Z M16 7 V27 M8 11 H12 M20 11 H24 M8 16 H12 M20 16 H24',
     download: 'M16 4 V20 M9 14 L16 21 L23 14 M5 26 H27',
   };
   function glyph(name, cls = 'gl') {

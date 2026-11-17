@@ -45,6 +45,10 @@ class Win32Windows:
             function.restype = wintypes.BOOL
         self._user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
         self._user32.ShowWindow.restype = wintypes.BOOL
+        self._user32.ShowWindowAsync.argtypes = [wintypes.HWND, ctypes.c_int]
+        self._user32.ShowWindowAsync.restype = wintypes.BOOL
+        self._user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+        self._user32.PostMessageW.restype = wintypes.BOOL
         self._user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
         self._user32.AttachThreadInput.restype = wintypes.BOOL
         self._kernel32.GetCurrentThreadId.argtypes = []
@@ -111,7 +115,9 @@ class Win32Windows:
     def minimize(self, pid):
         windows = self._checked(pid)
         for hwnd in windows:
-            self._user32.ShowWindow(hwnd, SW_MINIMIZE)
+            # A 4-FPS game (or its same-PID loader console) can block a synchronous
+            # ShowWindow for seconds. Queue it instead; success still needs IsIconic read-back.
+            self._user32.ShowWindowAsync(hwnd, SW_MINIMIZE)
         return all(self._user32.IsIconic(hwnd) for hwnd in windows)
 
     def restore(self, pid):
@@ -119,6 +125,25 @@ class Win32Windows:
         for hwnd in windows:
             self._user32.ShowWindow(hwnd, SW_RESTORE)
         return all(not self._user32.IsIconic(hwnd) for hwnd in windows)
+
+    def request_close(self, pid):
+        # Never close MelonLoader's console instead of its Unity player, and never force-kill.
+        accepted = True
+        for hwnd in self._game_windows(pid):
+            if not self._verify(pid):
+                return False
+            accepted = bool(self._user32.PostMessageW(hwnd, 0x0010, 0, 0)) and accepted  # WM_CLOSE
+        return accepted
+
+    def foreground_pid(self):
+        hwnd = self._user32.GetForegroundWindow()
+        owner = self._wt.DWORD()
+        if not hwnd or not self._user32.GetWindowThreadProcessId(hwnd, self._ct.byref(owner)) or not self._verify(owner.value):
+            return None
+        try:
+            return owner.value if hwnd in self._game_windows(owner.value) else None
+        except WindowError:
+            return None
 
 
 class NullWindows:
@@ -132,3 +157,9 @@ class NullWindows:
 
     def restore(self, pid):
         return False
+
+    def request_close(self, pid):
+        return False
+
+    def foreground_pid(self):
+        return None

@@ -60,6 +60,7 @@ namespace SlimeBridge.SR1
         private bool _pounceArmed;
         private bool _sawAirborne;
         private float _pounceDeadline;
+        private float _pounceDuration;
         private VisualState _state;
         // A one-shot clip (bite, digest) is played to its end: native completion events arrive earlier than the source
         // clip finishes (quick chomps are near-instant), and cutting to idle there made the eating motion invisible.
@@ -481,6 +482,7 @@ namespace SlimeBridge.SR1
             if (_biteActive) return;
             var source = _source;
             if (source == null || !source.TryGetClipLength(PounceClipName, out var duration) ||
+                float.IsNaN(duration) || float.IsInfinity(duration) || duration <= 0f ||
                 !source.TryPlay(PounceClipName, out _))
             {
                 Increment(ref _playFailures);
@@ -490,6 +492,7 @@ namespace SlimeBridge.SR1
             _state = VisualState.Pounce;
             _pounceArmed = true;
             _sawAirborne = false;
+            _pounceDuration = duration;
             _pounceDeadline = Time.time + duration;
             _idlePending = false;
             Record(Transition.PounceStart);
@@ -501,6 +504,9 @@ namespace SlimeBridge.SR1
             if (plexer == null || plexer.IsFloating() || plexer.IsCaptive()) return;
             if (airborne)
             {
+                // Native flight remains authoritative after the authored clip clamps at its end.
+                // Missing callbacks still expire one clip duration after the last observation.
+                _pounceDeadline = Math.Max(_pounceDeadline, Time.time + _pounceDuration);
                 if (!_sawAirborne)
                 {
                     _sawAirborne = true;

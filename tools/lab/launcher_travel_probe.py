@@ -66,6 +66,9 @@ def run(sr1_root, sr2_root, timeout_s):
         finally:
             plugins.find_source = original
         api = LauncherAPI(config_path=config)
+        # The temporary config would otherwise point the launcher at an empty models folder next to it, and Play's
+        # pack.prepare would sync the LAB's installed Largos away (restoring the native caches) for every later run.
+        api._models_dir = lambda data=None: REPO_ROOT / 'Lab' / 'Largos' / 'models'
         api._primary = lambda realm: {'game': realm, 'root': roots[realm], 'store': 'manual'}   # these two installs
         api._travel._install_for = api._primary
         ops = ['wait:25', 'unlock', 'wait:12', 'give:PINK_PLORT:2', 'tp:gate', 'wait:2', 'tp:portal', 'wait:4', 'tp:portal_in', 'wait:120']

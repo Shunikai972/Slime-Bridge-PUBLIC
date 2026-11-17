@@ -961,7 +961,26 @@ namespace SlimeBridge.SR1
     {
         internal static bool LabRestPoseRequested;
     }
+
+    internal static class ImportedQuantumAppearance
+    {
+        internal static bool EnsureBound(GameObject actorRoot, string canonical, out string problem)
+        {
+            problem = "";
+            return true;
+        }
+    }
+
+    internal static class ImportedBoomVisual
+    {
+        internal struct Slot { public Renderer Renderer; public int Index; }
+        internal static bool Eligible(string canonical, bool isFace, string shader) => false;
+        internal static Material NativeTemplate() => null;
+        internal static void Bind(GameObject visual, GameObject actor, List<Slot> slots) { }
+    }
 }
+
+class BoomSlimeExplode : MonoBehaviour { }
 
 class Identifiable : MonoBehaviour
 {

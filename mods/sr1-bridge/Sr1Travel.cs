@@ -142,7 +142,7 @@ namespace SlimeBridge.SR1
                     LockInput(true);
                     _pendingDone = done;
                     var offer = Sr1Carry.Snapshot(message.CarryMode);
-                    _overlay.Close(TravelText.Departing(message.Destination.Length > 0 ? message.Destination : "SR2"), TravelText.Waiting(message.Destination), 0.8f, () =>
+                    _overlay.Close(TravelText.Departing(message.Destination.Length > 0 ? message.Destination : "SR2"), TravelText.Waiting(message.Destination), 0.18f, () =>
                     {
                         try
                         {
@@ -227,7 +227,7 @@ namespace SlimeBridge.SR1
             SanctuaryHost.Instance?.PulsePortal();
             var how = (placed ? "portal" : "in_place") + (report.Length > 0 ? "; " + report : "");
             if (!_overlay.IsCovering) { LockInput(false); done(true, how, accepted); return; }
-            _overlay.Open(1.1f, () => { LockInput(false); done(true, how, accepted); });
+            _overlay.Open(0.22f, () => { LockInput(false); done(true, how, accepted); });
         }
 
         internal void Unload()

@@ -23,10 +23,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def generator_id():
-    """Short hash of the layout generator's own sources: an installed layout made by older code is detectably stale."""
+    """Hash source and statue policy so an installed retired puzzle is detectably stale."""
     digest = hashlib.sha256()
-    for name in ('layout.py', 'island.py'):
-        digest.update((Path(__file__).with_name(name)).read_bytes())
+    for path in (Path(__file__), Path(__file__).with_name('island.py'), EXCLUSIONS_FILE):
+        digest.update(path.name.encode('utf-8') + b'\x00')
+        digest.update(path.read_bytes())
     return digest.hexdigest()[:16]
 
 LAYOUT_SCHEMA = 'bridge-sanctuary-layout'

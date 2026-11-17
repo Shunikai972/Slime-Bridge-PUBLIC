@@ -7,8 +7,13 @@ No deployment, autoload, native creation or inventory command is performed here.
 
 import hashlib
 import json
-import time
+import time as _stdlib_time
 from pathlib import Path
+from types import SimpleNamespace
+
+# Module-owned clock object so test patches on tools.lab.registry_oracle.time do not mutate
+# the global stdlib time module across unrelated threads in the same test process.
+time = SimpleNamespace(monotonic=_stdlib_time.monotonic, sleep=_stdlib_time.sleep)
 
 from tools.lab import oracle
 

@@ -73,10 +73,126 @@ internal static class Program
         TestIndependentActorsAndBoundedHistory();
         TestNoHookAllocations();
         TestCallbackCanDestroyActor();
+        TestAirborneBeyondPounceClip();
         TestDisableReenableAndUnload(fixture);
 
         Console.WriteLine($"gameplay animation checks={_checks} failures={_failures}; production-linked harness");
         return _failures == 0 ? 0 : 1;
+    }
+
+    private static void TestAirborneBeyondPounceClip()
+    {
+        var fixture = CreateFixture();
+        var stalk = fixture.Actor.AddComponent<StalkConsumable>();
+        var plexer = fixture.Actor.AddComponent<SlimeSubbehaviourPlexer>();
+        var ground = fixture.Actor.AddComponent<Collider>();
+        Time.time = 200f;
+        stalk.SetPounceMode(true);
+        stalk.InvokeLeap();
+        ImportedGameplayAnimationPatch.LeapTowardPostfix(stalk);
+        Time.time = 200.4f;
+        Grounded(plexer, new RaycastHit());
+        Time.time = 200.6f; // Authored clip is .5s, but native actor is still airborne.
+        fixture.Actor.Tick();
+        Check(CurrentClip(fixture.Source) == "Pounce v4" &&
+            Counter(fixture.Driver, "fallback_completions") == 0 &&
+            Json(fixture.Driver).GetProperty("pounce_armed").GetBoolean(),
+            "recent native airborne evidence keeps a long hop armed beyond authored clip duration");
+        Grounded(plexer, new RaycastHit { collider = ground });
+        Check(Counter(fixture.Driver, "landings") == 1 && CurrentClip(fixture.Source) == "Idle_Cotton_Ringtail",
+            "late native landing is counted and returns to idle instead of being discarded after clip expiry");
+
+        Time.time = 210f;
+        fixture.Driver.OnConfirmedJump();
+        var playback = fixture.Visual.GetComponent<Animation>()!;
+        var plays = playback.PlayCalls;
+        playback["Pounce v4"]!.time = .37f;
+        foreach (var now in new[] { 210.4f, 210.8f, 211.2f })
+        {
+            Time.time = now;
+            Grounded(plexer, new RaycastHit());
+            Time.time = now + .05f;
+            fixture.Actor.Tick();
+            Check(CurrentClip(fixture.Source) == "Pounce v4" && Counter(fixture.Driver, "fallback_completions") == 0,
+                "every eligible airborne callback refreshes beyond the original and first-refreshed deadlines");
+        }
+        Check(playback.PlayCalls == plays && playback["Pounce v4"]!.time == .37f,
+            "airborne callbacks never replay, rewind or rebuild the authored clip");
+        var lastDeadline = 211.2f + .5f;
+        Time.time = lastDeadline - .01f;
+        fixture.Actor.Tick();
+        Check(CurrentClip(fixture.Source) == "Pounce v4", "callback-loss watchdog waits until the latest deadline");
+        Time.time = lastDeadline;
+        fixture.Actor.Tick();
+        fixture.Actor.Tick();
+        Grounded(plexer, new RaycastHit());
+        Grounded(plexer, new RaycastHit { collider = ground });
+        Check(Counter(fixture.Driver, "fallback_completions") == 1 && Counter(fixture.Driver, "landings") == 1 &&
+            CurrentClip(fixture.Source) == "Idle_Cotton_Ringtail",
+            "lost callbacks fall back once; late callbacks cannot resurrect or complete a disarmed hop");
+
+        foreach (var captive in new[] { false, true })
+        {
+            Time.time = captive ? 230f : 220f;
+            fixture.Driver.OnConfirmedJump();
+            Time.time += .2f;
+            Grounded(plexer, new RaycastHit());
+            var deadline = Time.time + .5f;
+            plexer.SetFloating(!captive);
+            plexer.SetCaptive(captive);
+            Time.time += .4f;
+            Grounded(plexer, new RaycastHit());
+            Grounded(plexer, new RaycastHit { collider = ground });
+            Time.time = deadline;
+            fixture.Actor.Tick();
+            Check(CurrentClip(fixture.Source) == "Idle_Cotton_Ringtail" && Counter(fixture.Driver, "landings") == 1,
+                "floating/captive callbacks cannot extend a watchdog or fabricate landing");
+            plexer.SetFloating(false);
+            plexer.SetCaptive(false);
+        }
+
+        Time.time = 240f;
+        fixture.Driver.OnConfirmedJump();
+        Time.time = 240.4f;
+        Grounded(plexer, new RaycastHit());
+        var chomper = fixture.Actor.AddComponent<Chomper>();
+        chomper.StartChomp(new GameObject("long-hop-food"), Identifiable.Id.Tabby, false, false, () => { }, (_, _, _, _) => { });
+        ImportedGameplayAnimationPatch.StartChompPostfix(chomper);
+        var fallbacks = Counter(fixture.Driver, "fallback_completions");
+        Time.time = 242f;
+        Grounded(plexer, new RaycastHit());
+        Grounded(plexer, new RaycastHit { collider = ground });
+        fixture.Actor.Tick();
+        Check(Json(fixture.Driver).GetProperty("state").GetString() == "bite" &&
+            Counter(fixture.Driver, "fallback_completions") == fallbacks && Counter(fixture.Driver, "landings") == 1,
+            "bite interrupts an extended hop; stale airborne/deadline observations never override it");
+        chomper.Cancel();
+        ImportedGameplayAnimationPatch.ForceCancelPostfix(chomper);
+
+        Time.time = 250f;
+        fixture.Driver.OnConfirmedJump();
+        Time.time = 250.4f;
+        Grounded(plexer, new RaycastHit());
+        fixture.Actor.SetActive(false);
+        Grounded(plexer, new RaycastHit());
+        fixture.Actor.SetActive(true);
+        Grounded(plexer, new RaycastHit { collider = ground });
+        fixture.Actor.Tick();
+        Check(CurrentClip(fixture.Source) == "Idle_Cotton_Ringtail" && Counter(fixture.Driver, "landings") == 1 &&
+            !Json(fixture.Driver).GetProperty("pounce_armed").GetBoolean(),
+            "disable/re-enable clears an extended watchdog; stale callbacks cannot revive it");
+
+        foreach (var duration in new[] { 0f, float.NaN, float.PositiveInfinity, -1f })
+        {
+            var invalid = CreateFixture();
+            var animation = invalid.Visual.GetComponent<Animation>()!;
+            animation["Pounce v4"]!.clip.length = duration;
+            var before = animation.PlayCalls;
+            invalid.Driver.OnConfirmedJump();
+            Check(animation.PlayCalls == before && Counter(invalid.Driver, "play_failures") == 1 &&
+                !Json(invalid.Driver).GetProperty("pounce_armed").GetBoolean(),
+                "nonpositive/nonfinite duration refuses pounce without starting an invalid watchdog");
+        }
     }
 
     private static void TestNoDeclarationAndTemplate()

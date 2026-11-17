@@ -485,81 +485,22 @@ namespace SlimeBridge.SR1
             return char.ToUpperInvariant(lower[0]) + lower.Substring(1);
         }
 
-        private static Bounds Bounds(GameObject root)
-        {
-            var bounds = new Bounds(root.transform.position, Vector3.zero);
-            foreach (var r in root.GetComponentsInChildren<MeshRenderer>()) bounds.Encapsulate(r.bounds);
-            return bounds;
-        }
-
         private static float FitWidth(GameObject root, float width)
         {
-            var scale = width / Mathf.Max(0.2f, Bounds(root).size.x);
-            root.transform.localScale = Vector3.one * scale;
-            return scale;
+            return SanctuaryMiniVisual.Fit(root, width);
         }
 
         private static void StandOn(GameObject root, float groundY)
         {
-            root.transform.position += Vector3.up * (groundY - Bounds(root).min.y);
+            SanctuaryMiniVisual.StandOn(root, groundY);
         }
 
         /// <summary>A frozen copy of the game's own slime (appearance meshes, native materials, species palette, happy face).</summary>
         private GameObject? NativeSlimeModel(string slime, Transform parent, Vector3 position, Quaternion rotation, out int parts)
         {
-            parts = 0;
-            {
-                Identifiable.Id id;
-                try { id = (Identifiable.Id)Enum.Parse(typeof(Identifiable.Id), slime + "_SLIME"); }
-                catch (Exception) { _log.Add("figure: the game has no " + slime + " slime"); return null; }
-                var definition = GameContext.Instance.SlimeDefinitions.GetSlimeByIdentifiableId(id);
-                var appearance = definition != null && definition.AppearancesDefault != null && definition.AppearancesDefault.Length > 0 ? definition.AppearancesDefault[0] : null;
-                if (appearance == null || appearance.Structures == null) { _log.Add("figure: no appearance for " + slime); return null; }
-                var root = new GameObject("figure." + slime.ToLowerInvariant());
-                root.transform.SetParent(parent, false);
-                root.transform.position = position;
-                root.transform.rotation = rotation;
-                var palette = appearance.ColorPalette;
-                SlimeExpressionFace face = default;
-                var hasFace = false;
-                try { face = appearance.Face.GetExpressionFace(SlimeFace.SlimeExpression.Happy); hasFace = true; } catch (Exception) { }
-
-                foreach (var structure in appearance.Structures)
-                {
-                    if (structure == null || structure.Element == null || structure.Element.Prefabs == null || structure.Element.Prefabs.Length == 0) continue;
-                    var prefab = structure.Element.Prefabs[0];
-                    var skinned = prefab != null ? prefab.GetComponentInChildren<SkinnedMeshRenderer>(true) : null;
-                    if (skinned == null || skinned.sharedMesh == null) continue;
-                    var materials = new List<Material>();
-                    foreach (var m in structure.DefaultMaterials ?? new Material[0])
-                    {
-                        if (m == null) continue;
-                        var copy = new Material(m) { name = m.name + " (SlimeBridge figure)" };
-                        if (copy.HasProperty("_TopColor")) copy.SetColor("_TopColor", palette.Top);
-                        if (copy.HasProperty("_MiddleColor")) copy.SetColor("_MiddleColor", palette.Middle);
-                        if (copy.HasProperty("_BottomColor")) copy.SetColor("_BottomColor", palette.Bottom);
-                        materials.Add(copy);
-                    }
-                    if (structure.SupportsFaces && hasFace && structure.FaceRules != null && structure.FaceRules.Length > 0)
-                    {
-                        if (structure.FaceRules[0].ShowEyes && face.Eyes != null) materials.Add(face.Eyes);
-                        if (structure.FaceRules[0].ShowMouth && face.Mouth != null) materials.Add(face.Mouth);
-                    }
-                    if (materials.Count == 0) continue;
-                    var part = new GameObject(structure.Element.Name ?? "part");
-                    part.transform.SetParent(root.transform, false);
-                    part.transform.localPosition = skinned.transform.localPosition;
-                    part.transform.localRotation = skinned.transform.localRotation;
-                    part.transform.localScale = skinned.transform.localScale;
-                    part.AddComponent<MeshFilter>().sharedMesh = skinned.sharedMesh;
-                    var renderer = part.AddComponent<MeshRenderer>();
-                    renderer.sharedMaterials = materials.ToArray();
-                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                    parts++;
-                }
-                if (parts == 0) { UnityEngine.Object.Destroy(root); _log.Add("figure: " + slime + " has no renderable part"); return null; }
-                return root;
-            }
+            var model = SanctuaryMiniVisual.Create(slime, parent, position, rotation, out parts);
+            if (model == null) _log.Add("figure: " + slime + " has no complete native visual");
+            return model;
         }
 
         /// <summary>A stone tablet carrying the "H" message, readable from the walkway side.</summary>

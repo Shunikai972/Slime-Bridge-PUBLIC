@@ -47,6 +47,7 @@ class LabFocusDiagnostics {
     public void Stop(string reason) { Stopped = true; }
 }
 class TravelStub { public void Unload() { } }
+static class Sr2LabVacuumTrace { public static void Stop() { } }
 class Flow : SyntheticMod {
     public LabFocusDiagnostics? _focusDiagnostics;
     public bool _focusDiagnosticAllowed = true;
@@ -124,7 +125,8 @@ class LabFocusLifecycleTests(unittest.TestCase):
                 '</PropertyGroup></Project>', encoding='utf-8')
             (work / 'NuGet.Config').write_text('<configuration><packageSources><clear /></packageSources></configuration>', encoding='utf-8')
             environment = dict(os.environ, TEMP=temporary, TMP=temporary, TMPDIR=temporary,
-                DOTNET_CLI_HOME=temporary, DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
+                DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
+                DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
                 DOTNET_CLI_TELEMETRY_OPTOUT='1')
             result = subprocess.run([dotnet, 'run', '--project', str(work / 'lifecycle.csproj'),
                 '-c', 'Release', '--disable-build-servers', '-p:UseSharedCompilation=false'],

@@ -101,7 +101,8 @@ def test_stone_form_harness():
     scratch.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='stone-form-harness-', dir=scratch) as temporary:
         environment = dict(os.environ, TEMP=temporary, TMP=temporary, TMPDIR=temporary,
-                           DOTNET_CLI_HOME=temporary, DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
+                           DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
+                           DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
                            DOTNET_CLI_TELEMETRY_OPTOUT='1')
         result = subprocess.run(
             [str(DOTNET), 'run', '--project',

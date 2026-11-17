@@ -62,7 +62,7 @@
       return `<article class="play-card ${realm === 'SR1' ? 'sr1' : 'sr2'}">
         <span class="pc-art"><img src="img/play-${realm.toLowerCase()}.png" alt=""></span>
         <span class="pc-body"><b>${NAMES[realm]}</b><small>${run ? t('home.running') : ok ? t('home.ready') : t('home.not_found')}</small></span>
-        ${ok ? `<span class="pc-actions"><button class="btn ${realm === 'SR1' ? 'btn--sr1' : 'btn--sr2'}" data-act="launch" data-arg="${realm}" ${run ? 'disabled' : ''}>${icon('play')} ${t('home.play_game')}</button>
+        ${ok ? `<span class="pc-actions"><button class="btn ${run ? 'btn--danger' : realm === 'SR1' ? 'btn--sr1' : 'btn--sr2'}" data-act="${run ? 'game-stop' : 'launch'}" data-arg="${realm}">${icon(run ? 'stop' : 'play')} ${t(run ? 'games.stop' : 'home.play_game')}</button>
              ${S.games[other(realm)] && S.games[other(realm)].primary && !run ? `<button class="pc-both" data-act="launch" data-arg="BOTH_${realm}">${t('home.with_other', { game: other(realm) })}</button>` : ''}</span>`
              : `<button class="btn btn--ghost" data-act="go" data-arg="games">${t('home.find')}</button>`}
       </article>`;
@@ -70,13 +70,18 @@
     const resume = last && S.games[last.realm] && S.games[last.realm].primary && !S.games[last.realm].running
       ? `<div class="resume-bar"><span>${t('home.resume_t', { game: NAMES[last.realm] })}${last.save ? `<small class="mono">${esc(last.save)}</small>` : ''}</span>
           <button class="btn btn--bridge" data-act="resume" data-arg="${last.realm}">${icon('play')} ${t('home.resume')}</button></div>` : '';
-    return `<section class="play-choice">${resume}<div class="play-cards">${card('SR1', 'pink')}${card('SR2', 'tabby')}</div></section>`;
+    return `<section class="play-choice">${resume}<div class="play-cards">${card('SR1', 'pink')}${card('SR2', 'tabby')}</div>
+      ${S.games.SR1.running && S.games.SR2.running ? `<div class="row stop-both"><button class="btn btn--danger btn--sm" data-act="game-stop" data-arg="BOTH">${icon('stop')} ${t('games.stop_both')}</button><small class="muted">${t('games.stop_hint')}</small></div>` : ''}</section>`;
   }
 
   function home(S) {
     return `<div class="page home">
   ${playChoice(S)}
+  ${S.audio && S.audio.errors && S.audio.errors.length ? `<section class="panel warn" role="status">${t('games.audio_warning')}</section>` : ''}
   <div class="home-top">${carousel()}${newsBox()}</div>
+  <section class="home-guides" aria-label="${t('nav.tutorial')}">
+    ${[['assets','home.island_t','home.island_b','play-sr1.png'],['models','home.largos_t','home.largos_b','largos/rad_cotton.png'],['tutorial','home.guide_t','home.guide_b','need-games.gif']].map(([go,title,body,image]) => `<button class="panel home-guide" data-act="go" data-arg="${go}"><img src="img/${image}" alt=""><span><b>${t(title)}</b><small>${t(body)}</small></span>${glyph('chevR')}</button>`).join('')}
+  </section>
 </div>`;
   }
 
@@ -112,7 +117,7 @@
       <span class="pill info">${storeName(p.store)}</span>${g.running ? `<span class="pill good live">${t('games.running')}</span>` : ''}</div>`;
     const others = g.all.length > 1 ? `<div class="field"><label>${t('games.which')}</label><select class="input" data-change="choose" data-realm="${realm}">${g.all.map(x => `<option value="${esc(x.root)}" ${x.root === p.root ? 'selected' : ''}>${esc(x.role === 'lab' ? 'LAB · ' : '')}${esc(storeName(x.store))} · ${esc(x.root)}</option>`).join('')}</select></div>` : '';
     return `<article class="panel game-card ${key}">${head}<div class="mono ellipsis path" title="${esc(p.root)}">${esc(p.root)}</div>${chips}${others}
-      <div class="row"><button class="btn btn--sm ${realm === 'SR1' ? 'btn--sr1' : 'btn--sr2'}" data-act="launch" data-arg="${realm}">${icon('play')} ${t('games.launch')}</button><button class="btn btn--ghost btn--sm" data-act="folder" data-arg="${realm}">${icon('folder')} ${t('games.open')}</button><button class="btn btn--ghost btn--sm" data-act="pick" data-arg="folder">${t('games.change')}</button><button class="btn btn--ghost btn--sm" data-act="forget" data-arg="${realm}">${t('games.forget')}</button></div></article>`;
+      <div class="row"><button class="btn btn--sm ${g.running ? 'btn--danger' : realm === 'SR1' ? 'btn--sr1' : 'btn--sr2'}" data-act="${g.running ? 'game-stop' : 'launch'}" data-arg="${realm}">${icon(g.running ? 'stop' : 'play')} ${t(g.running ? 'games.stop' : 'games.launch')}</button><button class="btn btn--ghost btn--sm" data-act="folder" data-arg="${realm}">${icon('folder')} ${t('games.open')}</button><button class="btn btn--ghost btn--sm" data-act="pick" data-arg="folder">${t('games.change')}</button><button class="btn btn--ghost btn--sm" data-act="forget" data-arg="${realm}">${t('games.forget')}</button></div></article>`;
   }
 
   function games(S) {
@@ -120,13 +125,13 @@
     return `<div class="page">
   <div class="page-title"><h1>${t('nav.games')}</h1><p>${t('games.sub')}</p></div>
   <section class="panel detect">
-    <div class="detect-art"><img src="img/find-games.png" alt=""></div>
+    <div class="detect-art"><img src="img/need-games.gif" alt=""></div>
     <div class="stack" style="flex:1"><h2>${t('games.detect_title')}</h2><p class="muted">${t('games.detect_body')}</p>
       <div class="row"><button class="btn btn--sky" data-act="detect">${icon('search')} ${t('games.autodetect')}</button><button class="btn btn--ghost" data-act="pick" data-arg="folder">${icon('folder')} ${t('games.choose_folder')}</button><button class="btn btn--ghost" data-act="pick" data-arg="exe">${t('games.choose_exe')}</button><span class="pill ${n ? 'good' : 'muted'}">${t('games.count', { n })}</span></div></div>
   </section>
   <div class="grid cols-2" id="games">${['SR1', 'SR2'].map(r => gameCard(S, r)).join('')}</div>
   <section class="panel own">
-    <div class="own-art"><img src="img/need-games.gif" alt=""></div>
+    <div class="own-art"><img src="img/find-games.png" alt=""></div>
     <div class="stack" style="flex:1"><h2>${t('legal.own_title')}</h2><p class="muted">${t('legal.own_body')}</p>
       <div class="row"><button class="btn btn--ghost btn--sm" data-act="store" data-arg="SR1">${t('games.buy', { game: NAMES.SR1 })}</button><button class="btn btn--ghost btn--sm" data-act="store" data-arg="SR2">${t('games.buy', { game: NAMES.SR2 })}</button></div></div>
   </section></div>`;

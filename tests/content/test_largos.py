@@ -71,6 +71,68 @@ class IdTests(unittest.TestCase):
 
 
 class SpecTests(unittest.TestCase):
+    def test_boom_parent_keeps_native_explosion_behaviour(self):
+        for parents in (['boom', 'cotton'], ['angler', 'boom'], ['boom', 'twin']):
+            with self.subTest(parents=parents):
+                row = {'canonical': 'largo.' + '.'.join(parents), 'display_name': 'test',
+                       'species': 'Test', 'parents': parents}
+                entry = largos.largo_entry(row, 960029)
+                self.assertEqual(entry['template']['slime_native_ref'], 'PINK_BOOM_LARGO')
+                self.assertEqual(entry['native_id'], 960029)
+                self.assertEqual(entry['largo']['parents'], parents)
+
+    def test_refresh_republishes_old_rock_template_even_with_same_cache_set(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            specs = root / 'Lab/GeneratedContent/species-import/20260101-largos'
+            specs.mkdir(parents=True)
+            base = root / 'base.json'
+            base.write_text('{"entries": []}', encoding='utf-8')
+            row = {'canonical': 'largo.boom.cotton', 'species': 'CottonBoom',
+                   'display_name': 'Cotton Boom Largo', 'parents': ['boom', 'cotton'], 'status': 'READY'}
+            entry = largos.largo_entry(row, 960029)
+            entry['template']['slime_native_ref'] = 'PINK_ROCK_LARGO'
+            (specs / largos.SPEC_FILE).write_text(json.dumps({'entries': [entry]}), encoding='utf-8')
+            sr2, sr1 = root / 'sr2', root / 'sr1'
+            (sr2 / largos.CATALOG).parent.mkdir(parents=True)
+            (sr2 / largos.CATALOG).write_text('{}', encoding='utf-8')
+            (sr1 / 'Managed').mkdir(parents=True)
+            (sr1 / 'Managed/Assembly-CSharp.dll').write_bytes(b'fixture; never loaded')
+            with mock.patch.object(largos, '_newest_species_spec', return_value=base), \
+                    mock.patch.object(largos, 'largo_roster', return_value=[row]), \
+                    mock.patch.object(largos, 'cache_ready', return_value=True), \
+                    mock.patch.object(largos, 'kept_largos', return_value=[]), \
+                    mock.patch('bridge.content.user_largos.user_canonicals', return_value=[]), \
+                    mock.patch.object(largos, 'publish_spec', return_value={'largos': 1, 'directory': 'new'}) as publish:
+                result = largos.refresh_spec(root, sr2, sr1)
+                entry['template']['slime_native_ref'] = 'PINK_BOOM_LARGO'
+                (specs / largos.SPEC_FILE).write_text(json.dumps({'entries': [entry]}), encoding='utf-8')
+                current = largos.refresh_spec(root, sr2, sr1)
+            self.assertTrue(result['changed'])
+            self.assertFalse(current['changed'])
+            publish.assert_called_once()
+
+    def test_retained_boom_specs_migrate_only_old_default_not_custom_templates(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            folder = root / '20260101-largos'
+            folder.mkdir()
+            entries = []
+            for canonical, template in [('largo.boom.cotton', 'PINK_ROCK_LARGO'),
+                                        ('largo.boom.rad', 'PINK_RAD_LARGO'),
+                                        ('largo.angler.pink', 'PINK_ROCK_LARGO')]:
+                row = {'canonical': canonical, 'display_name': 'test', 'species': 'Test',
+                       'parents': canonical.split('.')[1:]}
+                entry = largos.largo_entry(row, 960029 + len(entries))
+                entry['template']['slime_native_ref'] = template
+                entries.append(entry)
+            (folder / largos.SPEC_FILE).write_text(json.dumps({'entries': entries}), encoding='utf-8')
+            with mock.patch.object(largos, 'cache_ready', return_value=True):
+                kept = largos.kept_largos(set(), root / 'cache', root)
+            self.assertEqual([e['template']['slime_native_ref'] for e in kept],
+                             ['PINK_BOOM_LARGO', 'PINK_RAD_LARGO', 'PINK_ROCK_LARGO'])
+            self.assertEqual([e['native_id'] for e in kept], [960029, 960030, 960031])
+
     def test_spec_lists_only_extracted_largos_and_keeps_species(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

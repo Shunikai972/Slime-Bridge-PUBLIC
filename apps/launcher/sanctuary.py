@@ -114,13 +114,20 @@ def refresh_layout(kit_root=None, layout_root=None, publisher=None):
         out = layout_root / f"layout-{time.strftime('%Y%m%d-%H%M%S')}-{counter}"
         counter += 1
     (publisher or layout_module.publish_layout)(layout_module.build_layout(layout_module.load_kit(kit_dir), config), out)
-    _prune(layout_root, 'layout-')
+    _prune(layout_root, 'layout-', current=out)
     return out.name
 
 
-def _prune(root, prefix, keep=KEEP):
-    folders = sorted((p for p in Path(root).iterdir() if p.is_dir() and p.name.startswith(prefix)), key=lambda p: p.name)
-    for old in folders[:-keep]:
+def _prune(root, prefix, keep=KEEP, current=None):
+    """Remove all but the `keep` newest run folders. Age is the folder's modification time, not its name (a folder
+    named by hand, e.g. layout-sr1-verify, must not outrank a fresh layout-YYYYMMDD run); `current`, the folder
+    this run just published, is never removed."""
+    current = Path(current).resolve() if current else None
+    folders = [p for p in Path(root).iterdir() if p.is_dir() and p.name.startswith(prefix)]
+    folders.sort(key=lambda p: (current is not None and p.resolve() == current, p.stat().st_mtime, p.name))
+    for old in folders[:-keep] if keep > 0 else folders:
+        if current is not None and old.resolve() == current:
+            continue
         shutil.rmtree(old, ignore_errors=True)
 
 
@@ -259,8 +266,8 @@ class SanctuaryJob:
             layout_out = self.layout_root / f'layout-{stamp}'
             self.layout_root.mkdir(parents=True, exist_ok=True)
             layout_result = builder(kit_out, self.config, layout_out)
-            _prune(self.kit_root, 'sanctuary-kit-')
-            _prune(self.layout_root, 'layout-')
+            _prune(self.kit_root, 'sanctuary-kit-', current=kit_out)
+            _prune(self.layout_root, 'layout-', current=layout_out)
             self._set(status='DONE', progress=1.0, finished=self._clock(),
                       result={'kit': str(kit_out), 'layout': str(layout_out), 'kit_sha256': (kit_result or {}).get('kit_sha256'),
                               'statues': (layout_result or {}).get('statues'), 'required': (layout_result or {}).get('required')})

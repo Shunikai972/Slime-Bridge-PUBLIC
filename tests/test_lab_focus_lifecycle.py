@@ -116,7 +116,7 @@ class LabFocusLifecycleTests(unittest.TestCase):
         dotnet_root = os.environ.get('DOTNET_ROOT')
         dotnet = str(Path(dotnet_root) / 'dotnet.exe') if dotnet_root else shutil.which('dotnet')
         self.assertIsNotNone(dotnet, 'dotnet SDK required')
-        with tempfile.TemporaryDirectory(prefix='focus-lifecycle-', dir=os.environ.get('TMPDIR')) as temporary:
+        with tempfile.TemporaryDirectory(prefix='focus-lifecycle-', dir=os.environ.get('TMPDIR'), ignore_cleanup_errors=True) as temporary:
             work = Path(temporary)
             (work / 'Program.cs').write_text(PREFIX + body + SUFFIX, encoding='utf-8')
             (work / 'lifecycle.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup>'
@@ -127,7 +127,7 @@ class LabFocusLifecycleTests(unittest.TestCase):
             environment = dict(os.environ, TEMP=temporary, TMP=temporary, TMPDIR=temporary,
                 DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
                 DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
-                DOTNET_CLI_TELEMETRY_OPTOUT='1')
+                DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE='true')
             result = subprocess.run([dotnet, 'run', '--project', str(work / 'lifecycle.csproj'),
                 '-c', 'Release', '--disable-build-servers', '-p:UseSharedCompilation=false'],
                 cwd=work, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

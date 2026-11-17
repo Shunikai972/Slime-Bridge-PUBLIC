@@ -188,11 +188,11 @@ def test_rebind_evidence_counts_skipped_parts_separately():
 def test_sloomber_parts_harness():
     scratch = Path(os.environ.get('TMPDIR', tempfile.gettempdir()))
     scratch.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='sloomber-parts-', dir=scratch) as temporary:
+    with tempfile.TemporaryDirectory(prefix='sloomber-parts-', dir=scratch, ignore_cleanup_errors=True) as temporary:
         environment = dict(os.environ, TEMP=temporary, TMP=temporary, TMPDIR=temporary,
                            DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
                            DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
-                           DOTNET_CLI_TELEMETRY_OPTOUT='1')
+                           DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE='true')
         result = subprocess.run(
             [str(DOTNET), 'run', '--project',
              str(ROOT / 'tests/ImportedSloomberPartsHarness/ImportedSloomberPartsHarness.csproj'),

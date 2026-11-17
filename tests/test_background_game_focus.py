@@ -28,12 +28,15 @@ class BackgroundGameFocusTests(unittest.TestCase):
         if not dotnet:
             self.fail('dotnet SDK required')
         project = ROOT / 'tests/BackgroundGameFocusHarness/BackgroundGameFocusHarness.csproj'
-        with tempfile.TemporaryDirectory(prefix='background-focus-') as temporary:
+        # The SDK's background workload-update check can still hold its install log in this TEMP after
+        # `dotnet run` returns (seen on CI): it is disabled, and a log left locked must not fail the test.
+        with tempfile.TemporaryDirectory(prefix='background-focus-', ignore_cleanup_errors=True) as temporary:
             environment = dict(os.environ)
             environment.update(TEMP=temporary, TMP=temporary, TMPDIR=temporary,
                                DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
                                DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
-                               DOTNET_CLI_TELEMETRY_OPTOUT='1')
+                               DOTNET_CLI_TELEMETRY_OPTOUT='1',
+                               DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE='true')
             result = subprocess.run([dotnet, 'run', '--project', str(project), '-c', 'Release',
                                      '--disable-build-servers', '-p:UseSharedCompilation=false'],
                                     cwd=ROOT, env=environment, stdout=subprocess.PIPE,

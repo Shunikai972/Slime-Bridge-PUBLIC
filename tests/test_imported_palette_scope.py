@@ -70,11 +70,11 @@ def test_guards_unregressed_and_registrar_negative_cache_not_pinned():
 
 def test_palette_scope_harness():
     dotnet = Path(os.environ.get('DOTNET_ROOT', str(Path.home() / '.dotnet'))) / 'dotnet.exe'
-    with tempfile.TemporaryDirectory(prefix='palette-scope-', dir=os.environ.get('TMPDIR')) as temporary:
+    with tempfile.TemporaryDirectory(prefix='palette-scope-', dir=os.environ.get('TMPDIR'), ignore_cleanup_errors=True) as temporary:
         environment = dict(os.environ, TEMP=temporary, TMP=temporary, TMPDIR=temporary,
                            DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
                            DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
-                           DOTNET_CLI_TELEMETRY_OPTOUT='1')
+                           DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE='true')
         result = subprocess.run([str(dotnet), 'run', '--project',
                                  str(ROOT / 'tests/ImportedPaletteScopeHarness/ImportedPaletteScopeHarness.csproj'),
                                  '-c', 'Release', '--disable-build-servers', '-p:UseSharedCompilation=false'],

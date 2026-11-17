@@ -16,11 +16,11 @@ HARNESS = ROOT / 'tests/ImportedSourceAnimationHarness'
 
 
 def run_dotnet(arguments):
-    with tempfile.TemporaryDirectory(prefix='source-animation-', dir=os.environ.get('TMPDIR')) as temporary:
+    with tempfile.TemporaryDirectory(prefix='source-animation-', dir=os.environ.get('TMPDIR'), ignore_cleanup_errors=True) as temporary:
         environment = dict(os.environ)
         environment.update(TEMP=temporary, TMP=temporary, TMPDIR=temporary,
                            DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
-                           DOTNET_CLI_TELEMETRY_OPTOUT='1',
+                           DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE='true',
                            DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
         return subprocess.run([str(DOTNET), *arguments, '--disable-build-servers',
                                '-p:BaseIntermediateOutputPath=' + str(Path(temporary) / 'obj') + os.sep,

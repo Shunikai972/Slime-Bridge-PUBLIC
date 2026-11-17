@@ -9,11 +9,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_source_clip_native_sampling_boundary():
     dotnet = Path(os.environ.get('DOTNET_ROOT', str(Path.home() / '.dotnet'))) / 'dotnet.exe'
-    with tempfile.TemporaryDirectory(prefix='animation-probe-', dir=os.environ.get('TMPDIR')) as temporary:
+    with tempfile.TemporaryDirectory(prefix='animation-probe-', dir=os.environ.get('TMPDIR'), ignore_cleanup_errors=True) as temporary:
         environment = dict(os.environ)
         environment.update(TEMP=temporary, TMP=temporary, TMPDIR=temporary,
                            DOTNET_CLI_HOME=temporary, DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false',
-                           DOTNET_CLI_TELEMETRY_OPTOUT='1')
+                           DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE='true')
         result = subprocess.run([str(dotnet), 'run', '--project',
                                  str(ROOT / 'tests/ImportedAnimationProbeHarness/ImportedAnimationProbeHarness.csproj'),
                                  '-c', 'Release', '--disable-build-servers', '-p:UseSharedCompilation=false'],

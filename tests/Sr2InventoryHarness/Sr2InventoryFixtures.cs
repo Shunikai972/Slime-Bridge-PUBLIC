@@ -107,61 +107,9 @@ namespace Il2Cpp
         public string ReferenceId { get; }
         public IdentifiableType(string referenceId) { ReferenceId = referenceId; }
     }
-    public sealed class Ammo : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
-    {
-        public sealed class Slot
-        {
-            public IdentifiableType? Id;
-            public int Count;
-            public bool IsUnlocked = true, Accepts = true;
-            public int Capacity = 10;
-        }
-        public Il2CppReferenceArray<Slot> Slots = new(Array.Empty<Slot?>());
-        public readonly System.Collections.Generic.List<(int Index, int Amount)> Mutations = new();
-        public readonly System.Collections.Generic.List<int> CapacityChecks = new(), AcceptanceChecks = new();
-        public int RefuseMutationAt = -1, ThrowBeforeMutationAt = -1, ThrowAfterMutationAt = -1;
-        public bool WrongSlotDelta, ChangeOtherSlot;
-        public Action? AfterMutation;
-        public int GetSlotCount(int index) { FixtureTrace.CheckThread(); return Slots[index]!.Count; }
-        public int GetSlotMaxCount(IdentifiableType id, int index)
-        { FixtureTrace.CheckThread(); CapacityChecks.Add(index); return Slots[index]!.Capacity; }
-        public bool CouldAddToSlot(IdentifiableType id) => Enumerable.Range(0, Slots.Length).Any(i => CouldAddToSlot(id, i, false));
-        public bool CouldAddToSlot(IdentifiableType id, int index, bool overflow)
-        {
-            FixtureTrace.CheckThread(); AcceptanceChecks.Add(index);
-            if (overflow) throw new InvalidOperationException("overflow must never be requested");
-            var slot = Slots[index];
-            return slot != null && slot.IsUnlocked && slot.Accepts && (slot.Count == 0 || slot.Id?.Pointer == id.Pointer) && slot.Count < slot.Capacity;
-        }
-        public void Decrement(int index, int count)
-        {
-            if (!Mutate(index, count, false, null)) return;
-        }
-        public bool MaybeAddToSpecificSlot(IdentifiableType id, object? emotion, int index, int count, bool overflow)
-        {
-            if (overflow) throw new InvalidOperationException("overflow must never be requested");
-            return Mutate(index, count, true, id);
-        }
-        private bool Mutate(int index, int count, bool adding, IdentifiableType? id)
-        {
-            FixtureTrace.CheckThread();
-            var number = Mutations.Count;
-            Mutations.Add((index, count));
-            if (number == ThrowBeforeMutationAt) throw new IOException("synthetic pre-mutation exception");
-            if (number == RefuseMutationAt) return false;
-            var slot = Slots[index]!;
-            if (!slot.IsUnlocked || (adding && (!slot.Accepts || slot.Count + count > slot.Capacity))) return false;
-            slot.Count += (adding ? count : -count) + (WrongSlotDelta ? 1 : 0);
-            if (adding) slot.Id = id;
-            if (ChangeOtherSlot && Slots.Length > 1) Slots[(index + 1) % Slots.Length]!.Count++;
-            AfterMutation?.Invoke();
-            if (number == ThrowAfterMutationAt) throw new IOException("synthetic post-mutation exception");
-            return true;
-        }
-    }
     public sealed class PlayerState : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
     {
-        public Ammo? Ammo;
+        public Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager? Ammo;
         public int Health = 100;
         public int GetCurrHealth() { FixtureTrace.CheckThread(); return Health; }
     }
@@ -174,7 +122,7 @@ namespace Il2Cpp
     public sealed class GameContext : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
     {
         public static GameContext? Instance;
-        public AutoSaveDirector? AutoSaveDirector;
+        public Il2CppMonomiPark.SlimeRancher.AutoSaveDirector? AutoSaveDirector;
         public LookupDirector? LookupDirector;
     }
     public sealed class LookupDirector : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
@@ -189,20 +137,8 @@ namespace Il2Cpp
     public sealed class SavedGame : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
     {
         public string Name = "fixture_save";
+        public int Slot;                     // 1.x: the current game is a value (name + slot), never a pointer
         public string GetName() { FixtureTrace.CheckThread(); return Name; }
-    }
-    public sealed class AutoSaveDirector : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
-    {
-        public bool loadedGame = true;
-        public string? _currentGameName = "fixture_save";
-        public SavedGame? _savedGame = new();
-        public SavedGame? SavedGame => _savedGame;
-        public StorageProvider? StorageProvider;
-        public StorageProvider? _StorageProvider_k__BackingField => StorageProvider;
-        public Func<bool>? OnSave;
-        public int SaveCalls;
-        public GameData.Summary? LoadSummary(string name) => StorageProvider?.Summaries.GetValueOrDefault(name);
-        public bool SaveAllNow() { FixtureTrace.CheckThread(); SaveCalls++; return OnSave?.Invoke() ?? true; }
     }
     public class StorageProvider : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
     {
@@ -239,8 +175,101 @@ namespace Il2Cpp
         private int _time;
     }
 }
+namespace Il2CppMonomiPark.SlimeRancher.Player
+{
+    using Il2Cpp;
+    // SR2 1.x vacpack: slots live on AmmoSlotManager and every add is keyed on an AmmoMetadata (type + emotions + radiant).
+    public sealed class AmmoSlot
+    {
+        public sealed class AmmoMetadata
+        {
+            public readonly IdentifiableType Id;
+            public AmmoMetadata(IdentifiableType id) { Id = id; }
+        }
+        public IdentifiableType? Id;
+        public int Count;
+        public bool IsUnlocked = true, Accepts = true;
+        public int Capacity = 10;
+    }
+    public sealed class AmmoSlotManager : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+    {
+        public Il2CppReferenceArray<AmmoSlot> Slots = new(Array.Empty<AmmoSlot?>());
+        public readonly System.Collections.Generic.List<(int Index, int Amount)> Mutations = new();
+        public readonly System.Collections.Generic.List<int> AcceptanceChecks = new();
+        public int RefuseMutationAt = -1, ThrowBeforeMutationAt = -1, ThrowAfterMutationAt = -1;
+        public bool WrongSlotDelta, ChangeOtherSlot;
+        public Action? AfterMutation;
+        public int GetSlotCount(int index) { FixtureTrace.CheckThread(); return Slots[index]!.Count; }
+        public bool CouldAddToAnySlot(AmmoSlot.AmmoMetadata metadata)
+        {
+            FixtureTrace.CheckThread();
+            for (var index = 0; index < Slots.Length; index++)
+            {
+                AcceptanceChecks.Add(index);
+                var slot = Slots[index];
+                if (slot != null && slot.IsUnlocked && slot.Accepts && (slot.Count == 0 || slot.Id?.Pointer == metadata.Id.Pointer) && slot.Count < slot.Capacity)
+                    return true;
+            }
+            return false;
+        }
+        public void Decrement(int index, int count)
+        {
+            if (!Mutate(index, count, false, null)) return;
+        }
+        public bool MaybeAddToSpecificSlot(AmmoSlot.AmmoMetadata metadata, int index, int count, bool overflow)
+        {
+            if (overflow) throw new InvalidOperationException("overflow must never be requested");
+            return Mutate(index, count, true, metadata.Id);
+        }
+        private bool Mutate(int index, int count, bool adding, IdentifiableType? id)
+        {
+            FixtureTrace.CheckThread();
+            var number = Mutations.Count;
+            Mutations.Add((index, count));
+            if (number == ThrowBeforeMutationAt) throw new IOException("synthetic pre-mutation exception");
+            if (number == RefuseMutationAt) return false;
+            var slot = Slots[index]!;
+            if (!slot.IsUnlocked || (adding && (!slot.Accepts || slot.Count + count > slot.Capacity))) return false;
+            slot.Count += (adding ? count : -count) + (WrongSlotDelta ? 1 : 0);
+            if (adding) slot.Id = id;
+            if (ChangeOtherSlot && Slots.Length > 1) Slots[(index + 1) % Slots.Length]!.Count++;
+            AfterMutation?.Invoke();
+            if (number == ThrowAfterMutationAt) throw new IOException("synthetic post-mutation exception");
+            return true;
+        }
+    }
+}
 namespace Il2CppMonomiPark.SlimeRancher
 {
+    using Il2Cpp;
+    using Il2CppMonomiPark.SlimeRancher.Persist;
+    // 1.x: the storage provider is a private field and the loaded game is a (name, slot) value; Sr2Compat reads them.
+    public sealed class AutoSaveDirector : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+    {
+        public bool loadedGame = true;
+        public string? _currentGameName = "fixture_save";
+        public SavedGame? _savedGame = new();
+        public SavedGame? SavedGame => _savedGame;
+        public StorageProvider? StorageProvider;
+        public StorageProvider? _storageProvider => StorageProvider;
+        public SaveReferenceTranslation? _saveReferenceTranslation = new();
+        public Func<bool>? OnSave;
+        public int SaveCalls;
+        public GameData.Summary? LoadSummary(string name) => StorageProvider?.Summaries.GetValueOrDefault(name);
+        public bool SaveAllNow() { FixtureTrace.CheckThread(); SaveCalls++; return OnSave?.Invoke() ?? true; }
+    }
+    // 1.x: the director's save translation builds the persistence-id -> type table for one loaded payload.
+    public sealed class SaveReferenceTranslation : Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase
+    {
+        public IdentifiableTypePersistenceIdReverseLookupTable? CreateLoadReferenceTranslation(GameV11 game)
+        {
+            FixtureTrace.CheckThread();
+            var index = game.IdentTypeIndex?.IndexTable;
+            var lookup = GameContext.Instance?.LookupDirector?._identifiableTypeByRefId;
+            if (index == null || lookup == null) return null;
+            return new(index, lookup.Cast<Il2CppSystem.Collections.Generic.IReadOnlyDictionary<string, IdentifiableType>>());
+        }
+    }
     public sealed class IdentifiableTypePersistenceIdReverseLookupTable
     {
         private readonly Il2CppStringArray _index;
@@ -259,7 +288,7 @@ namespace Il2CppMonomiPark.SlimeRancher.Persist
     public sealed class AmmoDataV01 { public int ID, Count; }
     public sealed class PlayerV05 { public Il2CppSystem.Collections.Generic.List<AmmoDataV01?>? Ammo; }
     public sealed class IdentifiableTypeIndexTableV01 { public Il2CppStringArray? IndexTable; }
-    public sealed class GameV06
+    public sealed class GameV11
     {
         public string GameName = "";
         public bool _isLoadSummary;
@@ -304,5 +333,22 @@ namespace Il2Cpp
     public sealed class GameData
     {
         public sealed class Summary { public string Name = "", SaveName = ""; public bool IsInvalid; public DateTimeOffset SaveTimestamp; }
+    }
+}
+
+namespace SlimeBridge.SR2
+{
+    // SYNTHETIC stand-in for the five Sr2Compat members the linked production files call (the real file also maps
+    // cutscenes, currencies and GameMetadata, which this harness does not model). Bodies mirror production.
+    internal static class Sr2Compat
+    {
+        internal static string? CurrentGameName(this Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director) =>
+            director._savedGame == null ? null : director._currentGameName;
+        internal static int CurrentSlot(this Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director) => director._savedGame?.Slot ?? -1;
+        internal static Il2Cpp.StorageProvider? Storage(this Il2CppMonomiPark.SlimeRancher.AutoSaveDirector director) => director._storageProvider;
+        internal static bool CouldAdd(this Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type) =>
+            ammo.CouldAddToAnySlot(new Il2CppMonomiPark.SlimeRancher.Player.AmmoSlot.AmmoMetadata(type));
+        internal static bool AddToSlot(this Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type, int slot, int count) =>
+            ammo.MaybeAddToSpecificSlot(new Il2CppMonomiPark.SlimeRancher.Player.AmmoSlot.AmmoMetadata(type), slot, count, false);
     }
 }

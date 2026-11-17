@@ -95,6 +95,18 @@ namespace SlimeBridge.SR2
             catch (Exception) { return false; }
         }
 
+        // The story/cutscene card UI (the new-game story among others) is up: an active, enabled root on the cutscene director.
+        private static bool StoryOnScreen()
+        {
+            try
+            {
+                var cutscene = Sr2Compat.Cutscene();
+                var root = cutscene != null ? cutscene._uiRoot : null;
+                return root != null && root && root.isActiveAndEnabled;
+            }
+            catch (Exception) { return false; }
+        }
+
         private static string CurrentSave()
         {
             try { return Il2Cpp.GameContext.Instance.AutoSaveDirector.CurrentGameName() ?? ""; } catch (Exception) { return ""; }
@@ -311,6 +323,9 @@ namespace SlimeBridge.SR2
                     if (Time.realtimeSinceStartup < _retryAt || !EnsureAnchor()) return;
                     Build();
                 }
+                // A save made for a crossing opens on the new-game story cards while the player already stands in the world:
+                // no hint over the cards and no crossing until the story has handed control to the player.
+                if (StoryOnScreen()) { _inside = false; return; }
                 Interact();
                 if (_labOut != null) LabScript();
             }

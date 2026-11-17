@@ -3,6 +3,18 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.4] - 2026-11-18
+
+### Fixed
+- Slime Rancher 2: in a save created for a portal crossing, the return portal's hint no longer appears over the new-game
+  story cards, and the portal can only be used once the story has handed control to the player.
+
+### Changed
+- The 24 Largo source models on the `MODELS` branch are lighter (964 MB to 653 MB): textures capped at 2048 px, which the
+  games never exceed when baking (1024 px). Every animation was replayed and compared, and close-up renders are unchanged.
+  The ready-to-play downloads in the launcher are unchanged.
+- The SR2 inventory harness now models the SR2 1.x save and vacpack services, and its wire tests run by default.
+
 ## [0.2.3] - 2026-11-17
 
 ### Fixed

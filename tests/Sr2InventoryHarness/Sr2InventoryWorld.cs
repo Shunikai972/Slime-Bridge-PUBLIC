@@ -1,6 +1,8 @@
 // Authored SYNTHETIC fixtures, never native serialization or user saves.
 using System.Text;
 using Il2Cpp;
+using Il2CppMonomiPark.SlimeRancher;
+using Il2CppMonomiPark.SlimeRancher.Player;
 using SlimeBridge.Shared;
 using SlimeBridge.SR2;
 
@@ -10,7 +12,7 @@ internal sealed class FixtureWorld : IDisposable
     public readonly string Root, JournalPath;
     public readonly IdentifiableType Pink = new(BridgeMod.PinkSlimeRef), Plort = new(BridgeMod.PinkPlortRef), Other = new("fixture.other"),
         Ringtail = new("SlimeDefinition.Ringtail");
-    public readonly Ammo Ammo = new();
+    public readonly AmmoSlotManager Ammo = new();
     public readonly LookupDirector Lookup = new();
     public readonly AutoSaveDirector Director = new();
     public readonly SceneContext Scene = new();
@@ -25,7 +27,7 @@ internal sealed class FixtureWorld : IDisposable
         JournalPath = Path.Combine(Root, "synthetic-op-journal.log");
         Journal = OpJournal.Open(JournalPath, out var error) ?? throw new InvalidOperationException(error);
         Provider = new(Root);
-        Ammo.Slots = new(slots.Select(s => new Ammo.Slot { Id = s.Count == 0 ? null : s.Matching ? Pink : Other,
+        Ammo.Slots = new(slots.Select(s => new AmmoSlot { Id = s.Count == 0 ? null : s.Matching ? Pink : Other,
             Count = s.Count, Capacity = s.Capacity, IsUnlocked = s.Unlocked }).ToArray());
         Lookup._identifiableTypeByRefId![Pink.ReferenceId] = Pink;
         Lookup._identifiableTypeByRefId[Plort.ReferenceId] = Plort;

@@ -1,6 +1,8 @@
 """Production-host gates fed by linked SR2 adapter wire JSON, not native save evidence."""
 import json
 import os
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,17 +15,41 @@ from bridge.transfer.store import TransferStore
 from transfer_binding_fixtures import PairFixture
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _harness_wire():
+    """Build and run the linked Sr2InventoryHarness (real InventoryAgent + Sr2InventoryPersistence against synthetic
+    SR2 1.x doubles) and return its wire rows."""
+    dotnet = os.environ.get('DOTNET_ROOT')
+    dotnet = str(Path(dotnet) / 'dotnet.exe') if dotnet and (Path(dotnet) / 'dotnet.exe').is_file() else shutil.which('dotnet')
+    if not dotnet:
+        raise unittest.SkipTest('dotnet SDK required for the linked SR2 inventory harness')
+    project = ROOT / 'tests/Sr2InventoryHarness/Sr2InventoryHarness.csproj'
+    with tempfile.TemporaryDirectory(prefix='sr2-inventory-', ignore_cleanup_errors=True) as temporary:
+        environment = dict(os.environ)
+        environment.update(TEMP=temporary, TMP=temporary, TMPDIR=temporary, DOTNET_CLI_HOME=temporary,
+                           DOTNET_ADD_GLOBAL_TOOLS_TO_PATH='false', DOTNET_GENERATE_ASPNET_CERTIFICATE='0',
+                           DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE='true')
+        wire = Path(temporary) / 'wire.json'
+        result = subprocess.run([dotnet, 'run', '--project', str(project), '-c', 'Release', '--disable-build-servers',
+                                 '-p:UseSharedCompilation=false', '--', str(wire)],
+                                cwd=ROOT, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                                encoding='utf-8', errors='replace', timeout=300)
+        if result.returncode != 0 or 'failures=0' not in result.stdout:
+            raise AssertionError('Sr2InventoryHarness failed:\n' + result.stdout[-4000:])
+        return json.loads(wire.read_text(encoding='utf-8'))
+
+
 class Sr2InventoryWireTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         path = os.environ.get('SR2_INVENTORY_WIRE')
-        if path is None:
-            raise unittest.SkipTest('Run linked Sr2InventoryHarness to provide SR2_INVENTORY_WIRE')
-        cls.rows = json.loads(Path(path).read_text())
+        cls.rows = json.loads(Path(path).read_text()) if path else _harness_wire()
 
     def test_success_wire_passes_unchanged_production_gate(self):
         rows = [r for r in self.rows if r['scenario'] == 'success']
-        self.assertEqual(len(rows), 6)
+        self.assertEqual(len(rows), 9)              # add, remove, lab_give x pink slime, pink plort, Ringtail
         for row in rows:
             with self.subTest(kind=row['kind'], item=row['item']):
                 self.assertTrue(_valid_command_result(row['wire']))
@@ -56,7 +82,7 @@ class Sr2InventoryWireTests(unittest.TestCase):
 
     def test_failed_replay_is_reconciliation_not_success(self):
         rows = [r for r in self.rows if r['scenario'] == 'replay' and r['change'] != 'none']
-        self.assertEqual(len(rows), 10)
+        self.assertEqual(len(rows), 11)             # ten changed states + the Ringtail changed count
         for row in rows:
             with self.subTest(change=row['change']):
                 self.assertTrue(_valid_command_result(row['wire']))

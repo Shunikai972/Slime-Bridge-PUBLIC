@@ -1,10 +1,11 @@
 """Protected check of SR2 1.x new-game creation on a LAB copy, alone (no SR1, no crossing).
 
-    py -3.12 -m tools.lab.sr2_newgame_probe --sr2 <SR2 folder> [--plugin-dir <built net6.0 folder>] --current-user-authorized
+    py -3.12 -m tools.lab.sr2_newgame_probe --sr2 <SR2 folder> [--plugin-dir <built net6.0 folder>] [--portal] --current-user-authorized
 
 SR2 saves and registry keys are backed up and verified first, the plugin is installed, SR2 is started with
 SLIMEBRIDGE_TRAVEL_MODE=RESUME + SLIMEBRIDGE_TRAVEL_NEW (the launcher's "new save for this ranch" path), the MelonLoader log is
 followed until the game reports the new game (or gives up), then SR2 is stopped and the saves are restored.
+--portal: the plugin's LAB script then looks at the return portal it placed (far + close shots, receipt), price 0.
 """
 from __future__ import annotations
 
@@ -26,7 +27,7 @@ REPO_ROOT = oracle.REPO_ROOT
 NEEDLES = ('travel', 'autoload', 'SlimeBridge_SR2_Core] boot', 'Exception', 'save slot', 'imported', 'user largo', 'visual refused', 'physics')
 
 
-def run(sr2_root, plugin_dir, timeout_s, import_spec=None, import_ops=None):
+def run(sr2_root, plugin_dir, timeout_s, import_spec=None, import_ops=None, portal=False):
     root = validate_lab_destination(Path(sr2_root) / 'SlimeRancher2.exe', oracle.LAB).parent
     exe = root / 'SlimeRancher2.exe'
     log = root / 'MelonLoader' / 'Latest.log'
@@ -53,6 +54,9 @@ def run(sr2_root, plugin_dir, timeout_s, import_spec=None, import_ops=None):
                        SLIMEBRIDGE_IMPORT_CACHE_ROOT=str(REPO_ROOT / 'Lab' / 'AssetCache' / 'sr1-to-sr2'))
             if import_ops:
                 env['SLIMEBRIDGE_IMPORT_OPS'] = json.dumps({'ops': import_ops})
+        if portal:                                               # the return portal's own LAB script: shots + receipt
+            env.update(SLIMEBRIDGE_LAB_EXE=str(exe.resolve()), SLIMEBRIDGE_SR2_PORTAL_LAB_OUT=str(directory),
+                       SLIMEBRIDGE_SR2_PORTAL_LAB_COST='0')
         initial_log = log.read_bytes() if log.is_file() else b''
         started_at_ns = time.time_ns()
 
@@ -76,10 +80,16 @@ def run(sr2_root, plugin_dir, timeout_s, import_spec=None, import_ops=None):
                     while time.monotonic() < end and not (directory / 'imported-ops-receipt.json').is_file():
                         time.sleep(3)
                     time.sleep(8)
+                if portal:
+                    end = time.monotonic() + 180
+                    while time.monotonic() < end and not (directory / 'sr2-portal-receipt.json').is_file():
+                        time.sleep(3)
+                    receipt = directory / 'sr2-portal-receipt.json'
+                    result['portal'] = json.loads(receipt.read_text(encoding='utf-8')) if receipt.is_file() else None
                 result['screen'] = grab(directory, 'sr2-new-game')
                 text = fresh()
                 result['lines'] = [l for l in text.splitlines() if any(n in l for n in NEEDLES)][-60:]
-                result['passed'] = True
+                result['passed'] = not portal or bool(result.get('portal'))
                 break
             if any('giving up' in l for l in lines):
                 break
@@ -106,10 +116,11 @@ def main(argv=None):
     parser.add_argument('--current-user-authorized', action='store_true')
     parser.add_argument('--import-spec', help='import-spec-SR2.json to register in that game')
     parser.add_argument('--import-ops', default='[]', help='JSON list of imported-species ops (spawn:largo.x.y, diet:...)')
+    parser.add_argument('--portal', action='store_true', help='also photograph the return portal (LAB script, price 0)')
     args = parser.parse_args(argv)
     if not args.current_user_authorized:
         raise SystemExit('--current-user-authorized is required')
-    result = run(args.sr2, args.plugin_dir, args.timeout, args.import_spec, json.loads(args.import_ops) or None)
+    result = run(args.sr2, args.plugin_dir, args.timeout, args.import_spec, json.loads(args.import_ops) or None, args.portal)
     print('\n'.join(result['lines'][-25:]))
     print(json.dumps({k: result.get(k) for k in ('passed', 'screen', 'saves_match_backup_after_restore')}))
     return 0 if result['passed'] else 1

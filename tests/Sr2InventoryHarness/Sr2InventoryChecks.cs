@@ -45,8 +45,8 @@ internal static class Program
         tests.Add(("new revision during readback invalidates proof", () => Bad(w=>w.Provider.OnRead=()=>w.Provider.AddSyntheticRevision(FixtureWorld.Identity+"_2",w.Payload()))));
         tests.Add(("provider replacement during readback invalidates proof", () => Bad(w=>w.Provider.OnRead=()=>w.Director.StorageProvider=new Il2Cpp.FileStorageProvider(w.Root))));
         tests.Add(("root change during readback invalidates proof", () => Bad(w=>w.Provider.OnRead=()=>w.Provider.savePath=w.Root+"-changed")));
-        tests.Add(("director replacement during readback invalidates proof", () => Bad(w=>w.Provider.OnRead=()=>Il2Cpp.GameContext.Instance!.AutoSaveDirector=new Il2Cpp.AutoSaveDirector())));
-        tests.Add(("saved pointer replacement during readback invalidates proof", () => Bad(w=>w.Provider.OnRead=()=>w.Director._savedGame=new Il2Cpp.SavedGame())));
+        tests.Add(("director replacement during readback invalidates proof", () => Bad(w=>w.Provider.OnRead=()=>Il2Cpp.GameContext.Instance!.AutoSaveDirector=new Il2CppMonomiPark.SlimeRancher.AutoSaveDirector())));
+        tests.Add(("saved pointer replacement during readback invalidates proof", () => Bad(w=>w.Provider.OnRead=()=>w.Director._savedGame=new Il2Cpp.SavedGame{Slot=1})));
         var failures=0; var skips=0;
         Console.WriteLine("SYNTHETIC SR2 inventory proof/replay harness; not native runtime or save-format evidence.");
         foreach(var (name,test) in tests) { try { test(); Console.WriteLine("PASS "+name); } catch(PersistenceChecks.UnavailableFixtureException ex) { skips++; Console.WriteLine("SKIP "+name+": "+ex.Message); } catch(Exception ex) { failures++; Console.WriteLine("FAIL "+name+": "+ex.Message); } }

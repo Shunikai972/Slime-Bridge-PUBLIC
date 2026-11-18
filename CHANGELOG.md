@@ -3,6 +3,52 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.6] - 2026-11-18
+
+### Added
+- **Play together with one code** (Multi > Play together). Host in both games, or only one, and the launcher shows the
+  code to share.
+  - Slime Rancher 2 hosts first with Ranching Together's Auto Host. Without UPnP on the router, it hosts on UDP port
+    1919 instead, and the page says to forward that port.
+  - Slime Rancher then opens its SRMP lobby under the same code.
+  - A friend types the code in the launcher or in Slime Rancher's SRMP menu. A 7-character SRMP code still joins Slime
+    Rancher alone.
+  - For Slime Rancher 2, the friend loads a separate, empty save and joins in Ranching Together's own menu (F4):
+    joining can reset the loaded save, so the launcher never joins Slime Rancher 2 by itself.
+  - The launcher starts the games when they are not running. You choose your own online name on the Multi page (or
+    keep the one from SRMP's menu). Without a name, Slime Rancher does not go online and the page asks for one.
+  - Every player needs SlimeBridge 0.2.6: its SRMP build accepts the shared code.
+- Imported species now travel in the vacpack too:
+  - in Slime Rancher: Cotton, Angler and the other Slime Rancher 2 species;
+  - in Slime Rancher 2: Quantum, Rad and Mosaic;
+  - their plorts and the Largos.
+
+  What the other game has no item for stays in the vacpack it came from, and a message says so.
+
+### Changed
+- Launcher: five tabs (Home, News, Setup, Mods, Multi).
+  - Setup puts the games and the extraction on one page, plus the saves.
+  - Mods has a Largos sub-tab.
+  - The gear in the header opens the settings, help and console, and About (with the credits).
+  - The light bulb opens the tutorial, which also opens on the first start.
+- Continue starts both games again when your last save is linked. The game you were in comes to the front, and its
+  partner waits behind its portal on the linked save.
+- The two games are one session: closing the game you are in saves the other one and closes it.
+  - The waiting game checks that it is still the same process on the same save.
+  - It stays open if the game refuses to save.
+- Both games save right after items cross the portal, and when they are closed.
+- The source of a crossing never gives up more items than it offered, whatever the destination reports. A difference is
+  logged.
+- Travel instructions are matched to the operation they answer, and a cancelled crossing can no longer be applied late.
+
+### Fixed
+- The vacpack carry ignored every imported species: Cotton slimes stayed behind in Slime Rancher 2. A Slime Rancher 2
+  imported Largo could also have arrived as a plain slime of one of its parents.
+- A link between two saves was dropped, and a new save made, when the launcher could not list the other game's saves
+  (saves kept outside the usual folder). The linked save is now used.
+- "Continue" pointed at the wrong game after starting both games.
+- The Multi page keeps what you type while it refreshes, and ignores out-of-date answers.
+
 ## [0.2.5] - 2026-11-18
 
 ### Added

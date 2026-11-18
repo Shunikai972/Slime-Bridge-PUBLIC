@@ -273,3 +273,16 @@ ul.clean { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; } 
 .credit-row b { font: 600 16px var(--font-display); color: var(--ink); }
 @media (max-width: 1100px) { .thanks img { width: 130px; } .thanks-text { font-size: 16px; } }
 @media (max-height: 780px) { .nav { gap: 4px; } .nav-item { padding: 6px 14px; font-size: 15px; } .nav-item svg { width: 22px; height: 22px; } #side { padding-top: 14px; } }
+
+/* sub-tabs at the top of a page (Setup: games & extraction / saves; Mods: mods / largos; Settings: settings / help / about) */
+.subnav { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.subtab { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 18px; border: 2px solid rgba(255, 255, 255, .7); background: rgba(255, 255, 255, .72);
+  font-family: var(--font-display); font-weight: 500; font-size: 15px; color: #1d3050; cursor: pointer; transition: transform .2s var(--ease-spring); }
+.subtab svg { width: 20px; height: 20px; }
+.subtab:hover { transform: translateY(-2px); }
+.subtab[aria-selected="true"] { background: linear-gradient(180deg, #ff7aa6, #ff4585); color: #fff; border-color: rgba(255, 255, 255, .55); box-shadow: 0 4px 0 #c42a67; }
+#extract > .page { padding-top: 0; }
+
+/* Multi: the one code shared by both games */
+.mp-together .mp-code label { display: block; font-weight: 700; margin-bottom: 6px; }
+.mp-code-value { font-size: 30px; letter-spacing: .12em; padding: 8px 18px; border-radius: 14px; background: #fff; border: 3px solid #ff7aa6; user-select: all; }

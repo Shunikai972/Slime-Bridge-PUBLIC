@@ -15,8 +15,19 @@ namespace SlimeBridge.Shared
     /// <summary>One instruction the launcher relayed through BridgeHost for this game.</summary>
     internal sealed class TravelMessage
     {
-        public string Kind = "", TransitionId = "", MessageId = "", Destination = "", Source = "", PortalId = "", Reason = "", Policy = "", CarryMode = "NONE";
+        public string Kind = "", TransitionId = "", MessageId = "", Destination = "", Source = "", PortalId = "", Reason = "", Policy = "", CarryMode = "NONE", Code = "", Name = "";
+        public int TargetPid;
+        public string TargetSave = "";
         public Dictionary<string, int> Carry = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        internal bool Targets(int pid, string? save) => TargetPid > 0 && TargetPid == pid && TargetSave.Length > 0 &&
+            string.Equals(TargetSave, save, StringComparison.Ordinal);
+
+        internal string SaveForClose(int pid, Func<string?> readSave, Func<bool> save)
+        {
+            if (!Targets(pid, readSave())) return "wrong_save_or_process";
+            return save() && Targets(pid, readSave()) ? "" : "save_not_confirmed";
+        }
 
         internal static TravelMessage? Parse(string json)
         {
@@ -26,8 +37,10 @@ namespace SlimeBridge.Shared
             var m = new TravelMessage
             {
                 Kind = S("kind"), TransitionId = S("transition_id"), MessageId = S("message_id"), Destination = S("destination"),
-                Source = S("source"), PortalId = S("portal_id"), Reason = S("reason"), Policy = S("policy"),
+                Source = S("source"), PortalId = S("portal_id"), Reason = S("reason"), Policy = S("policy"), Code = OnlineCodes.Clean(S("code")), Name = OnlineCodes.CleanName(S("name")),
                 CarryMode = d.TryGetValue("carry_mode", out var cm) && cm is string cms && cms.Length > 0 ? cms : "NONE",
+                TargetPid = d.TryGetValue("target_pid", out var rawPid) && rawPid is long pid && pid > 0 && pid <= int.MaxValue ? (int)pid : 0,
+                TargetSave = S("target_save"),
             };
             if (d.TryGetValue("carry", out var carry) && carry is Dictionary<string, object?> items)
                 foreach (var item in items)
@@ -56,7 +69,7 @@ namespace SlimeBridge.Shared
     }
 
     /// <summary>
-    /// Takes the launcher's instructions (prepare_departure, hold, resume, arrive, abort) at-least-once and reports the matching
+    /// Takes the launcher's instructions (prepare_departure, hold, resume, arrive, abort, save_quit) at-least-once and reports the matching
     /// event. An instruction stays at the head of the host mailbox until acknowledged, so a lost report is re-sent when it comes
     /// back. If this game stays held while BridgeHost disappears, it resumes by itself: the player is never stranded.
     /// </summary>
@@ -89,6 +102,9 @@ namespace SlimeBridge.Shared
             "resume" => "resumed",
             "arrive" => "arrived",
             "abort" => "aborted",
+            "save_quit" => "saved",
+            "online_host" => "online_done",
+            "online_join" => "online_done",
             _ => "failed",
         };
 
@@ -96,8 +112,16 @@ namespace SlimeBridge.Shared
         {
             if (_hasResult && _current != null) Finish(now);
             var message = _transport.Next(now);
+            if (now - _transport.LastContact > HeldWithoutHostSeconds)
+            {
+                if (_realm.Held && !_autoResumeStarted)
+                {
+                    if (_current != null) { _realm.Cancel(); _current = null; _hasResult = false; }
+                    AutoResume(now);
+                }
+                return;
+            }
             if (message != null) Handle(message, now);
-            else if (_current == null && _realm.Held && now - _transport.LastContact > HeldWithoutHostSeconds) AutoResume(now);
             // A synchronous hold/resume must not wait for another 4-FPS standby frame to report.
             if (_hasResult && _current != null) Finish(now);
         }
@@ -212,7 +236,7 @@ namespace SlimeBridge.Shared
                     Volatile.Write(ref _lastContact, _clock());
                 }
             }
-            catch (Exception) { /* BridgeHost away: keep the last answer, LastContact ages */ }
+            catch (Exception) { Volatile.Write(ref _latest, null); }
             finally { Interlocked.Exchange(ref _inFlight, 0); }
         }
 

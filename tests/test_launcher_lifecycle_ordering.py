@@ -45,6 +45,51 @@ def test_already_queued_portal_cannot_begin_after_stop_intent(tmp_path,closing):
     coord._select_audio_front.assert_not_called()
 
 
+def test_launcher_cannot_join_sr2_on_the_players_save(tmp_path):
+    api, _ = api_for(tmp_path)
+    api._host.start = mock.Mock()
+    api._ensure_travel_loop = mock.Mock()
+    api._start_for_online = mock.Mock()
+    api._travel.online.join = mock.Mock()
+    assert api.mp_join('Rk7mP2xQa') == {'ok': False, 'error': 'SR2_JOIN_IN_GAME'}
+    api._host.start.assert_not_called()
+    api._ensure_travel_loop.assert_not_called()
+    api._start_for_online.assert_not_called()
+    api._travel.online.join.assert_not_called()
+
+
+@pytest.mark.parametrize('op', ['host', 'join'])
+def test_sr1_online_does_not_start_the_linked_sr2_save(tmp_path, op):
+    api, _ = api_for(tmp_path)
+    api._primary = lambda realm: {'game': realm, 'root': str(tmp_path / realm)}
+    api._launcher.running = lambda realm: False
+    api._host = mock.Mock()
+    api._host.realm_env.return_value = {}
+    api._ensure_travel_loop = mock.Mock()
+    api._keep_in_front = mock.Mock()
+    api._session.set('SR1', 'sr1-save')
+    api._travel._links.remember('sr1-save', 'sr2-save')
+    with mock.patch('apps.launcher.desktop.pack.is_lab_copy', return_value=False), mock.patch.object(api._launcher, 'launch') as launch:
+        result = api.mp_host('SR1') if op == 'host' else api.mp_join('K7QX2PA')
+    assert result['ok']
+    assert [c.args[0]['game'] for c in launch.call_args_list] == ['SR1']
+    assert launch.call_args.kwargs['extra_env']['SLIMEBRIDGE_TRAVEL_SAVE'] == 'sr1-save'
+
+
+def test_both_online_preflights_missing_game_before_launch(tmp_path):
+    api, _ = api_for(tmp_path)
+    api._primary = lambda realm: None if realm == 'SR1' else {'game': realm, 'root': str(tmp_path / realm)}
+    api._launcher.running = lambda realm: False
+    api._host = mock.Mock()
+    api._host.realm_env.return_value = {}
+    api._ensure_travel_loop = mock.Mock()
+    with mock.patch('apps.launcher.desktop.pack.is_lab_copy', return_value=False), mock.patch.object(api._launcher, 'launch') as launch:
+        result = api.mp_host('BOTH')
+    assert (result['ok'], result['error'], result['realm']) == (False, 'GAME_NOT_FOUND', 'SR1')
+    assert api._travel.online.request is None
+    launch.assert_not_called()
+
+
 def test_closing_state_clears_after_real_exit_and_after_new_child(tmp_path):
     api,exe=api_for(tmp_path)
     with mock.patch('tools.lab.process_guard.process_image_path',return_value=exe):api.game_stop('SR2')
@@ -199,3 +244,47 @@ def test_older_window_arrangement_cannot_release_newer_startup_pin(tmp_path):
         api._keep_in_front('SR1', api._audio_startup_epoch)
     assert api._audio_startup_deadline==456.0
     control.focus.assert_not_called()
+
+
+@pytest.mark.parametrize('last,partner',[('SR1','SR2'),('SR2','SR1')])
+def test_continue_starts_both_games_on_the_linked_pair_and_keeps_the_session(tmp_path,last,partner):
+    api,exe=api_for(tmp_path)
+    api._audio=mock.Mock()
+    api._host=mock.Mock()
+    api._host.realm_env.return_value={}
+    api._ensure_travel_loop=mock.Mock()
+    api._keep_in_front=mock.Mock()
+    api._primary=lambda realm:{'game':realm,'root':str(tmp_path/realm)}
+    for child in api._launcher._children.values():
+        child.poll.return_value=0                                   # nothing runs yet
+    api._travel._links.remember('ranch-sr1','ranch-sr2')
+    api._session.set(last,'ranch-'+last.lower())
+    started=[]
+    def start(installation,extra_env=None):
+        started.append((installation['game'],dict(extra_env or {})))
+        return {'realm':installation['game'],'pid':1}
+    with mock.patch('apps.launcher.desktop.pack.is_lab_copy',return_value=False),mock.patch.object(api._launcher,'launch',side_effect=start):
+        result=api.launch(last,confirmed=True,resume=True)
+    assert result['ok'] and result['front']==last
+    envs=dict(started)
+    assert [g for g,_ in started]==[last,partner], 'the game the player was in first, its partner behind'
+    assert (envs[last]['SLIMEBRIDGE_TRAVEL_MODE'],envs[last]['SLIMEBRIDGE_TRAVEL_SAVE'])==('RESUME','ranch-'+last.lower())
+    assert (envs[partner]['SLIMEBRIDGE_TRAVEL_MODE'],envs[partner]['SLIMEBRIDGE_TRAVEL_SAVE'])==('DESTINATION','ranch-'+partner.lower())
+    assert api._session.get()['realm']==last and api._session.get()['save']=='ranch-'+last.lower(), 'Continue still points at the front game'
+    assert (api._travel._front,api._travel._parked)==(last,partner)
+
+
+def test_continue_without_a_partner_starts_only_that_game(tmp_path):
+    api,exe=api_for(tmp_path)
+    api._audio=mock.Mock()
+    api._host=mock.Mock()
+    api._host.realm_env.return_value={}
+    api._ensure_travel_loop=mock.Mock()
+    api._primary=lambda realm:{'game':realm,'root':str(tmp_path/realm)}
+    for child in api._launcher._children.values():
+        child.poll.return_value=0
+    api._session.set('SR1','solo-ranch')
+    started=[]
+    with mock.patch('apps.launcher.desktop.pack.is_lab_copy',return_value=False),mock.patch.object(api._launcher,'launch',side_effect=lambda i,extra_env=None:started.append(i['game']) or {'pid':1}):
+        assert api.launch('SR1',confirmed=True,resume=True)['ok']
+    assert started==['SR1']

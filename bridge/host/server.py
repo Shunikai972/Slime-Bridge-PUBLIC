@@ -37,8 +37,13 @@ def _bounded_str(value, limit: int) -> bool:
 PORTAL_REQUEST_LIMIT = 64
 TRAVEL_EVENT_LIMIT = 500
 TRAVEL_QUEUE_LIMIT = 16
-TRAVEL_MESSAGE_KINDS = ('prepare_departure', 'hold', 'resume', 'arrive', 'abort')
-TRAVEL_EVENT_KINDS = ('departure_ready', 'held', 'resumed', 'arrived', 'aborted', 'failed')
+TRAVEL_EXPECTED_EVENTS = {'prepare_departure': 'departure_ready', 'hold': 'held', 'resume': 'resumed',
+                          'arrive': 'arrived', 'abort': 'aborted', 'save_quit': 'saved',
+                          'online_host': 'online_done', 'online_join': 'online_done'}
+TRAVEL_MESSAGE_KINDS = tuple(TRAVEL_EXPECTED_EVENTS)
+TRAVEL_EVENT_KINDS = frozenset(TRAVEL_EXPECTED_EVENTS.values()) | {'failed'}
+ONLINE_CODE = re.compile(r'\A[A-Za-z0-9]{0,16}\Z')
+ONLINE_NAME = re.compile(r'\A[A-Za-z_][A-Za-z0-9_]{0,23}\Z')
 _TRAVEL_ID = re.compile(r'[A-Za-z0-9._-]{1,64}')
 CARRY_MODES = ('ALL', 'SLIMES_PLORTS', 'NONE')
 CARRY_ENTRY_LIMIT = 64
@@ -73,9 +78,21 @@ def _valid_travel_send(data) -> bool:
     message = data['message']
     if not isinstance(message, dict) or message.get('kind') not in TRAVEL_MESSAGE_KINDS:
         return False
+    if data['realm'] == 'SR2' and message['kind'] == 'online_join':
+        return False
     if not isinstance(message.get('transition_id'), str) or _TRAVEL_ID.fullmatch(message['transition_id']) is None:
         return False
-    allowed = {'kind', 'transition_id', 'destination', 'source', 'portal_id', 'reason', 'policy', 'carry', 'carry_mode'}
+    allowed = {'kind', 'transition_id', 'destination', 'source', 'portal_id', 'reason', 'policy', 'carry', 'carry_mode', 'code', 'name'}
+    if 'name' in message and (not isinstance(message['name'], str) or ONLINE_NAME.fullmatch(message['name']) is None):
+        return False
+    target_fields = {'target_pid', 'target_save'}
+    if message['kind'] == 'save_quit':
+        if (type(message.get('target_pid')) is not int or not 0 < message['target_pid'] < 2 ** 31 or
+                not _bounded_str(message.get('target_save'), 128) or not message['target_save'].strip()):
+            return False
+        allowed |= target_fields
+    if 'code' in message and (not isinstance(message['code'], str) or ONLINE_CODE.fullmatch(message['code']) is None):
+        return False
     if set(message) - allowed:
         return False
     if 'carry' in message and not _valid_carry(message['carry']):
@@ -83,7 +100,7 @@ def _valid_travel_send(data) -> bool:
     if message.get('carry_mode', 'NONE') not in CARRY_MODES:
         return False
     return all(isinstance(message.get(k, ''), str) and len(message.get(k, '')) <= 80
-               for k in allowed - {'kind', 'transition_id', 'carry'})
+               for k in allowed - {'kind', 'transition_id', 'carry'} - target_fields)
 
 
 def _valid_portal_cross(data) -> bool:
@@ -93,6 +110,17 @@ def _valid_portal_cross(data) -> bool:
     return (data['protocol_version'] == 1 and data['message_type'] == 'portal_cross' and data['realm'] in ('SR1', 'SR2')
             and _bounded_str(data['portal_id'], 64) and re.fullmatch(r'[a-z0-9][a-z0-9._-]{0,63}', data['portal_id']) is not None
             and _bounded_str(data['save_id'], 128) and bool(data['save_id'].strip()) and _bounded_str(data['request_id'], 128))
+
+
+def _valid_online(online) -> bool:
+    """The game's online mod as the plugin sees it (SRMP / Ranching Together): flags, the shareable code, a short reason."""
+    flags = {'mod', 'signed_in', 'hosting', 'connected'}
+    if not isinstance(online, dict) or set(online) != flags | {'code', 'error'}:
+        return False
+    if any(type(online[key]) is not bool for key in flags):
+        return False
+    return (isinstance(online['code'], str) and ONLINE_CODE.fullmatch(online['code']) is not None
+            and isinstance(online['error'], str) and len(online['error']) <= 80)
 
 
 def _valid_heartbeat(data) -> bool:
@@ -107,6 +135,8 @@ def _valid_heartbeat(data) -> bool:
         return False
     version = data.get('plugin_version')
     if version is not None and not _bounded_str(version, 64):
+        return False
+    if 'online' in data and not _valid_online(data['online']):
         return False
     if 'status' in data:
         status = data['status']
@@ -416,6 +446,7 @@ class BridgeHost:
                             'received_monotonic': tick,
                             'count': previous.get('count', 0) + 1,
                             **({'status': data['status']} if 'status' in data else {}),
+                            **({'online': data['online']} if 'online' in data else {}),
                         }
                     return self._reply(200, {'protocol_version': 1, 'message_type': 'heartbeat_ack', 'request_id': data['request_id']})
 
@@ -424,7 +455,16 @@ class BridgeHost:
                         return self._reply(400, {'error': 'invalid_message'})
                     if not self._authorized(data['realm']):
                         return self._reply(401, {'error': 'unauthorized'})
-                    outer.travel_record(data)
+                    if not outer.travel_record(data):
+                        return self._reply(409, {'error': 'travel_ack_mismatch'})
+                    return self._reply(200, {'protocol_version': 1, 'ok': True})
+                if self.path == '/v1/travel/cancel':
+                    if not self._authorized(admin_only=True):
+                        return self._reply(401, {'error': 'unauthorized'})
+                    if (not isinstance(data, dict) or set(data) != {'transition_id'} or
+                            not isinstance(data['transition_id'], str) or not _TRAVEL_ID.fullmatch(data['transition_id'])):
+                        return self._reply(400, {'error': 'invalid_message'})
+                    outer.travel_cancel(data['transition_id'])
                     return self._reply(200, {'protocol_version': 1, 'ok': True})
                 if self.path == '/v1/travel/send':
                     if not self._authorized(admin_only=True):
@@ -618,17 +658,30 @@ class BridgeHost:
         with self._lock:
             return dict(self._travel_queue[realm][0]) if self._travel_queue[realm] else None
 
-    def travel_record(self, data: dict) -> None:
+    def travel_cancel(self, transition_id: str) -> None:
         with self._lock:
-            ack = data.get('ack_id')
+            for queue in self._travel_queue.values():
+                queue[:] = [m for m in queue if m['transition_id'] != transition_id]
+
+    def travel_record(self, data: dict) -> bool:
+        with self._lock:
+            ack, realm, tid, kind = data.get('ack_id'), data['realm'], data['transition_id'], data['event']
+            detail, carry = data.get('detail', ''), dict(data.get('carry') or {})
             if ack:
-                queue = self._travel_queue[data['realm']]
-                queue[:] = [m for m in queue if m['message_id'] != ack]
+                queue = self._travel_queue[realm]
+                head = queue[0] if queue else None
+                if head is None or head['message_id'] != ack:
+                    return any((e.get('ack_id'), e['realm'], e['transition_id'], e['event'], e['detail'], e['carry']) ==
+                               (ack, realm, tid, kind, detail, carry) for e in self._travel_events)
+                if head['transition_id'] != tid or kind not in (TRAVEL_EXPECTED_EVENTS[head['kind']], 'failed'):
+                    return False
+                queue.pop(0)
             self._travel_seq += 1
-            self._travel_events.append({'seq': self._travel_seq, 'realm': data['realm'], 'transition_id': data['transition_id'],
-                                        'event': data['event'], 'detail': data.get('detail', ''), 'carry': dict(data.get('carry') or {}),
+            self._travel_events.append({'seq': self._travel_seq, 'realm': realm, 'transition_id': tid,
+                                        'event': kind, 'detail': detail, 'carry': carry, 'ack_id': ack,
                                         'received_unix': time.time()})
             del self._travel_events[:-TRAVEL_EVENT_LIMIT]
+            return True
 
     def travel_events(self, since: int = 0) -> list[dict]:
         with self._lock:

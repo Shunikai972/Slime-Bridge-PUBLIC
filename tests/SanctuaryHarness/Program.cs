@@ -107,6 +107,7 @@ internal static class Program
 
         // items that travel: reported with the completion, re-sent with a redelivered instruction
         r.Immediate = true; r.Ok = true; r.ThrowOnExecute = false; r.Carry = new Dictionary<string, int> { ["CARROT_VEGGIE"] = 3 };
+        t.LastContact = 50;
         t.Head = Msg("arrive", "m7");
         agent.Tick(50); agent.Tick(51);
         Check(t.Reports.Last().Event == "arrived" && t.Reports.Last().Carry != null && t.Reports.Last().Carry!["CARROT_VEGGIE"] == 3, "accepted items are reported with the event");
@@ -116,14 +117,45 @@ internal static class Program
               && CarryNames.Canonical("PINK_SLIME") == CarryNames.Canonical("SlimeDefinition.Pink") && CarryNames.Canonical("PEAR_FRUIT") == "pear", "the two games' names meet on one canonical key");
         Check(CarryNames.Allowed("ALL", "HEN") && !CarryNames.Allowed("NONE", "PINK_PLORT") && CarryNames.Allowed("SLIMES_PLORTS", "PINK_PLORT") && CarryNames.Allowed("SLIMES_PLORTS", "IdentifiableType.PinkPlort")
               && CarryNames.Allowed("SLIMES_PLORTS", "SlimeDefinition.Pink") && !CarryNames.Allowed("SLIMES_PLORTS", "CARROT_VEGGIE") && !CarryNames.Allowed("ALL", ""), "carry modes filter what may travel");
+        // Imported species: SR1 knows Cotton only as the bridge id, SR2 knows Quantum only under its SlimeBridge reference id.
+        Check(CarryNames.Canonical("slime.cotton") == CarryNames.Canonical("SlimeDefinition.Cotton") && CarryNames.Canonical("slime.cotton") == "cotton"
+              && CarryNames.Canonical("plort.cotton") == CarryNames.Canonical("IdentifiableType.CottonPlort") && CarryNames.Canonical("plort.cotton") != CarryNames.Canonical("slime.cotton")
+              && CarryNames.Canonical("SlimeBridge.SlimeDefinition.quantum") == CarryNames.Canonical("QUANTUM_SLIME")
+              && CarryNames.Canonical("SlimeBridge.IdentifiableType.quantumPlort") == CarryNames.Canonical("QUANTUM_PLORT"), "imported species and plorts meet the other game's native names");
+        Check(CarryNames.Canonical("SlimeBridge.SlimeDefinition.largo.angler.mosaic") == "largo:angler+mosaic" && CarryNames.Canonical("SlimeBridge.SlimeDefinition.largo.angler.mosaic") != CarryNames.Canonical("MOSAIC_SLIME")
+              && CarryNames.Canonical("largo.angler.batty") == CarryNames.Canonical("SlimeDefinition.AnglerBatty")
+              && CarryNames.Canonical("PINK_TABBY_LARGO") == CarryNames.Canonical("SlimeDefinition.PinkTabby") && CarryNames.Canonical("SlimeDefinition.CottonPink") == CarryNames.Canonical("largo.pink.cotton")
+              && CarryNames.Canonical("largo.pink.slumber") == CarryNames.Canonical("SlimeDefinition.PinkSloomber"), "a Largo never collapses to one parent and both games' orders meet");
+        Check(CarryNames.Allowed("SLIMES_PLORTS", "slime.cotton") && CarryNames.Allowed("SLIMES_PLORTS", "plort.cotton") && CarryNames.Allowed("SLIMES_PLORTS", "PINK_TABBY_LARGO")
+              && CarryNames.Allowed("SLIMES_PLORTS", "SlimeBridge.SlimeDefinition.largo.angler.rad"), "imported slimes, plorts and Largos count as slimes and plorts");
+        Check(CarryNames.Left(new Dictionary<string, int> { ["SlimeDefinition.Cotton"] = 3, ["IdentifiableType.CarrotVeggie"] = 7 }, new Dictionary<string, int> { ["IdentifiableType.CarrotVeggie"] = 7 }) == "Cotton x3"
+              && CarryNames.Left(new Dictionary<string, int> { ["PINK_PLORT"] = 2 }, new Dictionary<string, int> { ["PINK_PLORT"] = 2 }) == ""
+              && CarryNames.Display("largo.angler.rad") == "Angler Rad Largo", "what stays behind is named for the player");
+        var hostMessage = TravelMessage.Parse("{\"message\":{\"kind\":\"online_host\",\"transition_id\":\"o1\",\"message_id\":\"m1\",\"code\":\"Rk7m-P2xQa\"}}");
+        Check(hostMessage != null && hostMessage.Code == "Rk7mP2xQa" && TravelAgent.EventFor("online_host") == "online_done" && TravelAgent.EventFor("online_join") == "online_done"
+              && TravelAgent.EventFor("save_quit") == "saved", "online and closing instructions parse and report");
+        var close = TravelMessage.Parse("{\"message\":{\"kind\":\"save_quit\",\"transition_id\":\"t\",\"message_id\":\"m\",\"target_pid\":731,\"target_save\":\"ranch\"}}")!;
+        var saveCalls = 0;
+        Check(close.SaveForClose(732, () => "ranch", () => { ++saveCalls; return true; }) == "wrong_save_or_process" && saveCalls == 0,
+              "a replacement process cannot save and close");
+        Check(close.SaveForClose(731, () => "ranch", () => false) == "save_not_confirmed", "save refusal cannot arm close");
+        Check(close.SaveForClose(731, () => saveCalls == 0 ? "ranch" : "other", () => { ++saveCalls; return true; }) == "save_not_confirmed",
+              "a changed world cannot arm close");
+        Check(OnlineCodes.IsSession("Rk7mP2xQa") && !OnlineCodes.IsSession("Rk7mP2xQ0") && !OnlineCodes.IsSession("Rk7mP2xQ") && OnlineCodes.IsSr1("K7QX2PA") && !OnlineCodes.IsSr1("k7qx2pa")
+              && OnlineCodes.Clean("a b\"c") == "abc", "session and SRMP code formats");
+        Check(OnlineCodes.CleanName("Noam_42") == "Noam_42" && OnlineCodes.CleanName("9lives") == "" && OnlineCodes.CleanName("two words") == "" && OnlineCodes.CleanName("") == ""
+              && TravelMessage.Parse("{\"message\":{\"kind\":\"online_host\",\"transition_id\":\"o2\",\"message_id\":\"m2\",\"name\":\"Noam_42\"}}")!.Name == "Noam_42", "only a name the player typed reaches SRMP");
+        var online = new OnlineState { mod = true, signed_in = true, hosting = true, code = "Rk7mP2xQa", error = "auto_host: no \"UPnP\"\n" }.Json();
+        Check(online == "{\"mod\":true,\"signed_in\":true,\"hosting\":true,\"connected\":false,\"code\":\"Rk7mP2xQa\",\"error\":\"auto_host: no UPnP\"}", "the online report is plain JSON");
 
         var t2 = new FakeTransport(); var r2 = new FakeRealm { Held = true };
         var agent2 = new TravelAgent(t2, r2, logs.Add);
         t2.LastContact = 100;
         agent2.Tick(100 + TravelAgent.HeldWithoutHostSeconds - 1);
         Check(r2.Calls.Count == 0, "a held game waits while BridgeHost was heard recently");
+        t2.Head = new TravelMessage { Kind = "hold", TransitionId = "stale", MessageId = "stale" };
         agent2.Tick(100 + TravelAgent.HeldWithoutHostSeconds + 1);
-        Check(r2.Calls.SequenceEqual(new[] { "resume" }) && t2.Reports.Count == 0, "a held game resumes on its own when BridgeHost stays silent, without reporting");
+        Check(r2.Calls.SequenceEqual(new[] { "resume" }) && t2.Reports.Count == 0, "a held game resumes on its own even with a cached mailbox head");
         Check(TravelAgent.EventFor("prepare_departure") == "departure_ready" && TravelAgent.EventFor("hold") == "held" && TravelAgent.EventFor("resume") == "resumed"
               && TravelAgent.EventFor("arrive") == "arrived" && TravelAgent.EventFor("abort") == "aborted" && TravelAgent.EventFor("zzz") == "failed", "event names");
     }

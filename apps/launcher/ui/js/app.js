@@ -6,7 +6,22 @@
   SB.errors = [];
   window.addEventListener('error', e => SB.errors.push(String(e.message)));
   window.addEventListener('unhandledrejection', e => SB.errors.push(String(e.reason && e.reason.message || e.reason)));
-  const NAV = ['home', 'news', 'games', 'mods', 'assets', 'models', 'tutorial', 'multiplayer', 'profiles', 'debug', 'options', 'credits'];   // 'recovery' lives in 'debug' now
+  // Five tabs; the other pages open from a tab's sub-tabs or from the header (light bulb: tutorial, gear: settings).
+  const NAV = ['home', 'news', 'games', 'mods', 'multiplayer'];   // 'recovery' lives in 'debug' now
+  const SUBNAV = {
+    games: ['games', 'profiles'], profiles: ['games', 'profiles'],
+    mods: ['mods', 'models'], models: ['mods', 'models'],
+    options: ['options', 'debug', 'about'], debug: ['options', 'debug', 'about'], about: ['options', 'debug', 'about'], recovery: ['options', 'debug', 'about'],
+  };
+  const SECTION = { profiles: 'games', models: 'mods' };
+  const subLabel = k => t(k === 'games' ? 'sub.games' : k === 'debug' ? 'sub.debug' : 'nav.' + k);
+  function subnav(name) {
+    const tabs = SUBNAV[name];
+    if (!tabs) return '';
+    const here = name === 'recovery' ? 'debug' : name;
+    return `<div class="subnav" role="tablist">${tabs.map(k => `<button role="tab" class="subtab" data-act="go" data-arg="${k}" aria-selected="${k === here}">${glyph(k === 'debug' ? 'recovery' : k === 'about' ? 'heart' : k, 'gl')} ${subLabel(k)}</button>`).join('')}</div>`;
+  }
+  SB.subnav = subnav;
   const NAMES = { SR1: 'Slime Rancher', SR2: 'Slime Rancher 2' }, LOADERS = { SR1: 'SRML', SR2: 'MelonLoader' };
   const FAN_POLICY = 'https://www.slimerancher.com/fan-content-policy';
   let S = null, page = 'home', pollTimer = 0, busy = new Set(), menu = null;
@@ -48,18 +63,20 @@
     const host = S ? S.host : { state: 'STOPPED' }, on = host.state === 'RUNNING', frameless = !(S && S.preferences.native_frame);
     $('#head').innerHTML = `<button class="logo-link" data-act="go" data-arg="home" aria-label="SlimeBridge">${SB.Art.wordmark()}</button><div class="spacer pywebview-drag-region"></div>
       ${SB.isDemo() ? `<span class="pill warn" data-tip="${esc(t('demo.tip'))}">DEMO</span>` : ''}
+      <button class="head-ico ${page === 'tutorial' ? 'on' : ''}" data-act="go" data-arg="tutorial" aria-label="${esc(t('head.tuto'))}" title="${esc(t('head.tuto'))}">${glyph('bulb')}</button>
+      <button class="head-ico ${SUBNAV.options.includes(page) ? 'on' : ''}" data-act="go" data-arg="options" aria-label="${esc(t('nav.options'))}" title="${esc(t('nav.options'))}">${glyph('options')}</button>
       <div class="profile" data-act="profile-menu" role="button" tabindex="0" aria-haspopup="true">
         <span class="avatar">${SB.cutout(/pink/i, 'pink', 44, { cls: '' })}</span>
         <span class="who"><b>${t('profile.name')}</b><small><i class="dot ${on ? 'on' : ''}"></i>${on ? t('profile.on') : t('profile.off')}</small></span>${glyph('chevD', 'chev')}
         ${menu === 'profile' ? `<div class="menu" role="menu"><button data-act="${on ? 'host-stop' : 'host-start'}">${glyph(on ? 'stop' : 'play', 'gl mi')} ${on ? t('menu.host_stop') : t('menu.host_start')}</button><hr>
-          <button data-act="lang-toggle">${glyph('news', 'gl mi')} ${SB.lang === 'fr' ? 'English' : 'Français'}</button><button data-act="go" data-arg="options">${glyph('options', 'gl mi')} ${t('nav.options')}</button><button data-act="go" data-arg="about">${glyph('heart', 'gl mi')} ${t('nav.about')}</button></div>` : ''}
+          <button data-act="lang-toggle">${glyph('news', 'gl mi')} ${SB.lang === 'fr' ? 'English' : 'Français'}</button><button data-act="go" data-arg="options">${glyph('options', 'gl mi')} ${t('nav.options')}</button><button data-act="go" data-arg="profiles">${glyph('profiles', 'gl mi')} ${t('nav.profiles')}</button><button data-act="go" data-arg="debug">${glyph('recovery', 'gl mi')} ${t('sub.debug')}</button><button data-act="go" data-arg="about">${glyph('heart', 'gl mi')} ${t('nav.about')}</button></div>` : ''}
       </div>
       ${frameless ? `<div class="winctl"><button data-act="win-min" aria-label="Minimize">${glyph('min')}</button><button data-act="win-max" aria-label="Maximize">${glyph('max')}</button><button class="x" data-act="win-close" aria-label="Close">${glyph('close')}</button></div>` : ''}`;
     SB.net.hydrate($('#head'));
   }
   function renderSide() {
     const side = $('#side'), top = side.querySelector('.nav')?.scrollTop || 0;
-    side.innerHTML = `<nav class="nav" tabindex="0" aria-label="${t('nav.navigation')}">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${!S ? 'disabled aria-disabled="true"' : ''} ${k === page ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k === 'debug' ? 'recovery' : k === 'credits' ? 'star' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>
+    side.innerHTML = `<nav class="nav" tabindex="0" aria-label="${t('nav.navigation')}">${NAV.map(k => `<button class="nav-item" data-act="go" data-arg="${k}" ${!S ? 'disabled aria-disabled="true"' : ''} ${k === (SECTION[page] || page) ? 'aria-current="page"' : ''}>${glyph(k === 'assets' ? 'extract' : k === 'debug' ? 'recovery' : k === 'credits' ? 'star' : k)}<span>${t('nav.' + k)}</span></button>`).join('')}</nav>
       <div class="side-art" aria-hidden="true"><img src="img/pink-cotton-artist.png" alt=""></div>`;
     side.querySelector('.nav').scrollTop = top;
   }
@@ -114,8 +131,27 @@
     if (opened.size) $$('details', el).forEach((d, i) => { const s = opened.get(key(d, i)); if (!s) return; d.open = true; const pre = d.querySelector('pre'); if (pre) pre.scrollTop = s.end ? pre.scrollHeight : s.top; });
   }
   function renderView(keep) {
+    if (page === 'assets') page = 'games';                 // Extract is part of the Setup page now
     const root = $('#view'), top = root.scrollTop, def = SB.pages[page];
-    if (keep) redraw(root, def.render(S)); else root.innerHTML = def.render(S);
+    let html = def.render(S);
+    if (page === 'games' && SB.pages.assets) html += `<div id="extract">${SB.pages.assets.render(S)}</div>`;   // games + extraction, one page
+    if (page === 'about' && SB.pages.credits) html += SB.pages.credits.render(S);      // the credits live in About
+    const tabs = subnav(page);
+    if (tabs) html = html.replace(/^(\s*<(?:div|section) class="page[^"]*">)/, '$1' + tabs);
+    const nameInput = keep && page === 'multiplayer' ? $('#mp-name') : null;
+    if (nameInput) L.mpName = nameInput.value;                 // a refresh never wipes what is being typed
+    const codeInput = keep && page === 'multiplayer' ? $('#mp-join-code') : null;
+    const codeFocused = codeInput && codeInput === document.activeElement;
+    const codeValue = codeInput && codeInput.value;
+    if (keep) redraw(root, html); else root.innerHTML = html;
+    if (codeInput) {
+      const replacement = $('#mp-join-code');
+      replacement.value = codeValue;
+      if (codeFocused) {
+        replacement.focus({ preventScroll: true });
+        if (replacement.setSelectionRange) replacement.setSelectionRange(codeInput.selectionStart, codeInput.selectionEnd, codeInput.selectionDirection);
+      }
+    }
     root.scrollTop = keep ? top : 0;
     SB.net.hydrate(root);
     renderSide(); renderDock();
@@ -126,8 +162,9 @@
     if ((page === 'recovery' || page === 'debug') && !L.recovery) loadRecovery();
     if (page === 'mods' && !(L.mods && L.mods.started)) { L.mods = L.mods || { realm: 'SR2', query: '', results: null, installed: {}, busy: false }; L.mods.started = true; loadModsInstalled(); A['mods-search'](); }
     if (page === 'multiplayer' && !L.mp) loadMp();
-    if (page === 'assets' && !L.assets.job) pollJob(true);
-    if (page === 'assets' && !L.sanct) loadSanct();
+    if (page === 'multiplayer' && !mpTimer && !SHOT) followSession();
+    if (page === 'games' && !L.assets.job) pollJob(true);
+    if (page === 'games' && !L.sanct) loadSanct();
     schedulePoll(); startCarousel();
   }
   function renderAll() { renderHead(); renderSide(); renderRibbon(); renderChars(); renderView(true); }
@@ -155,8 +192,22 @@
     if (r && !(r.manifest && r.manifest.loaded) && !L.modelsAuto) { L.modelsAuto = true; const f = await safe(() => api.models_refresh()); if (f && f.rows) r = f; }
     if (r) { L.models = r; if (page === 'models') renderView(true); }
   }
-  async function loadSanct() { const r = await safe(() => api.sanctuary_state()); if (r) { L.sanct = r; if (page === 'assets') renderView(true); } }
-  async function loadMp() { const r = await safe(() => api.mp_state()); if (r) { L.mp = r; if (page === 'multiplayer') renderView(true); } }
+  async function loadSanct() { const r = await safe(() => api.sanctuary_state()); if (r) { L.sanct = r; if (page === 'games') renderView(true); } }
+  async function loadMp() { const r = await safe(() => api.mp_state()); if (r) { L.mp = r; if (!L.mpSession && !L.mpSubmitting) L.mpSession = r.session; if (page === 'multiplayer') renderView(true); } }
+  // The shared online code changes in the games (Auto Host, lobby): follow it while the Multi page is open.
+  let mpTimer = 0, mpRevision = 0, mpPoll = 0, mpApplied = 0;
+  function followSession() {
+    clearInterval(mpTimer);
+    mpTimer = setInterval(async () => {
+      if (page !== 'multiplayer') { clearInterval(mpTimer); mpTimer = 0; return; }
+      if (L.mpSubmitting) return;
+      const revision = mpRevision, poll = ++mpPoll;
+      const r = await api.mp_session().catch(() => null);
+      if (page !== 'multiplayer' || revision !== mpRevision || poll < mpApplied || !r || !r.ok) return;
+      mpApplied = poll;
+      if (JSON.stringify(r) !== JSON.stringify(L.mpSession)) { L.mpSession = r; renderView(true); }
+    }, 1500);
+  }
   function go(name) { if (!S || !SB.pages[name]) return; menu = null; page = name; location.hash = '#/' + name; renderHead(); renderView(false); }
 
   /* ----- carousel ----- */
@@ -207,6 +258,13 @@
   }
 
   /* ----- polling for long jobs (extraction, downloads) ----- */
+  /** The online name the player typed (kept for next time); SRMP only ever uses a name the player chose. */
+  function mpName() {
+    const name = (($('#mp-name') || {}).value || '').trim();
+    L.mpName = name;
+    try { localStorage.setItem('sb.mpName', name); } catch (e) { /* storage refused */ }
+    return name;
+  }
   function schedulePoll() {
     clearInterval(pollTimer);
     const job = L.assets.job, dl = L.models && L.models.download;
@@ -215,7 +273,7 @@
   }
   async function pollJob(silent) {
     const r = await api.extract_status().catch(() => null);
-    if (r && r.job && (!L.assets.job || r.job.id !== L.assets.job.id || silent)) { L.assets.job = r.job; if (page === 'assets') renderView(true); renderDock(); schedulePoll(); }
+    if (r && r.job && (!L.assets.job || r.job.id !== L.assets.job.id || silent)) { L.assets.job = r.job; if (page === 'games') renderView(true); renderDock(); schedulePoll(); }
   }
   async function pollTick() {
     const job0 = L.assets.job;
@@ -224,7 +282,7 @@
       if (r && r.job) {
         const was = job0.status; L.assets.job = r.job; renderDock();
         const box = $('#jobbox'); if (box) redraw(box, SB.jobBox(r.job));
-        if (was !== r.job.status && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'assets') renderView(true); if (r.job.status === 'DONE') { toast(t('assets.done'), 'good'); confetti($('.play') || document.body, 26); } }
+        if (was !== r.job.status && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'games') renderView(true); if (r.job.status === 'DONE') { toast(t('assets.done'), 'good'); confetti($('.play') || document.body, 26); } }
       }
     }
     const dl0 = L.models && L.models.download;
@@ -240,7 +298,7 @@
       const r = await api.sanctuary_state().catch(() => null);
       if (r) {
         L.sanct = r; const box = $('#sanctbox'); if (box) redraw(box, SB.sanctBox(r));
-        if (r.job && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'assets') renderView(true); toast(r.job.status === 'DONE' ? t('sanct.done') : (r.job.error || t('sanct.failed')), r.job.status === 'DONE' ? 'good' : 'bad'); if (r.job.status === 'DONE') confetti($('.sanct') || document.body, 24); }
+        if (r.job && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'games') renderView(true); toast(r.job.status === 'DONE' ? t('sanct.done') : (r.job.error || t('sanct.failed')), r.job.status === 'DONE' ? 'good' : 'bad'); if (r.job.status === 'DONE') confetti($('.sanct') || document.body, 24); }
       }
     }
     schedulePoll();
@@ -337,12 +395,7 @@
     'model-rm': async a => { const r = await safe(() => api.models_remove(a)); if (r) { L.models = r; renderView(true); } },
     'models-import': async () => { const r = await safe(() => api.models_import_folder()); if (r && r.imported) { L.models = r; toast(t('models.imported', { n: r.imported.length }), 'good'); renderView(true); } else if (r && r.ok === false && !r.cancelled) toast(t('models.import_none'), 'warn'); },
 
-    'mp-fill': a => { const i = $('#mp-addr'); if (i) i.value = a; },
-    'mp-star': async a => { const fav = L.mp.servers.favourites.includes(a); await api.mp_remember(a, !fav); L.mp = await api.mp_state(); renderView(true); },
-    'mp-join': async () => { const i = $('#mp-addr'), r = await safe(() => api.mp_remember(i.value.trim(), null)); if (r && !r.ok) { L.mp.error = r.error; renderView(true); } else if (r) { toast(t('mp.saved', { a: r.address }), 'good'); L.mp = await api.mp_state(); renderView(true); } },
-    'mp-mode': async (a, el) => { L.mp.host.mode = el.dataset.v; renderView(true); },
     'mp-online': async realm => { toast(t('mp.on_working'), 'info'); const r = await safe(() => api.mp_online(realm, 'install')); if (r && r.ok) { toast(t('mp.on_done'), 'good'); L.mp = await api.mp_state(); renderView(true); } else if (r) toast(t('mp.on_err', { e: r.error || '?' }), 'bad'); },
-    'mp-save': async () => { const r = await safe(() => api.mp_host_save({ name: $('#mp-name').value, port: $('#mp-port').value, mode: L.mp.host.mode })); if (r) { if (r.ok) { L.mp.host = r.host; toast(t('mp.saved_host'), 'good'); } else toast(r.error, 'bad'); } },
 
     pref: async (a, el) => { await safe(() => api.set_preference(a, el.dataset.v)); await refresh(); renderChars(); },
     'pref-bool': async (a, el) => { await safe(() => api.set_preference(a, el.getAttribute('aria-checked') !== 'true')); await refresh(); },
@@ -390,6 +443,13 @@
     'console-src': a => { SB.console.state.sources[a] = !SB.console.state.sources[a]; renderView(true); },
     'console-pause': () => { SB.console.state.paused = !SB.console.state.paused; renderView(true); },
     'console-clear': () => { SB.console.lines.length = 0; renderView(true); },
+    'mp-mode': (a, el) => { L.mpMode = el.dataset.v; renderView(true); },
+    'mp-host': a => submitOnline(() => api.mp_host(a || 'BOTH', mpName())),
+    'mp-join': async () => {
+      const code = (($('#mp-join-code') || {}).value || '').trim();
+      await submitOnline(() => api.mp_join(code, mpName()));
+    },
+    'mp-copy': async a => { try { await navigator.clipboard.writeText(a); } catch (e) { const el = document.createElement('textarea'); el.value = a; document.body.appendChild(el); el.select(); document.execCommand('copy'); el.remove(); } toast(t('mp.copied'), 'good'); },
     'console-copy': async () => { const text = SB.console.visible().map(l => `[${l.source}] ${l.text}`).join('\n'); try { await navigator.clipboard.writeText(text); } catch (e) { /* clipboard refused */ } toast(t('diag.copied'), 'good'); },
     'diag-run': async () => { L.diag = { busy: true, text: '' }; renderView(true); const r = await safe(() => api.diagnostics()); L.diag = { busy: false, text: r && r.text ? r.text : t('diag.failed') }; renderView(true); },
     'diag-copy': async () => { const text = (L.diag && L.diag.text) || ''; try { await navigator.clipboard.writeText(text); toast(t('diag.copied'), 'good'); } catch (e) { const ta = $('#diag-text'); if (ta) { ta.select(); document.execCommand('copy'); toast(t('diag.copied'), 'good'); } } },
@@ -400,6 +460,24 @@
     'opt-bool': async (a, el) => { const [s, k] = a.split('.'); const r = await safe(() => api.set_setting(s, k, el.getAttribute('aria-checked') !== 'true')); if (r && !r.ok) toast(r.error, 'bad'); L.settings = await api.get_settings(); renderView(true); },
     'opt-choice': async (a, el) => { const [s, k] = a.split('.'); const r = await safe(() => api.set_setting(s, k, el.dataset.v)); if (r && !r.ok) toast(r.error, 'bad'); L.settings = await api.get_settings(); renderView(true); },
   };
+
+  async function submitOnline(call) {
+    const current = L.mpSession || (L.mp && L.mp.session);
+    if (L.mpSubmitting || (current && current.request && !current.request.done)) return;
+    L.mpSubmitting = true;
+    ++mpRevision;
+    try {
+      const r = await safe(call);
+      if (r && !r.ok) {
+        const key = { BAD_CODE: 'mp.launcher_bad_code', SR2_JOIN_IN_GAME: 'mp.sr2_join_in_game' }[r.error];
+        toast(key ? t(key) : (r.error || t('mp.step_failed', { error: '?' })), 'bad');
+      }
+      if (r && r.ok) {
+        L.mpSession = { ...(L.mpSession || current || {}), request: r.request };
+        if (page === 'multiplayer') { renderView(true); followSession(); }
+      }
+    } finally { L.mpSubmitting = false; }
+  }
 
   document.addEventListener('click', e => {
     const el = e.target.closest('[data-act]');
@@ -420,7 +498,8 @@
     if (el.classList.contains('opt-text')) { const r = await safe(() => api.set_setting(el.dataset.sec, el.dataset.key, el.value)); if (r && !r.ok) toast(r.error, 'bad'); }
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && e.target.id === 'mp-addr') A['mp-join'](); if (e.key === 'Enter' && e.target.id === 'manifest-url') A['manifest-save']();
+    if (e.key === 'Enter' && e.target.id === 'mp-join-code' && S) { e.preventDefault(); A['mp-join'](); }
+    if (e.key === 'Enter' && e.target.id === 'manifest-url') A['manifest-save']();
     if (e.key === 'Escape' && menu) { menu = null; renderHead(); renderDock(); }
   });
   window.addEventListener('hashchange', () => { const n = location.hash.replace('#/', ''); if (SB.pages[n] && n !== page && S) { page = n; renderHead(); renderView(false); } });
@@ -475,7 +554,7 @@
     if (SHOT && openParam === 'launching') { const sc = SB.loading.open({ compact: true, title: t('launch.t', { game: NAMES.SR2 }), sub: t('launch.sub') }); sc.progress(68, t('launch.s3', { game: NAMES.SR2 })); sc.el.querySelector('.ld-tip').textContent = SB.tips()[1]; }
     if (SHOT && openParam === 'menu') { menu = 'profile'; renderHead(); }
     if (SHOT && openParam === 'playmenu') { menu = 'play'; renderDock(); }
-    if (!S.legal_understood && !SHOT) { await SB.showLegal(); await api.acknowledge_legal(); S.legal_understood = true; }
+    if (!S.legal_understood && !SHOT) { await SB.showLegal(); await api.acknowledge_legal(); S.legal_understood = true; go('tutorial'); }   // first start: the tutorial
     refreshNews(false);            // official news + artwork, at every start
   }
   /* ----- portal crossings: a plugin asked BridgeHost to cross, the launcher starts the other game ----- */
@@ -493,10 +572,11 @@
     const r = await api.crossings_poll().catch(() => null); if (!r || !r.ok) return;
     for (const c of r.crossings) {
       if (c.state === 'NEEDS_LINK' && !askedLink.has(c.id)) { askedLink.add(c.id); askLink(c); continue; }
-      const key = c.request_id + ':' + c.state;
+      const key = (c.request_id || c.id) + ':' + c.state;
       if (seenCrossings.has(key) || !['COMPLETE', 'ROLLED_BACK', 'FAILED', 'CANCELLED'].includes(c.state)) continue; seenCrossings.add(key);
       const game = NAMES[c.to] || c.to || '?';
-      if (c.state === 'COMPLETE') toast(t('cross.ok'), 'good');
+      if (c.code === 'SESSION_CLOSED') toast(t('cross.session_closed', { game }), 'good');
+      else if (c.state === 'COMPLETE') toast(t('cross.ok'), 'good');
       else if (c.code === 'NEEDS_BACKUP_CONFIRMATION') toast(t('cross.backup'), 'warn');
       else if (c.state === 'ROLLED_BACK' || c.state === 'FAILED') toast(t('cross.' + String(c.code || '').toLowerCase(), { game }) !== 'cross.' + String(c.code || '').toLowerCase() ? t('cross.' + String(c.code).toLowerCase(), { game }) : t('cross.failed', { game, code: c.code || '' }), 'bad');
     }

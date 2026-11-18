@@ -215,6 +215,7 @@ ${deco ? `<g transform="translate(18 64)"><g class="float">${slime('pink', { siz
     star: 'M16 3 L20 12 L30 13 L22 20 L25 29 L16 24 L7 29 L10 20 L2 13 L12 12Z', link: 'M13 19 a5 5 0 0 1 0 -7 l3 -3 a5 5 0 0 1 7 7 l-2 2 M19 13 a5 5 0 0 1 0 7 l-3 3 a5 5 0 0 1 -7 -7 l2 -2',
     stop: 'M8 8 H24 V24 H8Z', plus: 'M16 6 V26 M6 16 H26', trash: 'M6 9 H26 M12 9 V5 H20 V9 M9 9 L10.5 27 H21.5 L23 9',
     mods: 'M9 4 h4 a2 2 0 1 1 4 0 h4 v6 a2 2 0 1 0 0 4 v6 h-6 a2 2 0 1 0 -4 0 h-6 v-6 a2 2 0 1 1 0 -4 Z',
+    bulb: 'M12 21 C9 18.5 7 15.6 7 12 a9 9 0 0 1 18 0 c0 3.6 -2 6.5 -5 9 Z M12 25 H20 M13.5 29 H18.5',
     tutorial: 'M4 6 Q10 3 16 7 Q22 3 28 6 V26 Q22 23 16 27 Q10 23 4 26Z M16 7 V27 M8 11 H12 M20 11 H24 M8 16 H12 M20 16 H24',
     download: 'M16 4 V20 M9 14 L16 21 L23 14 M5 26 H27',
   };

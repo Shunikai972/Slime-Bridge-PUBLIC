@@ -101,6 +101,7 @@
     <Compile Include="../shared/TravelOverlay.cs" Link="Shared/TravelOverlay.cs" />
     <Compile Include="../shared/TravelThrottle.cs" Link="Shared/TravelThrottle.cs" />
     <Compile Include="../shared/TravelCarry.cs" Link="Shared/TravelCarry.cs" />
+    <Compile Include="../shared/OnlineLink.cs" Link="Shared/OnlineLink.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Update="modinfo.json" CopyToOutputDirectory="PreserveNewest" />

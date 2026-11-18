@@ -280,6 +280,21 @@ namespace SlimeBridge.Shared
             return french ? $"Le portail dort : {filled}/{total} statues remplies" : $"The portal sleeps: {filled}/{total} statues filled";
         }
 
+        /// <summary>What the other game offered and this one has no such item for: it stays in the other game's vac.</summary>
+        internal static string LeftBehind(string sourceRealm, string items)
+        {
+            var fr = Application.systemLanguage == SystemLanguage.French;
+            return fr ? "Resté dans le sac de " + Game(sourceRealm) + " : " + items + " (ce jeu ne l’a pas : page Extraire de SlimeBridge)."
+                      : "Left in the " + Game(sourceRealm) + " vacpack: " + items + " (this game does not have it: Extract page in SlimeBridge).";
+        }
+
+        /// <summary>The game the player was in closed: this one saves and closes too.</summary>
+        internal static string SavingAndClosing(string otherRealm)
+        {
+            var fr = Application.systemLanguage == SystemLanguage.French;
+            return fr ? Game(otherRealm) + " est fermé : sauvegarde et fermeture…" : Game(otherRealm) + " closed: saving and closing…";
+        }
+
         /// <summary>Why a crossing did not happen, in words the player can act on (codes come from the launcher).</summary>
         internal static string Failure(string code, string otherRealm)
         {

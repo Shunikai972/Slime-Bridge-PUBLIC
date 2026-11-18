@@ -18,6 +18,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+from apps.launcher.online_session import OnlineSession
+
 DESTINATIONS = {'portal.sr1.sanctuary_gate': 'SR2', 'portal.sr2.return_portal': 'SR1'}
 ACTIVE = ('NEEDS_LINK', 'PREPARING', 'SWITCHING', 'HOLDING')
 DEADLINES = {'NEEDS_LINK': 240.0, 'PREPARING_WARM': 45.0, 'PREPARING_COLD': 420.0, 'SWITCHING': 30.0, 'HOLDING': 15.0}
@@ -134,6 +136,12 @@ class TravelCoordinator:
         self._prepare_destination = prepare_destination
         self._select_audio_front = select_audio_front or (lambda realm: None)
         self.transitions = []
+        # The two games are one session: the one the player is in (front) and the one waiting at its portal (parked).
+        self._front = self._parked = None
+        self._parked_identity = None
+        # Online play with one shared code (hosting / joining both games' online mods).
+        self.online = OnlineSession(self._send, self._heartbeat, self._launcher.running, self._world_ready,
+                                    lambda record_id: self._events.get(record_id, []), self._clock, cancel=self._cancel)
 
     # ---- host relay -------------------------------------------------------------------------------------------------
     def _call(self, method, path, body=None):
@@ -157,10 +165,16 @@ class TravelCoordinator:
         reply = self._call('POST', '/v1/travel/send', {'realm': realm, 'message': message})
         return bool(reply and reply.get('ok'))
 
+    def _cancel(self, transition):
+        reply = self._call('POST', '/v1/travel/cancel', {'transition_id': transition['id']})
+        return bool(reply and reply.get('ok'))
+
     def _drain_events(self):
         reply = self._call('GET', f'/v1/travel/events?since={self._since}')
         for event in (reply or {}).get('events', []):
             self._since = max(self._since, event['seq'])
+            if not event.get('ack_id'):
+                continue
             self._events.setdefault(event['transition_id'], []).append(event)
             for transition in self.transitions:
                 if transition['id'] == event['transition_id']:
@@ -228,6 +242,11 @@ class TravelCoordinator:
     def _pid(self, realm):
         return self._heartbeat(realm).get('pid')
 
+    def _identity(self, realm):
+        beat = self._heartbeat(realm)
+        pid, save = beat.get('pid'), (beat.get('status') or {}).get('save_id')
+        return (pid, save) if type(pid) is int and pid > 0 and save else None
+
     def _window(self, transition, action, realm):
         # A native window exists before the plugin sends its first heartbeat. The backend still verifies the launch image.
         pid = self._pid(realm) or (transition.get('destination_pid') if realm == transition['to'] else None)
@@ -270,10 +289,8 @@ class TravelCoordinator:
                 # Never switch a running game to another save behind the player's back.
                 transition['detail'] = {'running': running_save, 'linked': linked}
                 return self._refuse(transition, 'DESTINATION_WRONG_SAVE', transition['detail'])
-            if linked and not running and linked not in {c['group'] for c in self._list_saves(destination)}:
-                self._links.unlink(transition['from'], transition['source_save'] or '')
-                self._log(transition, f'the linked {destination} save {linked} no longer exists: link dropped')
-                linked = None
+            # The launcher lists a bounded subset of saves. Only the native loader can
+            # resolve a linked save, and an unsuccessful load must not drop the link.
             if not linked:
                 if (self._settings().get('travel_link_mode') or 'AUTO').upper() == 'ASK':
                     return self._ask_for_link(transition, running_save)
@@ -399,6 +416,7 @@ class TravelCoordinator:
 
     def _rollback(self, transition, code):
         source = transition['from']
+        self._cancel(transition)
         self._select_audio_front(source)
         self._send(source, 'resume', transition, reason=code[:60])
         self._window(transition, 'restore', source)
@@ -430,6 +448,9 @@ class TravelCoordinator:
                     self._links.remember(sr1, sr2)
                     self._log(transition, f'linked {src} {transition["source_save"]} <-> {dst} {created} (new save)')
             if self._saw(transition, src, 'departure_ready') and self._world_ready(dst) and self._launcher.running(dst):
+                dest_save = (self._heartbeat(dst).get('status') or {}).get('save_id')
+                if transition['dest_save'] and dest_save != transition['dest_save']:
+                    return self._rollback(transition, 'DESTINATION_WRONG_SAVE')
                 self._window(transition, 'restore', dst)
                 focused = self._window(transition, 'focus', dst)
                 if getattr(self._windows, 'requires_focus_confirmation', False) and not focused:
@@ -439,27 +460,45 @@ class TravelCoordinator:
                     return
                 transition.pop('waiting_foreground', None)
                 self._select_audio_front(dst)
+                # The vac follows the player: the destination adds what it can, then the source gives up exactly that.
                 offer = self._latest_carry(transition, src, 'departure_ready') if self._carry_mode() != 'NONE' else {}
                 transition['carry_offered'] = offer
                 extra = {'carry': offer} if offer else {}
-                self._send(dst, 'arrive', transition, source=src, portal_id=transition['portal_id'], **extra)
+                if not self._send(dst, 'arrive', transition, source=src, portal_id=transition['portal_id'], **extra):
+                    return self._rollback(transition, 'DESTINATION_QUEUE_FAILED')
                 self._enter(transition, 'SWITCHING', 'both sides ready: arrival requested')
         elif state == 'SWITCHING':
             if self._saw(transition, dst, 'failed'):
                 return self._rollback(transition, 'DESTINATION_FAILED')
             if self._saw(transition, dst, 'arrived'):
                 policy = (self._settings().get('background_policy') or 'FREEZE').upper()
-                accepted = self._latest_carry(transition, dst, 'arrived')
+                offered = transition.get('carry_offered') or {}
+                # Never take more from the source than it offered, whatever the destination reports.
+                accepted = {k: min(v, offered[k]) for k, v in self._latest_carry(transition, dst, 'arrived').items()
+                            if isinstance(v, int) and v > 0 and isinstance(offered.get(k), int) and offered[k] > 0}
                 transition['carry_moved'] = accepted
                 extra = {'carry': accepted} if accepted else {}
-                self._send(src, 'hold', transition, policy=policy[:20], **extra)
+                if not self._send(src, 'hold', transition, policy=policy[:20], **extra):
+                    return self._rollback(transition, 'SOURCE_QUEUE_FAILED')
                 if accepted:
                     self._log(transition, 'carried through the portal: ' + ', '.join(f'{k} x{v}' for k, v in sorted(accepted.items())))
+                left = {k: v - accepted.get(k, 0) for k, v in offered.items() if isinstance(v, int) and v > accepted.get(k, 0)}
+                if left:
+                    transition['carry_left'] = left
+                    self._log(transition, f'left in the {src} vacpack ({dst} has no such item): ' + ', '.join(f'{k} x{v}' for k, v in sorted(left.items())))
                 self._window(transition, 'minimize', src)
                 self._enter(transition, 'HOLDING', 'player arrived: the other game is being throttled')
         elif state == 'HOLDING':
+            if self._saw(transition, src, 'failed'):
+                return self._rollback(transition, 'SOURCE_FAILED')
             if self._saw(transition, src, 'held'):
+                removed = self._latest_carry(transition, src, 'held')
+                if removed != (transition.get('carry_moved') or {}):
+                    transition['carry_mismatch'] = {'moved': transition.get('carry_moved') or {}, 'removed': removed}
+                    self._log(transition, f'carry mismatch: {src} removed {removed} for {transition.get("carry_moved") or {}}')
                 self._finish(transition, 'COMPLETE', 'ARRIVED')
+                self._front, self._parked = dst, src
+                self._parked_identity = self._identity(src)
                 if self._session is not None:
                     self._session.set(dst, transition.get('dest_save') or (self._heartbeat(dst).get('status') or {}).get('save_id'))
 
@@ -478,11 +517,74 @@ class TravelCoordinator:
                 self._handled.add(rid)
                 self._begin(request)
         self._drain_events()
+        self.online.tick()
         for transition in list(self.transitions):
             if transition['state'] in ACTIVE:
                 self._advance(transition)
-        self._note_session()
+        paired = self._parked is not None or any(t['state'] == 'CLOSING_SESSION' for t in self.transitions)
+        for transition in self.transitions:
+            if transition['state'] == 'CLOSING_SESSION':
+                self._advance_session_close(transition)
+        self._watch_session_end()
+        if not paired or (self._parked is None and self._front is not None):
+            self._note_session()
         return [self.public(t) for t in self.transitions]
+
+    def park(self, front, parked):
+        """Both games were started together (Continue): ``parked`` waits at its portal while the player is in ``front``."""
+        with self._lock:
+            self._front, self._parked = front, parked
+            self._parked_identity = self._identity(parked)
+
+    def _watch_session_end(self):
+        """The game the player was in has closed: the parked one saves and closes too (the two games are one session)."""
+        front, parked = self._front, self._parked
+        if parked is None or any(t['state'] in ACTIVE for t in self.transitions):
+            return
+        if not self._launcher.running(parked):
+            self._front = self._parked = None                     # nothing is waiting any more
+            self._parked_identity = None
+            return
+        if front is not None and self._launcher.running(front):
+            if self._parked_identity is None:
+                self._parked_identity = self._identity(parked)
+            foreground = getattr(self._windows, 'foreground_pid', lambda: None)
+            try:
+                pid = foreground()
+            except Exception:                                      # noqa: BLE001 - a rebuilt window is not a decision
+                pid = None
+            if pid is not None and pid == self._pid(parked):
+                self._front, self._parked = parked, None          # the player went back to the parked game by hand
+                self._parked_identity = None
+            return
+        self._front = self._parked = None
+        identity, self._parked_identity = self._parked_identity, None
+        record = {'id': uuid.uuid4().hex[:16], 'request_id': None, 'portal_id': None, 'from': front, 'to': parked, 'state': 'CLOSING_SESSION',
+                  'code': None, 'since': self._clock(), 'started': self._clock(), 'detail': None, 'history': [], 'target': identity,
+                  'launched': False, 'source_save': None, 'dest_save': None, 'candidates': []}
+        self.transitions.append(record)
+        del self.transitions[:-KEEP]
+        if identity is None or identity != self._identity(parked):
+            return self._finish(record, 'FAILED', 'SESSION_CLOSE_TARGET_CHANGED')
+        if not self._send(parked, 'save_quit', record, target_pid=identity[0], target_save=identity[1]):
+            return self._finish(record, 'FAILED', 'SESSION_CLOSE_QUEUE_FAILED')
+        self._log(record, f'{front} closed: requested save and exit from {parked}')
+
+    def _advance_session_close(self, record):
+        realm = record['to']
+        if self._saw(record, realm, 'failed'):
+            return self._finish(record, 'FAILED', 'SESSION_SAVE_FAILED')
+        if not self._launcher.running(realm):
+            self._cancel(record)
+            saved = self._saw(record, realm, 'saved')
+            return self._finish(record, 'COMPLETE' if saved else 'FAILED',
+                                'SESSION_CLOSED' if saved else 'SESSION_SAVE_UNCONFIRMED')
+        if self._identity(realm) not in (None, record['target']):
+            self._cancel(record)
+            return self._finish(record, 'FAILED', 'SESSION_CLOSE_TARGET_CHANGED')
+        if self._clock() - record['since'] > 15:
+            self._cancel(record)
+            return self._finish(record, 'FAILED', 'SESSION_CLOSE_TIMEOUT')
 
     def _note_session(self):
         """Outside a crossing, the one game that is running with a loaded save is where the player is."""

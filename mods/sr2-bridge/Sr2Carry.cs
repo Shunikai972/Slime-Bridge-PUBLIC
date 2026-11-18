@@ -8,13 +8,17 @@ namespace SlimeBridge.SR2
     internal static class Sr2Carry
     {
         private static Dictionary<string, Il2Cpp.IdentifiableType>? _byCanonical;
+        private static int _byCanonicalCount = -1;
 
         private static Dictionary<string, Il2Cpp.IdentifiableType> ByCanonical()
         {
-            if (_byCanonical != null) return _byCanonical;
-            var map = new Dictionary<string, Il2Cpp.IdentifiableType>(StringComparer.Ordinal);
             var lookup = Il2Cpp.GameContext.Instance?.LookupDirector;
-            if (lookup == null || lookup._identifiableTypeByRefId == null) return map;
+            if (lookup == null || lookup._identifiableTypeByRefId == null) return new Dictionary<string, Il2Cpp.IdentifiableType>(StringComparer.Ordinal);
+            // Imported species (Quantum, Rad, Mosaic, the Largos) join the lookup when the world loads: rebuild when it grew.
+            var count = lookup._identifiableTypeByRefId.Count;
+            if (_byCanonical != null && count == _byCanonicalCount) return _byCanonical;
+            _byCanonicalCount = count;
+            var map = new Dictionary<string, Il2Cpp.IdentifiableType>(StringComparer.Ordinal);
             foreach (var entry in lookup._identifiableTypeByRefId)
             {
                 if (entry.Key == null || entry.Value == null) continue;

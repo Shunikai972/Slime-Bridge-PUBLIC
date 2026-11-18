@@ -11,7 +11,7 @@ namespace SlimeBridge.SR1
     {
         private static Dictionary<string, Identifiable.Id>? _byCanonical;
 
-        private static Dictionary<string, Identifiable.Id> ByCanonical()
+        private static Dictionary<string, Identifiable.Id> NativeByCanonical()
         {
             if (_byCanonical != null) return _byCanonical;
             var map = new Dictionary<string, Identifiable.Id>(StringComparer.Ordinal);
@@ -24,6 +24,56 @@ namespace SlimeBridge.SR1
                 if (!map.TryGetValue(key, out var existing) || id.ToString().Length < existing.ToString().Length) map[key] = id;
             }
             return _byCanonical = map;
+        }
+
+        /// <summary>
+        /// The native enum plus the species this session imported (Cotton, Angler, the Largos...): those have numeric ids outside
+        /// the enum and are only known to the registrar by their bridge id (slime.cotton, plort.cotton, largo.angler.batty).
+        /// Rebuilt on every carry: the registrar can register more species after the first crossing.
+        /// </summary>
+        private static Dictionary<string, Identifiable.Id> ByCanonical()
+        {
+            var map = new Dictionary<string, Identifiable.Id>(NativeByCanonical(), StringComparer.Ordinal);
+            var registrar = SpeciesRegistrar.Current;
+            if (registrar == null) return map;
+            foreach (var canonical in registrar.RegisteredCanonicalIds)
+                if (registrar.TryResolveNativeId(canonical, out var nativeId)) AddImported(map, canonical, nativeId);
+            foreach (var plort in registrar.RegisteredPlorts) AddImported(map, plort.Key, plort.Value);
+            return map;
+        }
+
+        private static void AddImported(Dictionary<string, Identifiable.Id> map, string canonical, int nativeId)
+        {
+            var key = CarryNames.Canonical(canonical);
+            if (key.Length > 0 && !map.ContainsKey(key)) map[key] = (Identifiable.Id)nativeId;   // a native species always wins
+        }
+
+        /// <summary>The name this game sends for an item: its enum name, or the bridge id of an imported species.</summary>
+        private static string? Name(Identifiable.Id id)
+        {
+            if (Enum.IsDefined(typeof(Identifiable.Id), id)) return id.ToString();
+            var registrar = SpeciesRegistrar.Current;
+            if (registrar == null) return null;
+            if (registrar.TryGetCanonical((int)id, out var canonical)) return canonical;
+            foreach (var plort in registrar.RegisteredPlorts)
+                if (plort.Value == (int)id) return plort.Key;
+            return null;
+        }
+
+        /// <summary>This game's item for a name it sent itself (enum name or bridge id).</summary>
+        private static bool TryOwn(string name, out Identifiable.Id id)
+        {
+            id = Identifiable.Id.NONE;
+            var registrar = SpeciesRegistrar.Current;
+            if (registrar != null)
+            {
+                if (registrar.TryResolveNativeId(name, out var nativeId) || registrar.TryResolvePlortId(name, out nativeId))
+                {
+                    id = (Identifiable.Id)nativeId;
+                    return true;
+                }
+            }
+            return Enum.TryParse(name, out id) && id != Identifiable.Id.NONE && Enum.IsDefined(typeof(Identifiable.Id), id);
         }
 
         private static Ammo? Vac()
@@ -60,8 +110,8 @@ namespace SlimeBridge.SR1
                     var id = ammo.GetSlotName(i);
                     var count = ammo.GetSlotCount(i);
                     if (id == Identifiable.Id.NONE || count <= 0) continue;
-                    var name = id.ToString();
-                    if (!CarryNames.Allowed(mode, name)) continue;
+                    var name = Name(id);
+                    if (name == null || !CarryNames.Allowed(mode, name)) continue;
                     result[name] = Math.Min(9999, (result.TryGetValue(name, out var have) ? have : 0) + count);
                 }
             }
@@ -112,7 +162,7 @@ namespace SlimeBridge.SR1
                 if (ammo == null) return removed;
                 foreach (var item in items)
                 {
-                    if (!Enum.TryParse<Identifiable.Id>(item.Key, out var id) || id == Identifiable.Id.NONE) continue;
+                    if (!TryOwn(item.Key, out var id)) continue;
                     var remaining = item.Value;
                     for (var i = 0; i < ammo.GetUsableSlotCount() && remaining > 0; i++)
                     {

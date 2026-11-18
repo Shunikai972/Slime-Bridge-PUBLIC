@@ -139,18 +139,19 @@ class CoordinatorTests(unittest.TestCase):
         cross(self.host)
         self.coord.poll()
         self.assertEqual(self.host.travel_peek('SR1')['carry_mode'], 'ALL')
-        plugin_reply(self.host, 'SR1', 'departure_ready', carry={'CARROT_VEGGIE': 3, 'PINK_PLORT': 2})
+        plugin_reply(self.host, 'SR1', 'departure_ready', carry={'CARROT_VEGGIE': 3, 'PINK_PLORT': 2, 'slime.cotton': 4})
         self.coord.poll()
         arrive = self.host.travel_peek('SR2')
-        self.assertEqual((arrive['kind'], arrive['carry']), ('arrive', {'CARROT_VEGGIE': 3, 'PINK_PLORT': 2}))
-        plugin_reply(self.host, 'SR2', 'arrived', carry={'CARROT_VEGGIE': 3})        # the vac was full for the plorts
+        self.assertEqual((arrive['kind'], arrive['carry']), ('arrive', {'CARROT_VEGGIE': 3, 'PINK_PLORT': 2, 'slime.cotton': 4}))
+        plugin_reply(self.host, 'SR2', 'arrived', carry={'CARROT_VEGGIE': 3, 'slime.cotton': 4})   # the vac was full for the plorts
         self.coord.poll()
         hold = self.host.travel_peek('SR1')
-        self.assertEqual((hold['kind'], hold['carry']), ('hold', {'CARROT_VEGGIE': 3}), 'only what was accepted leaves the source')
-        plugin_reply(self.host, 'SR1', 'held', carry={'CARROT_VEGGIE': 3})
+        self.assertEqual((hold['kind'], hold['carry']), ('hold', {'CARROT_VEGGIE': 3, 'slime.cotton': 4}), 'only what was accepted leaves the source')
+        plugin_reply(self.host, 'SR1', 'held', carry={'CARROT_VEGGIE': 3, 'slime.cotton': 4})
         done = self.coord.poll()[-1]
         self.assertEqual(done['state'], 'COMPLETE')
-        self.assertTrue(any('CARROT_VEGGIE x3' in h['text'] for h in done['history']))
+        self.assertTrue(any('CARROT_VEGGIE x3' in h['text'] and 'slime.cotton x4' in h['text'] for h in done['history']))
+        self.assertTrue(any('left in the SR1 vacpack' in h['text'] and 'PINK_PLORT x2' in h['text'] for h in done['history']))
 
     def test_nothing_is_offered_when_the_player_turned_carrying_off(self):
         self.settings['travel_carry'] = 'NONE'
@@ -164,6 +165,23 @@ class CoordinatorTests(unittest.TestCase):
         plugin_reply(self.host, 'SR1', 'departure_ready', carry={'CARROT_VEGGIE': 3})
         self.coord.poll()
         self.assertNotIn('carry', self.host.travel_peek('SR2'))
+
+    def test_the_source_never_gives_up_more_than_it_offered(self):
+        self.links.remember('sr1-save', 'sr2-save')
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.proc.alive('SR2', 'sr2-save', 222)
+        self.launcher._running |= {'SR1', 'SR2'}
+        cross(self.host)
+        self.assertEqual(self.state(), 'PREPARING')
+        plugin_reply(self.host, 'SR1', 'departure_ready', carry={'PINK_PLORT': 7})
+        self.assertEqual(self.state(), 'SWITCHING')
+        plugin_reply(self.host, 'SR2', 'arrived', carry={'PINK_PLORT': 9, 'GOLD_PLORT': 5})   # a report larger than the offer
+        self.coord.poll()
+        self.assertEqual(self.host.travel_peek('SR1')['carry'], {'PINK_PLORT': 7})
+        plugin_reply(self.host, 'SR1', 'held', carry={'PINK_PLORT': 6})                      # the vac changed meanwhile
+        done = self.coord.poll()[-1]
+        self.assertEqual(done['state'], 'COMPLETE')
+        self.assertTrue(any('carry mismatch' in h['text'] for h in done['history']), 'a short removal is reported, not hidden')
 
     def test_return_trip_uses_the_still_running_first_game(self):
         self.links.remember('sr1-save', 'sr2-save')
@@ -205,6 +223,19 @@ class CoordinatorTests(unittest.TestCase):
         cross(self.host)
         self.coord.poll()
         self.assertNotIn('SLIMEBRIDGE_TRAVEL_SAVE', self.launcher.started[0][1])
+
+    def test_cold_destination_on_unrelated_save_never_receives_carry(self):
+        self.links.remember('sr1-save', 'sr2-linked')
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.launcher._running.add('SR1')
+        cross(self.host)
+        self.assertEqual(self.state(), 'PREPARING')
+        plugin_reply(self.host, 'SR1', 'departure_ready', carry={'PINK_PLORT': 7})
+        self.proc.alive('SR2', 'sr2-solo', 222)
+        done = self.coord.poll()[-1]
+        self.assertEqual((done['state'], done['code']), ('ROLLED_BACK', 'DESTINATION_WRONG_SAVE'))
+        self.assertIsNone(self.host.travel_peek('SR2'))
+        self.assertEqual(self.links.lookup('SR1', 'sr1-save'), 'sr2-linked')
 
     def test_a_silent_source_rolls_back_with_resume_and_focus(self):
         self.links.remember('sr1-save', 'sr2-save')
@@ -295,13 +326,96 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual(self.state(), 'SWITCHING')
         self.assertEqual(self.launcher.started, [], 'an already running game is not restarted')
 
-    def test_a_vanished_linked_save_drops_the_link_and_asks_again(self):
+    def test_a_linked_save_missing_from_the_listing_is_still_requested(self):
         self.links.remember('sr1-save', 'sr2-deleted')
         self.proc.alive('SR1', 'sr1-save', 111)
         self.launcher._running.add('SR1')
         cross(self.host)
-        self.assertEqual(self.coord.poll()[-1]['state'], 'NEEDS_LINK')
-        self.assertIsNone(self.links.lookup('SR1', 'sr1-save'))
+        self.assertEqual(self.state(), 'PREPARING')
+        self.assertEqual(self.links.lookup('SR1', 'sr1-save'), 'sr2-deleted')
+        self.assertEqual(self.launcher.started[0][1]['SLIMEBRIDGE_TRAVEL_SAVE'], 'sr2-deleted')
+        self.assertNotIn('SLIMEBRIDGE_TRAVEL_NEW', self.launcher.started[0][1])
+
+    def test_an_unreadable_save_folder_never_breaks_a_link(self):
+        # Saves kept somewhere the launcher cannot list (a non-Steam copy): the linked save is still the one started.
+        self.saves['SR2'] = []
+        self.links.remember('sr1-save', 'sr2-elsewhere')
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.launcher._running.add('SR1')
+        cross(self.host)
+        self.assertEqual(self.coord.poll()[-1]['state'], 'PREPARING')
+        game, env = self.launcher.started[0]
+        self.assertEqual((game, env['SLIMEBRIDGE_TRAVEL_SAVE']), ('SR2', 'sr2-elsewhere'))
+        self.assertEqual(self.links.lookup('SR1', 'sr1-save'), 'sr2-elsewhere')
+
+    def _crossed_to_sr2(self):
+        self.links.remember('sr1-save', 'sr2-save')
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.proc.alive('SR2', 'sr2-save', 222)
+        self.launcher._running |= {'SR1', 'SR2'}
+        cross(self.host)
+        self.coord.poll()
+        plugin_reply(self.host, 'SR1', 'departure_ready')
+        self.coord.poll()
+        plugin_reply(self.host, 'SR2', 'arrived')
+        self.coord.poll()
+        plugin_reply(self.host, 'SR1', 'held')
+        return self.coord.poll()[-1]
+
+
+    def test_closing_the_game_the_player_is_in_saves_and_closes_the_parked_one(self):
+        self.coord._session = travel.LastSession(Path(self.tmp.name) / 'last.json')
+        self.assertEqual(self._crossed_to_sr2()['state'], 'COMPLETE')       # the player is in SR2, SR1 waits at its portal
+        self.coord.poll()
+        self.assertIsNone(self.host.travel_peek('SR1'), 'nothing is sent while the player plays')
+        self.launcher._running.discard('SR2')                                # the player closed SR2
+        last = self.coord.poll()[-1]
+        self.assertEqual((last['state'], last['to']), ('CLOSING_SESSION', 'SR1'))
+        message = self.host.travel_peek('SR1') or {}
+        self.assertEqual((message['kind'], message['target_pid'], message['target_save']), ('save_quit', 111, 'sr1-save'))
+        self.assertEqual(self.coord._session.get()['realm'], 'SR2')
+        plugin_reply(self.host, 'SR1', 'saved')
+        self.assertEqual(self.coord.poll()[-1]['state'], 'CLOSING_SESSION', 'save is not proof of exit')
+        self.launcher._running.discard('SR1')
+        self.coord.poll()
+        self.assertEqual(sum(1 for t in self.coord.transitions if t.get('code') == 'SESSION_CLOSED'), 1, 'asked once')
+        self.assertEqual(self.coord._session.get()['realm'], 'SR2')
+
+    def test_replacement_game_does_not_inherit_pending_save_and_close(self):
+        self._crossed_to_sr2()
+        self.launcher._running.discard('SR2')
+        self.coord.poll()
+        self.proc.alive('SR1', 'unrelated-save', 999)
+        result = self.coord.poll()[-1]
+        self.assertEqual((result['state'], result['code']), ('FAILED', 'SESSION_CLOSE_TARGET_CHANGED'))
+        self.assertIsNone(self.host.travel_peek('SR1'))
+
+    def test_failed_save_does_not_complete_coordinated_close(self):
+        self._crossed_to_sr2()
+        self.launcher._running.discard('SR2')
+        self.coord.poll()
+        plugin_reply(self.host, 'SR1', 'failed')
+        result = self.coord.poll()[-1]
+        self.assertEqual((result['state'], result['code']), ('FAILED', 'SESSION_SAVE_FAILED'))
+
+    def test_a_player_back_in_the_parked_game_by_hand_keeps_playing_it(self):
+        self.assertEqual(self._crossed_to_sr2()['state'], 'COMPLETE')
+        self.windows.foreground_pid = lambda: 111                            # SR1's window was brought back by hand
+        self.coord.poll()
+        self.launcher._running.discard('SR2')
+        self.coord.poll()
+        self.assertIsNone(self.host.travel_peek('SR1'), 'SR1 is where the player is: it is not closed')
+
+    def test_continue_parks_the_partner_and_closing_the_front_closes_it(self):
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.proc.alive('SR2', 'sr2-save', 222)
+        self.launcher._running |= {'SR1', 'SR2'}
+        self.coord.park('SR1', 'SR2')
+        self.coord.poll()
+        self.assertIsNone(self.host.travel_peek('SR2'))
+        self.launcher._running.discard('SR1')
+        self.coord.poll()
+        self.assertEqual(self.host.travel_peek('SR2')['kind'], 'save_quit')
 
     def test_a_new_slime_rancher_save_can_be_created_for_an_sr2_ranch(self):
         self.proc.alive('SR2', 'sr2-save', 222)

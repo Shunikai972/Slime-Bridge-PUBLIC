@@ -54,6 +54,26 @@ class TravelMailboxTests(unittest.TestCase):
             self.assertEqual(call(host, 'GET', '/v1/travel/events?since=0', token=host.realm_token('SR1'))[0], 401)
             self.assertEqual(call(host, 'GET', '/v1/travel/events?since=x')[0], 400)
 
+    def test_ack_matches_transition_and_operation_and_cancellation_is_final(self):
+        with BridgeHost(token=TOKEN) as host:
+            body = {'realm': 'SR1', 'message': {'kind': 'online_host', 'transition_id': 'online1'}}
+            _, queued = call(host, 'POST', '/v1/travel/send', body)
+            mid = queued['message_id']
+            self.assertEqual(plugin_event(host, 'SR1', 'online_done', tid='other', ack=mid)[0], 409)
+            self.assertEqual(plugin_event(host, 'SR1', 'held', tid='online1', ack=mid)[0], 409)
+            self.assertEqual(host.travel_peek('SR1')['message_id'], mid)
+            self.assertEqual(call(host, 'POST', '/v1/travel/cancel', {'transition_id': 'online1'})[0], 200)
+            self.assertIsNone(host.travel_peek('SR1'))
+            self.assertEqual(plugin_event(host, 'SR1', 'online_done', tid='online1', ack=mid)[0], 409)
+            self.assertEqual(host.travel_events(), [])
+
+    def test_valid_ack_replay_is_idempotent(self):
+        with BridgeHost(token=TOKEN) as host:
+            mid = host.travel_enqueue('SR1', {'kind': 'online_host', 'transition_id': 't1'})
+            for _ in range(2):
+                self.assertEqual(plugin_event(host, 'SR1', 'online_done', ack=mid)[0], 200)
+            self.assertEqual(len(host.travel_events()), 1)
+
     def test_a_plugin_cannot_send_instructions_or_read_the_other_realm(self):
         with BridgeHost(token=TOKEN) as host:
             body = {'realm': 'SR2', 'message': {'kind': 'hold', 'transition_id': 't1'}}

@@ -19,7 +19,7 @@ namespace SlimeBridge.SR2
     /// </summary>
     public sealed class BridgeMod : MelonMod
     {
-        public const string PluginVersion = "0.2.5";
+        public const string PluginVersion = "0.2.6";
         private static readonly int Pid = Environment.ProcessId;
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { UseProxy = false })
         {
@@ -656,6 +656,11 @@ namespace SlimeBridge.SR2
 
         public override void OnGUI() { _travel?.Gui(); _returnPortal?.Gui(); }
 
+        public override void OnApplicationQuit()
+        {
+            try { _travel?.SaveOnQuit(); } catch (Exception) { /* closing anyway */ }
+        }
+
         public override void OnDeinitializeMelon()
         {
             Sr2LabVacuumTrace.Stop();
@@ -686,6 +691,7 @@ namespace SlimeBridge.SR2
                         pid = Pid,
                         plugin_version = PluginVersion,
                         status = fresh,
+                        online = SlimeBridge.Shared.OnlineStatus.Current,
                     }, JsonOptions);
                     using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
                     {

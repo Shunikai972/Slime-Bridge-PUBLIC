@@ -8,10 +8,6 @@
   const segment = (act, arg, value, options) => `<div class="seg" role="group">${options.map(([v, label]) => `<button data-act="${act}" data-arg="${arg}" data-v="${esc(v)}" aria-pressed="${String(value) === String(v)}">${label}</button>`).join('')}</div>`;
 
   /* ------------------------------------------------------------------ multiplayer */
-  function addrChips(list, fav) {
-    if (!list.length) return `<p class="faint small">${t('mp.none')}</p>`;
-    return `<div class="row">${list.slice(0, 10).map(a => `<span class="chip addr"><button data-act="mp-fill" data-arg="${esc(a)}" class="plain">${esc(a)}</button><button class="star ${fav.includes(a) ? 'on' : ''}" data-act="mp-star" data-arg="${esc(a)}" aria-label="${esc(t('mp.favourite'))}">${icon('star')}</button></span>`).join('')}</div>`;
-  }
   function multiplayer(S) {
     const M = L.mp || { servers: { favourites: [], recent: [], directory_enabled: true }, host: { name: 'My Ranch', port: 7777, mode: 'HYBRID' } };
     const host = S.host, running = host.state === 'RUNNING';
@@ -28,8 +24,34 @@
       </div>
     </section>`;
     };
+    const sess = L.mpSession || (M.session || { code: '', games: {}, request: null }), mode = L.mpMode || 'BOTH', req = sess.request;
+    const gameState = realm => {
+      const g = (sess.games || {})[realm];
+      if (!g) return `<span class="pill muted">${t('mp.g_closed')}</span>`;
+      if (!g.mod) return `<span class="pill warn">${t('mp.g_nomod')}</span>`;
+      if (g.hosting) return `<span class="pill good live">${t('mp.g_hosting')}</span>`;
+      if (g.connected) return `<span class="pill good live">${t('mp.g_connected')}</span>`;
+      return `<span class="pill muted">${t('mp.g_offline')}</span>`;
+    };
+    const failure = e => /needs_name/.test(e || '') ? t('mp.needs_name') : /bad_name|BAD_NAME/.test(e || '') ? t('mp.bad_name') : t('mp.step_failed', { error: esc(e || '?') });
+    const step = req ? (req.step === 'failed' ? failure(req.error) : t('mp.step_' + req.step)) : '';
+    const udp = ((sess.games || {}).SR2 || {}).error === 'needs_udp_1919' ? `<p class="warn">${t('mp.udp_hint')}</p>` : '';
+    const together = `<section class="panel stack mp-together">
+    <div class="row between"><h2>${slime('pink', { size: 40, cls: 'idle' })} ${t('mp.together')}</h2><span class="row" style="gap:8px">${'SR1'} ${gameState('SR1')} ${'SR2'} ${gameState('SR2')}</span></div>
+    <p class="muted">${t('mp.launcher_scope')}</p>
+    <div class="mp-code"><label>${t('mp.code')}</label>
+      ${sess.code ? `<div class="row"><span class="mono mp-code-value" id="mp-code">${esc(sess.code)}</span><button class="btn btn--sky btn--sm" data-act="mp-copy" data-arg="${esc(sess.code)}">${icon('link')} ${t('mp.copy')}</button></div>` : `<p class="faint">${t('mp.no_code')}</p>`}</div>
+    <div class="row">${segment('mp-mode', 'mode', mode, ['BOTH', 'SR1', 'SR2'].map(m => [m, t('mp.mode_' + m)]))}
+      <button class="btn btn--bridge" data-act="mp-host" data-arg="${mode}" ${req && !req.done ? 'disabled aria-busy="true"' : ''}>${icon('play')} ${t('mp.host_btn')}</button></div>
+    <div class="row"><label class="faint" for="mp-name">${t('mp.name')}</label><input class="input" id="mp-name" maxlength="24" placeholder="${esc(t('mp.name_ph'))}" value="${esc(L.mpName || localStorage.getItem('sb.mpName') || '')}" style="max-width:220px" autocomplete="off" spellcheck="false"></div>
+    <div class="row"><input class="input mono" id="mp-join-code" maxlength="16" placeholder="${esc(t('mp.join_ph'))}" style="max-width:220px" autocomplete="off" spellcheck="false">
+      <button class="btn btn--sky" data-act="mp-join" ${req && !req.done ? 'disabled' : ''}>${icon('link')} ${t('mp.join_btn')}</button></div>
+    <p class="muted small">${t('mp.sr2_join_in_game')}</p>
+    ${step ? `<p class="${req.step === 'failed' ? 'err' : 'muted'}" role="status" aria-live="polite">${step}</p>` : ''}${udp}
+  </section>`;
     return `<div class="page">
   <div class="page-title"><h1>${t('nav.multiplayer')}</h1><p>${t('mp.sub')}</p></div>
+  ${together}
   <div class="grid cols-2">
     ${card('SR1', 'tabby')}
     ${card('SR2', 'hunter', true)}

@@ -507,12 +507,25 @@ class LauncherAPI:
     # ---- launching -------------------------------------------------------------------------------------------------
     def launch(self, target: str, confirmed: bool = False, remember: bool = False, resume: bool = False) -> dict:
         """``target``: SR1, SR2, BOTH (SR1 in front), BOTH_SR1 or BOTH_SR2 (both games, that one in front, the other waits
-        minimized). ``resume``: load the save the player was last in (that game only), straight from the game's menu."""
+        minimized). ``resume``: load the save the player was last in, straight from the game's menu; when that save has a
+        linked partner, the other game starts too on the partner save and waits at its portal (the session as it was left)."""
+        return self._launch(target, confirmed, remember, resume, resume_partner=True)
+
+    def _launch(self, target, confirmed=False, remember=False, resume=False, *, resume_partner=False):
         if target not in ('SR1', 'SR2', 'BOTH', 'BOTH_SR1', 'BOTH_SR2'):
             raise ValueError('target must be SR1, SR2, BOTH, BOTH_SR1 or BOTH_SR2')
         front = 'SR2' if target in ('SR2', 'BOTH_SR2') else 'SR1'
         if target.startswith('BOTH'):
             target = 'BOTH'
+        partner_env = {}
+        if resume and resume_partner:
+            last = self._session.get()
+            if last and last['realm'] == front and last['save']:
+                back_realm = 'SR2' if front == 'SR1' else 'SR1'
+                partner = self._travel._links.lookup(front, last['save'])
+                if partner and self._primary(back_realm) is not None and not self._launcher.running(back_realm):
+                    target = 'BOTH'
+                    partner_env = {'SLIMEBRIDGE_TRAVEL_MODE': 'DESTINATION', 'SLIMEBRIDGE_TRAVEL_SAVE': partner}
         data = self._load()
         if not data['backup_ack'] and not confirmed:
             return {'ok': False, 'needs_confirmation': True}
@@ -552,12 +565,17 @@ class LauncherAPI:
                 last = self._session.get() if resume else None
                 if last and last['realm'] == realm and last['save']:
                     resume_env = {'SLIMEBRIDGE_TRAVEL_MODE': 'RESUME', 'SLIMEBRIDGE_TRAVEL_SAVE': last['save']}
+                elif realm != front and partner_env:
+                    resume_env = dict(partner_env)                 # the partner save, waiting behind the portal card
                 launched.append(self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(self._settings()[1]['bridge'], realm), **self._perf_env(), **lab_env, **resume_env}))
-                self._session.set(realm, last['save'] if resume_env else None)
+                if realm == front:
+                    self._session.set(realm, last['save'] if resume_env else None)
             except RuntimeErrorWithCode as exc:
                 errors.append({'realm': realm, 'error': exc.code, 'detail': exc.detail})
         if target == 'BOTH' and len(launched) == 2:
             self._keep_in_front(front, launch_epoch)
+            # One session: closing the game the player is in saves and closes the waiting one too.
+            self._travel.park(front, 'SR2' if front == 'SR1' else 'SR1')
         else:
             with self._audio_policy_lock:
                 if launch_epoch == self._audio_startup_epoch:
@@ -1088,8 +1106,68 @@ class LauncherAPI:
                 states[realm] = online.status(realm, primary['root'])
             except OSError as exc:
                 states[realm] = {'state': 'error', 'loader': False, 'error': str(exc)}
+        with self._travel._lock:
+            session = self._travel.online.state()
         return {'ok': True, 'servers': settings['servers'], 'host': self._load()['mp_host'], 'content': content,
-                'online': states, 'network_adapter': any(s.get('state') == 'current' for s in states.values())}
+                'online': states, 'network_adapter': any(s.get('state') == 'current' for s in states.values()),
+                'session': session}
+
+    def mp_session(self) -> dict:
+        """The shared online code and where each game's online mod stands (polled by the Multi page)."""
+        with self._travel._lock:
+            return {'ok': True, **self._travel.online.state()}
+
+    def _start_for_online(self, realms):
+        """Online needs the games running: start what is missing, on the player's last saves (Continue)."""
+        missing = [realm for realm in realms if not self._launcher.running(realm)]
+        if not missing:
+            return None
+        for realm in missing:
+            if self._primary(realm) is None:
+                return {'ok': False, 'error': 'GAME_NOT_FOUND', 'realm': realm}
+        if len(missing) == 2:
+            last = self._session.get()
+            front = last['realm'] if last else 'SR1'
+            result = self._launch('BOTH_' + front, confirmed=True, resume=True, resume_partner=True)
+        else:
+            result = self._launch(missing[0], confirmed=True, resume=True)
+        if not result['ok']:
+            failure = next(iter(result.get('errors', ())), {})
+            return {'ok': False, 'error': failure.get('error', 'LAUNCH_FAILED'),
+                    'realm': failure.get('realm'), 'launched': result}
+        return result
+
+    def _request_online(self, realms, start):
+        with self._travel._lock:
+            active = self._travel.online.request
+            if active and (not active['done'] or active.get('cancelled') is False):
+                return {'ok': False, 'error': 'ONLINE_REQUEST_PENDING'}
+            launched = self._start_for_online(realms)
+            if launched is not None and not launched['ok']:
+                return launched
+            try:
+                self._host.start()
+            except RuntimeErrorWithCode as exc:
+                return {'ok': False, 'error': exc.code, 'detail': exc.detail}
+            self._ensure_travel_loop()
+            return {'ok': True, 'request': start(), 'launched': launched}
+
+    def mp_host(self, mode: str = 'BOTH', name: str = '') -> dict:
+        """Host online in both games (BOTH), or only one (SR1 / SR2); the code appears once the games have opened it."""
+        if mode not in ('BOTH', 'SR1', 'SR2'):
+            raise ValueError('mode must be BOTH, SR1 or SR2')
+        return self._request_online(('SR1', 'SR2') if mode == 'BOTH' else (mode,),
+                                    lambda: self._travel.online.host(mode, name))
+
+    def mp_join(self, code: str, name: str = '') -> dict:
+        """Join SRMP only. Ranching Together requires a deliberately selected empty save."""
+        from apps.launcher import online_session
+        realms = online_session.realms_for_code(online_session.clean(code))
+        if not realms:
+            return {'ok': False, 'error': 'BAD_CODE'}
+        if 'SR2' in realms:
+            return {'ok': False, 'error': 'SR2_JOIN_IN_GAME'}
+        return self._request_online(realms, lambda: self._travel.online.join(code, name))
 
     def mp_online(self, realm: str, action: str) -> dict:
         """Install/update (``install``) or remove (``remove``) the online components of one game."""

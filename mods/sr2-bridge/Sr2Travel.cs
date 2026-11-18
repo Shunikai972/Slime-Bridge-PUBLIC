@@ -19,6 +19,9 @@ namespace SlimeBridge.SR2
         internal void RequestCrossing(string portalId, string saveId) => _transport.RequestCrossing(portalId, saveId);
         private readonly bool _destinationMode;
         private bool _held, _arrived;
+        private float _quitAt = -1f;
+        private string? _quitSave;
+        private static readonly int OwnPid = System.Diagnostics.Process.GetCurrentProcess().Id;
 
 
         public bool Held => _held || _throttle.Active;
@@ -41,6 +44,30 @@ namespace SlimeBridge.SR2
             return new Sr2TravelRealm(url!, token!, destination);
         }
 
+        /// <summary>Write this world's save now (after items moved, or before closing with the other game).</summary>
+        private static bool SaveNow(string why)
+        {
+            try
+            {
+                var director = Il2Cpp.GameContext.Instance?.AutoSaveDirector;
+                if (director == null || !WorldReady()) return false;
+                var ok = director.SaveAllNow();
+                MelonLoader.MelonLogger.Msg("travel: save (" + why + ") " + (ok ? "written" : "refused by the game"));
+                return ok;
+            }
+            catch (Exception ex)
+            {
+                MelonLoader.MelonLogger.Msg("travel: save (" + why + ") failed: " + ex.GetType().Name);
+                return false;
+            }
+        }
+
+        /// <summary>The game is closing (window closed, Alt+F4): keep what the vac holds now.</summary>
+        internal void SaveOnQuit()
+        {
+            if (_quitSave == null) SaveNow("game closing");
+        }
+
         private static bool WorldReady()
         {
             try
@@ -52,6 +79,8 @@ namespace SlimeBridge.SR2
             catch (Exception) { return false; }
         }
 
+        private static string? CurrentSave() => CounterpartCreator.TryReadWorld(out var world) ? world!.Name : null;
+
         internal void Gui() { _overlay.Draw(); }
 
         internal void Tick()
@@ -62,7 +91,18 @@ namespace SlimeBridge.SR2
             if (notice != null) _overlay.ShowHint(notice, 6f);
             if (_destinationMode && !_arrived && WorldReady() && !_overlay.IsCovering && !_held)
                 _overlay.CoverNow(TravelText.Arriving(), TravelText.Waiting("SR2"));
+            Sr2Online.Refresh();
             _agent.Tick((double)Time.realtimeSinceStartup);
+            if (_quitAt > 0f)
+            {
+                if (Time.realtimeSinceStartup >= _quitAt)
+                {
+                    _quitAt = -1f;
+                    if (_quitSave == CurrentSave() && _quitSave != null) Application.Quit();
+                    else { _quitSave = null; Resume(null); }
+                }
+                return;                                      // closing: never resume by hand on the way out
+            }
             if (_held && _throttle.ReturnedByHand(Application.isFocused, Time.realtimeSinceStartup))
             {
                 MelonLoader.MelonLogger.Msg("travel: the player returned to this window by hand; resuming");
@@ -98,6 +138,8 @@ namespace SlimeBridge.SR2
                     if (!WorldReady()) { done(false, "no_world"); return; }
                     _overlay.CoverNow(TravelText.Parked("SR2"), TravelText.Waiting("SR2"));
                     var removed = message.Carry.Count > 0 ? Sr2Carry.Remove(message.Carry) : new System.Collections.Generic.Dictionary<string, int>();
+                    // Saved at once: closing this game later (or a crash) can neither bring the items back nor lose them.
+                    if (removed.Count > 0) SaveNow("carried items left");
                     _throttle.Apply(!string.Equals(message.Policy, "THROTTLE", StringComparison.Ordinal));
                     _held = true;
                     done(true, removed.Count != message.Carry.Count ? "carry mismatch" : "", removed);
@@ -111,11 +153,37 @@ namespace SlimeBridge.SR2
                 case "arrive":
                     if (!WorldReady()) { done(false, "no_world"); return; }
                     var accepted = message.Carry.Count > 0 ? Sr2Carry.Receive(message.Carry) : new System.Collections.Generic.Dictionary<string, int>();
+                    if (accepted.Count > 0) SaveNow("carried items arrived");
+                    var left = CarryNames.Left(message.Carry, accepted);
+                    if (left.Length > 0)
+                    {
+                        MelonLoader.MelonLogger.Msg("travel: left in the other vac (no such item here): " + left);
+                        TravelNotice.Post(TravelText.LeftBehind(message.Source.Length > 0 ? message.Source : "SR1", left));
+                    }
                     _throttle.Restore();
                     _held = false; _arrived = true;
                     var placed = Sr2ReturnPortalHook.PlacePlayer?.Invoke() ?? false;
                     if (!_overlay.IsCovering) { done(true, placed ? "portal" : "in_place", accepted); return; }
                     _overlay.Open(0.22f, () => done(true, placed ? "portal" : "in_place", accepted));
+                    break;
+                case "online_host":
+                    // Ranching Together's Auto Host makes the session code (sent with the heartbeat once it exists)
+                    var hosted = Sr2Online.Host();
+                    done(hosted.Length == 0, hosted);
+                    break;
+                case "online_join":
+                    // Ranching Together can reset the currently loaded save. The player
+                    // must deliberately pick an empty save and join in its native UI.
+                    done(false, "sr2_join_in_game");
+                    break;
+                case "save_quit":
+                    var error = message.SaveForClose(OwnPid, CurrentSave, () => SaveNow("closing with the other game"));
+                    if (error.Length > 0) { Resume(null); done(false, error); return; }
+                    _throttle.Restore();
+                    _overlay.CoverNow(TravelText.SavingAndClosing("SR1"), "");
+                    _quitSave = message.TargetSave;
+                    _quitAt = Time.realtimeSinceStartup + 1.5f;      // lets the report reach the launcher first
+                    done(true, "saved");
                     break;
                 default:
                     done(false, "unknown_kind");

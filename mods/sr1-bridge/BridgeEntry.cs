@@ -16,7 +16,7 @@ namespace SlimeBridge.SR1
     public sealed class BridgeEntry : ModEntryPoint
     {
         // Must stay a plain X.Y[.Z] integer string: SRML's ModVersion.Parse rejects suffixes like "-dev".
-        internal const string PluginVersion = "0.2.5";
+        internal const string PluginVersion = "0.2.6";
         private static readonly int Pid = Process.GetCurrentProcess().Id;
 
         private DateTime _nextHeartbeat = DateTime.MinValue;
@@ -110,6 +110,8 @@ namespace SlimeBridge.SR1
             // Protocol v1 omits status entirely at the menu.
             var head = "{\"protocol_version\":1,\"message_type\":\"heartbeat\",\"realm\":\"SR1\",\"request_id\":\"" +
                        heartbeat.request_id + "\",\"pid\":" + Pid + ",\"plugin_version\":\"" + PluginVersion + "\"";
+            var online = SlimeBridge.Shared.OnlineStatus.Current;
+            if (online != null) head += ",\"online\":" + online.Json();
             var s = heartbeat.status;
             if (s == null) return head + "}";
             return head + ",\"status\":{\"player_alive\":" + (s.player_alive ? "true" : "false") +

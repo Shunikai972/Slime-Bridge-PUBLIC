@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
     'autodetect-timeout-late-result', 'startup-before-state-navigation',
     'failure-before-state-navigation', 'invalid-state-retry',
     'cached-news-cannot-replace-newer-refresh', 'cached-news-in-order-control',
-    'ready-state-navigation-control', 'loading-control-and-branding',
+    'ready-state-navigation-control', 'multiplayer-join-with-enter', 'multiplayer-unsafe-join-message',
+    'multiplayer-rejects-stale-poll-and-renders-while-typing',
+    'loading-control-and-branding',
 ])
 def test_startup_boundary(scenario):
     node = shutil.which('node') or 'C:/Program Files/nodejs/node.exe'

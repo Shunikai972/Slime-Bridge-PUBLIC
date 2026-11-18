@@ -62,7 +62,7 @@ class Element {
 function state(legal=true){return {version:'startup-boundary-fixture',platform:'inert',installations:[],preferences:{language:'en',reduce_motion:true,play_target:'SR1',backup_ack:false,native_frame:false},games:{SR1:{primary:null,all:[],running:false},SR2:{primary:null,all:[],running:false}},host:{state:'STOPPED'},legal_understood:legal,paths:{models:'fixture',output:'fixture',cache:'fixture'},tool:{found:false,path:null},last_session:null};}
 function create(options={}){
   const clock=new Clock();const doc=new Element('#document',null);doc.ownerDocument=doc;doc.hidden=false;doc.createElement=t=>new Element(t,doc);doc.getElementById=id=>doc.querySelector('#'+id);const html=doc.appendChild(new Element('html',doc));doc.documentElement=html;const body=html.appendChild(new Element('body',doc));body.innerHTML='<div id="bg"></div><div id="app"><header id="head"></header><aside id="side"></aside><main id="stage"><div id="view"></div><footer id="dock"></footer></main><footer id="ribbon"></footer></div><div id="chars-back"></div><div id="chars"></div><canvas id="fx"></canvas><div id="toasts"></div><div id="modal-root"></div><div id="loading-root"></div>';
-  const calls=[];const unknown=[];const local=new Map();const backend=new Proxy({get_state:async()=>state(options.legal??true),autodetect:never,news_cached:async()=>null,news_refresh:async()=>null,image_data:async()=>null,update_check:async()=>({ok:false}),acknowledge_legal:async()=>({understood:true}),...options.api},{get(target,name){if(typeof target[name]!=='function'){unknown.push(String(name));return async()=>{throw Error('Unimplemented inert API: '+String(name));};}return (...args)=>{calls.push({name,args,at:clock.now});return target[name](...args);};}});
+  const calls=[];const unknown=[];const local=new Map();const backend=new Proxy({get_state:async()=>state(options.legal??true),autodetect:never,news_cached:async()=>null,news_refresh:async()=>null,image_data:async()=>null,update_check:async()=>({ok:false}),acknowledge_legal:async()=>({understood:true}),extract_status:async()=>null,sanctuary_state:async()=>null,get_settings:async()=>({sections:[]}),...options.api},{get(target,name){if(typeof target[name]!=='function'){unknown.push(String(name));return async()=>{throw Error('Unimplemented inert API: '+String(name));};}return (...args)=>{calls.push({name,args,at:clock.now});return target[name](...args);};}});
   const winEvents=new Map();const SB={local:{assets:{job:null}},Art:Object.fromEntries(['slime','plort','icon','glyph','largo','wordmark'].map(k=>[k,()=>'<svg></svg>'])),Scene:{background:()=>'<svg></svg>',hero:()=>'<svg></svg>',parallax(){}},has:()=>true};SB.Art.trackEyes=()=>{};
   const window={SB,pywebview:{api:backend},addEventListener:(type,fn)=>{const list=winEvents.get(type)||[];list.push(fn);winEvents.set(type,list);}};
   class FakeDate extends Date {constructor(...args){super(...(args.length?args:[clock.now]));}static now(){return clock.now;}}
@@ -86,6 +86,50 @@ const cases={
   async 'cached-news-cannot-replace-newer-refresh'(){const cached=deferred();const fresh={items:[{title:'new',url:'https://fixture.invalid/new',date:'new',summary:'new'}],slimes:[],scenes:[],backdrop:null,fetched_at:200,offline:false};const old={...fresh,items:[{title:'old',url:'https://fixture.invalid/old',date:'old',summary:'old'}],fetched_at:100,offline:true};const h=create({api:{news_cached:()=>cached.promise,news_refresh:async()=>fresh}});h.local.set('sb.detected','1');const tasks=await h.start();await h.clock.tick(4000);const refreshBeforeCache=h.calls.some(x=>x.name==='news_refresh');if(refreshBeforeCache)assert.equal(h.SB.NEWS.items[0].title,'new');cached.resolve(old);await flush();await h.clock.tick(4000);await Promise.all(tasks);console.log('NEWS ORDER '+JSON.stringify({refresh_started_before_cache_resolved:refreshBeforeCache,calls:h.calls.filter(x=>/news/.test(x.name))}));assert.equal(h.SB.NEWS.items[0].title,'new','late startup cache must not overwrite fresh news');},
   async 'cached-news-in-order-control'(){const fresh=deferred();const old={items:[{title:'old',url:'https://fixture.invalid/old',date:'old',summary:'old'}],slimes:[],scenes:[],backdrop:null,fetched_at:100,offline:true};const current={...old,items:[{title:'new',url:'https://fixture.invalid/new',date:'new',summary:'new'}],fetched_at:200,offline:false};const h=create({api:{news_cached:async()=>old,news_refresh:()=>fresh.promise}});await booted(h);assert.equal(h.SB.NEWS.items[0].title,'old');fresh.resolve(current);await flush();assert.equal(h.SB.NEWS.items[0].title,'new');},
   async 'ready-state-navigation-control'(){const h=create();await booted(h);await h.click(h.q('[data-act="go"][data-arg="games"]'));assert.match(h.q('#view').innerHTML,/id="games"/);await h.click(h.q('[data-act="go"][data-arg="news"]'));assert.ok(h.q('#view [data-act="open-url"][data-arg="https://www.slimerancher.com/news/"]'));assert.equal(h.unknown.length,0);},
+  async 'multiplayer-join-with-enter'(){
+    const request=deferred();
+    const h=create({api:{mp_state:async()=>({ok:true}),mp_session:async()=>({ok:true,games:{},request:null}),mp_join:()=>request.promise}});
+    await booted(h);
+    await h.click(h.q('[data-act="go"][data-arg="multiplayer"]'));
+    const input=h.q('#mp-join-code');assert.ok(input);input.value=' K7QX2PA ';
+    await input.emit('keydown',{key:'Enter'},true);
+    assert.deepEqual(h.calls.filter(x=>x.name==='mp_join').map(x=>x.args[0]),['K7QX2PA']);
+    await input.emit('keydown',{key:'Enter'},true);
+    await h.click(h.q('[data-act="mp-join"]'));
+    assert.equal(h.calls.filter(x=>x.name==='mp_join').length,1,'do not send a duplicate API call');
+    request.resolve({ok:true,request:{kind:'join',step:'joining',done:false}});
+    await flush();
+    await h.q('#mp-join-code').emit('keydown',{key:'Enter'},true);
+    assert.equal(h.calls.filter(x=>x.name==='mp_join').length,1,'do not replace a pending join');
+  },
+  async 'multiplayer-unsafe-join-message'(){
+    const h=create({api:{mp_state:async()=>({ok:true}),mp_session:async()=>({ok:true,games:{},request:null}),mp_join:async()=>({ok:false,error:'SR2_JOIN_IN_GAME'})}});
+    await booted(h);
+    await h.click(h.q('[data-act="go"][data-arg="multiplayer"]'));
+    assert.match(h.q('#view').innerHTML,/empty save/);
+    h.q('#mp-join-code').value='Rk7mP2xQa';
+    await h.click(h.q('[data-act="mp-join"]'));
+    assert.match(h.q('#toasts .toast.bad').textContent,/empty save/);
+  },
+  async 'multiplayer-rejects-stale-poll-and-renders-while-typing'(){
+    const old=deferred(), joining={kind:'join',step:'joining',done:false};
+    let polls=0;
+    const h=create({api:{mp_state:async()=>({ok:true}),mp_session:()=>++polls===1?old.promise:Promise.resolve({ok:true,games:{},request:{...joining,step:'lobby_joined',done:true}}),mp_join:async()=>({ok:true,request:joining})}});
+    await booted(h);
+    await h.click(h.q('[data-act="go"][data-arg="multiplayer"]'));
+    await h.clock.tick(1500);
+    assert.equal(polls,1);
+    h.q('#mp-join-code').value='K7QX2PA';
+    await h.click(h.q('[data-act="mp-join"]'));
+    old.resolve({ok:true,games:{},request:null});
+    await flush();
+    const input=h.q('#mp-join-code');input.value='OTHER12';input.focus();
+    await input.emit('keydown',{key:'Enter'},true);
+    assert.equal(h.calls.filter(x=>x.name==='mp_join').length,1);
+    await h.clock.tick(1500);
+    assert.match(h.q('#view').innerHTML,/SRMP lobby joined/);
+    assert.equal(h.q('#mp-join-code').value,'OTHER12');
+  },
   async 'loading-control-and-branding'(){const h=create();const sc=h.SB.loading.open({id:'splash'});assert.match(sc.el.innerHTML,/pink-cotton-artist/);const bar=sc.el.querySelector('.ld-bar');assert.equal(bar.getAttribute('role'),'progressbar');sc.progress(70,'fixture progress');assert.equal(bar.getAttribute('aria-valuenow'),'70');assert.equal(sc.el.querySelector('.ld-step').textContent,'fixture progress');sc.fail('fixture failed');assert.ok(sc.el.classList.contains('bad'));const actions=sc.actions('<button data-retry>Retry</button>');assert.ok(actions.querySelector('[data-retry]'));const closing=sc.close();await h.clock.tick(750);await closing;assert.equal(h.q('#splash'),null);},
 };
 (async()=>{for(const [name,fn] of Object.entries(cases)){if(CASE!=='all'&&CASE!==name)continue;try{await fn();results.push({name,passed:true});console.log('PASS '+name);}catch(error){results.push({name,passed:false,error:String(error),stack:error.stack});console.error('FAIL '+name+'\n'+error.stack);}}assert.ok(results.length,'known case required');const failures=results.filter(r=>!r.passed);clearTimeout(watchdog);console.log(JSON.stringify({synthetic_dom:true,visual_acceptance:false,source_root:ROOT,cases:results,passed:results.length-failures.length,failed:failures.length},null,2));process.exitCode=failures.length?1:0;})().catch(e=>{console.error(e);process.exitCode=1;});

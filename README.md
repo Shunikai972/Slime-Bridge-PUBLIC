@@ -75,7 +75,11 @@ Installing the SlimeBridge plugin in a game also installs its online mod: nothin
 
 * **Slime Rancher**: open the multiplayer menu in game, host your ranch or join a friend with their code.
 * **Slime Rancher 2**: on the main menu press **F4**, pick a name once, then host the save you are playing or join a
-  friend (UDP port 1919; joining uses an empty save slot).
+  friend (UDP port 1919). Before joining a friend, load a separate, empty save: joining can reset the loaded save, so the
+  launcher never joins Slime Rancher 2 for you.
+* **Multi → Play together** hosts both games under one code: Slime Rancher 2 (Ranching Together) makes the code, and
+  Slime Rancher opens its SRMP lobby under the same code, so friends type it in the launcher or in Slime Rancher. Without
+  UPnP on the router, forward UDP port 1919 to the host PC for Slime Rancher 2.
 
 Everyone needs SlimeBridge with the same *content fingerprint* (launcher → Multi) to see the same imported slimes and
 Largos.

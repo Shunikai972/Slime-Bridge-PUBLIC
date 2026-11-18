@@ -12,6 +12,7 @@
     <Compile Include="../../mods/shared/SanctuaryLayout.cs" Link="SanctuaryLayout.cs" />
     <Compile Include="../../mods/shared/SanctuaryProgress.cs" Link="SanctuaryProgress.cs" />
     <Compile Include="../../mods/shared/TravelAgent.cs" Link="TravelAgent.cs" />
+    <Compile Include="../../mods/shared/OnlineLink.cs" Link="OnlineLink.cs" />
     <Compile Include="../../mods/shared/TravelCarry.cs" Link="TravelCarry.cs" />
   </ItemGroup>
 </Project>

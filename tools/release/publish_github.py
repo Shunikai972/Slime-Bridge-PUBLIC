@@ -1,4 +1,4 @@
-"""Push the current branch and publish GitHub release v<VERSION> with the zips in dist/ (no gh CLI needed).
+"""Push the current branch and publish GitHub release v<VERSION> with both Windows ZIPs and the Linux tarball.
 
     py -3.12 -m tools.release.publish_github [--draft]
 
@@ -63,26 +63,36 @@ def main():
     repo = match.group(1)
     if git('status', '--porcelain'):
         die('uncommitted changes in the public tree')
-    assets = [ROOT / 'dist' / f'SlimeBridge-v{version}-win64-standalone.zip', ROOT / 'dist' / f'SlimeBridge-v{version}-win64.zip']
-    for path in assets:
-        if not path.is_file():
-            die(f'{path} missing: run make_release and build_exe first')
+    dist = ROOT / 'dist'
+    assets = [(dist / f'SlimeBridge-v{version}-win64.zip', 'application/zip'),
+              (dist / f'SlimeBridge-v{version}-win64-standalone.zip', 'application/zip')]
+    for path, _ in assets:
+        if not path.is_file() or not path.stat().st_size:
+            die(f'{path} missing or empty: run make_release and build_exe first')
+    # The Linux build normally comes from the tag's CI run (linux-release.yml), after this release exists; a local
+    # build is attached and listed in SHA256SUMS when present.
+    linux = dist / f'SlimeBridge-v{version}-linux-x64-standalone.tar.gz'
+    if linux.is_file() and linux.stat().st_size:
+        assets.append((linux, 'application/gzip'))
+    hashes = {}
+    for path, _ in assets:
+        with path.open('rb') as stream:
+            hashes[path.name] = hashlib.file_digest(stream, 'sha256').hexdigest()
+    sums = dist / 'SHA256SUMS.txt'
+    sums.write_text(''.join(f'{digest}  {name}\n' for name, digest in hashes.items()), encoding='utf-8', newline='\n')
     secret = token()
     if api(secret, 'GET', f'https://api.github.com/repos/{repo}/releases/tags/{tag}', allow_404=True):
         die(f'release {tag} already exists: bump VERSION (and mods/sr1-bridge/modinfo.json) first')
     print(git('push', 'origin', 'HEAD') or 'pushed')
-    sums = ''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in assets)
-    (ROOT / 'dist' / 'SHA256SUMS.txt').write_text(sums, encoding='utf-8')
-    assets.append(ROOT / 'dist' / 'SHA256SUMS.txt')
+    assets.append((sums, 'text/plain'))
     notes_file = ROOT / 'dist' / f'release-notes-v{version}.md'
     notes = notes_file.read_text(encoding='utf-8') if notes_file.is_file() else f'SlimeBridge {tag}'
     release = api(secret, 'POST', f'https://api.github.com/repos/{repo}/releases', {
         'tag_name': tag, 'target_commitish': git('rev-parse', 'HEAD'), 'name': f'SlimeBridge {tag}', 'body': notes,
         'draft': bool(args.draft), 'prerelease': False})
     upload = release['upload_url'].split('{')[0]
-    for path in assets:
-        asset = api(secret, 'POST', f'{upload}?name={path.name}', path.read_bytes(),
-                    'application/zip' if path.suffix == '.zip' else 'text/plain')
+    for path, content_type in assets:
+        asset = api(secret, 'POST', f'{upload}?name={path.name}', path.read_bytes(), content_type)
         print('uploaded', asset.get('name'), asset.get('size'))
     print('release', release['html_url'])
 

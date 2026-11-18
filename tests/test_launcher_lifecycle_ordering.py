@@ -288,3 +288,80 @@ def test_continue_without_a_partner_starts_only_that_game(tmp_path):
     with mock.patch('apps.launcher.desktop.pack.is_lab_copy',return_value=False),mock.patch.object(api._launcher,'launch',side_effect=lambda i,extra_env=None:started.append(i['game']) or {'pid':1}):
         assert api.launch('SR1',confirmed=True,resume=True)['ok']
     assert started==['SR1']
+
+
+def _launch_fixture(tmp_path, running=(), beats=None, plugin_state='missing'):
+    api,exe=api_for(tmp_path)
+    api._audio=mock.Mock()
+    api._host=mock.Mock()
+    api._host.realm_env.return_value={}
+    api._ensure_travel_loop=mock.Mock()
+    api._keep_in_front=mock.Mock()
+    api._primary=lambda realm:{'game':realm,'root':str(tmp_path/realm)}
+    for realm,child in api._launcher._children.items():
+        child.poll.return_value=None if realm in running else 0
+    api._travel._heartbeat=lambda realm:(beats or {}).get(realm,{})
+    started=[]
+    def start(installation,extra_env=None):
+        started.append((installation['game'],dict(extra_env or {})))
+        api._launcher._children[installation['game']].poll.return_value=None
+        return {'realm':installation['game'],'pid':1}
+    patches=[mock.patch('apps.launcher.desktop.pack.is_lab_copy',return_value=False),
+             mock.patch('apps.launcher.desktop.plugins.status',return_value={'state':plugin_state}),
+             mock.patch('apps.launcher.desktop.pack.prepare',return_value={'ok':True,'steps':[],'warnings':[]}),
+             mock.patch.object(api._launcher,'launch',side_effect=start)]
+    return api,started,patches
+
+
+@pytest.mark.parametrize('front,back',[('SR1','SR2'),('SR2','SR1')])
+def test_play_both_opens_the_session_pair_and_the_back_game_waits_on_its_save(tmp_path,front,back):
+    api,started,patches=_launch_fixture(tmp_path)
+    api._travel._links.remember('ranch-sr1','ranch-sr2')
+    api._session.set('SR1','ranch-sr1')
+    with patches[0],patches[1],patches[2],patches[3]:
+        assert api.launch('BOTH_'+front,confirmed=True)['ok']
+    envs=dict(started)
+    assert [g for g,_ in started]==[front,back]
+    assert (envs[front]['SLIMEBRIDGE_TRAVEL_MODE'],envs[front]['SLIMEBRIDGE_TRAVEL_SAVE'])==('RESUME','ranch-'+front.lower())
+    assert (envs[back]['SLIMEBRIDGE_TRAVEL_MODE'],envs[back]['SLIMEBRIDGE_TRAVEL_SAVE'])==('DESTINATION','ranch-'+back.lower())
+    assert api._travel._waiting[back]['save']=='ranch-'+back.lower()
+    assert (api._travel._front,api._travel._parked)==(front,back)
+
+
+def test_online_starts_the_missing_game_behind_the_one_being_played(tmp_path):
+    beats={'SR1':{'pid':111,'status':{'player_alive':True,'save_id':'ranch-sr1'}}}
+    api,started,patches=_launch_fixture(tmp_path,running=('SR1',),beats=beats)
+    api._travel._links.remember('ranch-sr1','ranch-sr2')
+    with patches[0],patches[1],patches[2],patches[3]:
+        assert api._start_for_online(('SR1','SR2'))['ok']
+    (game,env),=started
+    assert (game,env['SLIMEBRIDGE_TRAVEL_MODE'],env['SLIMEBRIDGE_TRAVEL_SAVE'])==('SR2','DESTINATION','ranch-sr2')
+    assert (api._travel._front,api._travel._parked)==('SR1','SR2')
+
+
+def test_without_a_partner_the_started_game_makes_a_new_save_for_the_ranch(tmp_path):
+    beats={'SR1':{'pid':111,'status':{'player_alive':True,'save_id':'solo'}}}
+    api,started,patches=_launch_fixture(tmp_path,running=('SR1',),beats=beats)
+    with patches[0],patches[1],patches[2],patches[3]:
+        assert api._start_for_online(('SR1','SR2'))['ok']
+    (game,env),=started
+    assert (game,env['SLIMEBRIDGE_TRAVEL_MODE'],env['SLIMEBRIDGE_TRAVEL_NEW'])==('SR2','DESTINATION','SlimeBridge solo')
+    assert api._travel._waiting['SR2']['save'] is None
+
+
+@pytest.mark.parametrize('state,armed',[('current',True),('outdated',True),('missing',False)])
+def test_play_arms_the_extracted_content_where_the_plugin_is_installed(tmp_path,state,armed):
+    api,started,patches=_launch_fixture(tmp_path,plugin_state=state)
+    with patches[0],patches[1],patches[2] as prepare,patches[3]:
+        assert api.launch('SR1',confirmed=True)['ok']
+    assert prepare.called is armed
+
+
+def test_the_typed_online_name_reaches_slime_rancher(tmp_path):
+    api,started,patches=_launch_fixture(tmp_path)
+    api._remember_online_name('Noam_42')
+    api._remember_online_name('bad name')                       # refused: the previous one stays
+    with patches[0],patches[1],patches[2],patches[3]:
+        assert api.launch('BOTH_SR1',confirmed=True)['ok']
+    envs=dict(started)
+    assert envs['SR1']['SLIMEBRIDGE_ONLINE_NAME']=='Noam_42' and 'SLIMEBRIDGE_ONLINE_NAME' not in envs['SR2']

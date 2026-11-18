@@ -33,7 +33,7 @@ CONFIG_DEFAULTS = {'manual_paths': [], 'detected_paths': [], 'legal_understood':
                    'reduce_motion': False, 'backup_ack': False, 'prefer_lab': False, 'selected': {},
                    'native_frame': False, 'play_target': 'BOTH', 'converter_path': None, 'converter_output': None, 'cache_dir': None,
                    'largo_manifest_url': None,
-                   'models_dir': None, 'extract_ram_gb': None, 'performance': 'off', 'nexus_api_key': None, 'mp_host': {'name': 'My Ranch', 'port': 7777, 'mode': 'HYBRID'}}
+                   'models_dir': None, 'extract_ram_gb': None, 'performance': 'off', 'nexus_api_key': None, 'mp_host': {'name': 'My Ranch', 'port': 7777, 'mode': 'HYBRID'}, 'mp_name': None}
 _VALIDATORS = {
     'language': lambda v: v in ('auto', 'en', 'fr'),
     'theme': lambda v: v in ('day', 'dusk'),
@@ -511,21 +511,56 @@ class LauncherAPI:
         linked partner, the other game starts too on the partner save and waits at its portal (the session as it was left)."""
         return self._launch(target, confirmed, remember, resume, resume_partner=True)
 
-    def _launch(self, target, confirmed=False, remember=False, resume=False, *, resume_partner=False):
+    def _session_pair(self):
+        """The pair of saves the player plays now: the save open in a running game, else the last one, with its partner."""
+        pair, other = {}, lambda realm: 'SR2' if realm == 'SR1' else 'SR1'
+        anchor = None
+        for realm in ('SR1', 'SR2'):
+            save = (self._travel._heartbeat(realm).get('status') or {}).get('save_id') if self._launcher.running(realm) else None
+            if save:
+                anchor = (realm, save)
+        if anchor is None:
+            last = self._session.get()
+            if last and last.get('save'):
+                anchor = (last['realm'], last['save'])
+        if anchor:
+            pair[anchor[0]] = anchor[1]
+            partner = self._travel._links.lookup(anchor[0], anchor[1])
+            if partner:
+                pair[other(anchor[0])] = partner
+        return pair
+
+    def _launch(self, target, confirmed=False, remember=False, resume=False, *, resume_partner=False, background=False):
+        """``background``: start ``target`` as the waiting half of a session (online, or next to the game being played)."""
         if target not in ('SR1', 'SR2', 'BOTH', 'BOTH_SR1', 'BOTH_SR2'):
             raise ValueError('target must be SR1, SR2, BOTH, BOTH_SR1 or BOTH_SR2')
         front = 'SR2' if target in ('SR2', 'BOTH_SR2') else 'SR1'
         if target.startswith('BOTH'):
             target = 'BOTH'
-        partner_env = {}
-        if resume and resume_partner:
+        other = 'SR2' if front == 'SR1' else 'SR1'
+        pair = self._session_pair()
+        # Continue of one game with a linked partner starts both (the partner waits behind its portal).
+        if (resume and resume_partner and target != 'BOTH' and not background and pair.get(other)
+                and pair.get(front) and self._primary(other) is not None and not self._launcher.running(other)):
+            target = 'BOTH'
+        waiting = other if target == 'BOTH' else (target if background else None)
+        envs = {}
+        if target == 'BOTH' and pair.get(front):
+            # Both games: the front one opens the session's save straight away, so the portal is instant.
+            envs[front] = {'SLIMEBRIDGE_TRAVEL_MODE': 'RESUME', 'SLIMEBRIDGE_TRAVEL_SAVE': pair[front]}
+        elif resume and not background:
             last = self._session.get()
             if last and last['realm'] == front and last['save']:
-                back_realm = 'SR2' if front == 'SR1' else 'SR1'
-                partner = self._travel._links.lookup(front, last['save'])
-                if partner and self._primary(back_realm) is not None and not self._launcher.running(back_realm):
-                    target = 'BOTH'
-                    partner_env = {'SLIMEBRIDGE_TRAVEL_MODE': 'DESTINATION', 'SLIMEBRIDGE_TRAVEL_SAVE': partner}
+                envs[front] = {'SLIMEBRIDGE_TRAVEL_MODE': 'RESUME', 'SLIMEBRIDGE_TRAVEL_SAVE': last['save']}
+        if waiting is not None:
+            partner_realm = 'SR2' if waiting == 'SR1' else 'SR1'
+            if pair.get(waiting):
+                # The waiting game loads its linked save behind the portal card: minimized, muted, frozen until the crossing.
+                envs[waiting] = {'SLIMEBRIDGE_TRAVEL_MODE': 'DESTINATION', 'SLIMEBRIDGE_TRAVEL_SAVE': pair[waiting]}
+            elif pair.get(partner_realm) and self._launcher.running(partner_realm):
+                # No partner yet for the save being played: a new one is made for it (linked at the first crossing).
+                name = travel.NEW_NAME.sub('', f"SlimeBridge {pair[partner_realm]}"[:48]).strip() or 'SlimeBridge'
+                envs[waiting] = {'SLIMEBRIDGE_TRAVEL_MODE': 'DESTINATION', 'SLIMEBRIDGE_TRAVEL_NEW': name}
         data = self._load()
         if not data['backup_ack'] and not confirmed:
             return {'ok': False, 'needs_confirmation': True}
@@ -539,7 +574,8 @@ class LauncherAPI:
             launch_epoch = self._audio_startup_epoch
             self._audio_startup_deadline = time.monotonic() + 180 if target == 'BOTH' else 0.0
             self._select_audio_front(front)
-        realms = ((front, 'SR2' if front == 'SR1' else 'SR1') if target == 'BOTH' else (target,))
+        realms = ((front, other) if target == 'BOTH' else (target,))
+        self._travel.note_waiting(waiting, (envs.get(waiting) or {}).get('SLIMEBRIDGE_TRAVEL_SAVE')) if waiting else None
         warnings, errors, launched = [], [], []
         # The bridge (portals, travel, shared inventory) needs BridgeHost whichever game is started first.
         try:
@@ -552,30 +588,32 @@ class LauncherAPI:
             if primary is None:
                 errors.append({'realm': realm, 'error': 'GAME_NOT_FOUND'})
                 continue
-            # LAB copies are made ready here (plugin, island + portal layout, imported species) so a normal Play has
-            # everything linked; real installs keep the explicit install flow (nothing is copied behind the player's back).
+            # LAB copies are made ready here (plugin, island + portal layout, imported species). A real install is armed
+            # the same way once the player has installed the SlimeBridge plugin in it: Play then keeps it current and
+            # points it at the extracted species, so an extraction reaches the game at the next start.
             lab_env = {}
-            if pack.is_lab_copy(realm, primary['root']):
+            lab = pack.is_lab_copy(realm, primary['root'])
+            if lab or plugins.status(realm, primary['root']).get('state') in ('current', 'outdated'):
                 installs = {r: (self._primary(r) or {}).get('root') for r in ('SR1', 'SR2')}
                 prepared = pack.prepare(realm, primary['root'], installs=installs, models_dir=self._models_dir())
                 warnings += [f'{realm}: {w}' for w in prepared['warnings']]
-                lab_env = pack.lab_env(realm, primary['root'])
+                if lab:
+                    lab_env = pack.lab_env(realm, primary['root'])
             try:
-                resume_env = {}
-                last = self._session.get() if resume else None
-                if last and last['realm'] == realm and last['save']:
-                    resume_env = {'SLIMEBRIDGE_TRAVEL_MODE': 'RESUME', 'SLIMEBRIDGE_TRAVEL_SAVE': last['save']}
-                elif realm != front and partner_env:
-                    resume_env = dict(partner_env)                 # the partner save, waiting behind the portal card
-                launched.append(self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(self._settings()[1]['bridge'], realm), **self._perf_env(), **lab_env, **resume_env}))
-                if realm == front:
-                    self._session.set(realm, last['save'] if resume_env else None)
+                resume_env = dict(envs.get(realm) or {})
+                name_env = {'SLIMEBRIDGE_ONLINE_NAME': data['mp_name']} if realm == 'SR1' and data.get('mp_name') else {}
+                launched.append(self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(self._settings()[1]['bridge'], realm), **self._perf_env(), **lab_env, **resume_env, **name_env}))
+                if realm == front and not background:
+                    self._session.set(realm, resume_env.get('SLIMEBRIDGE_TRAVEL_SAVE') if resume_env.get('SLIMEBRIDGE_TRAVEL_MODE') == 'RESUME' else None)
             except RuntimeErrorWithCode as exc:
                 errors.append({'realm': realm, 'error': exc.code, 'detail': exc.detail})
         if target == 'BOTH' and len(launched) == 2:
             self._keep_in_front(front, launch_epoch)
             # One session: closing the game the player is in saves and closes the waiting one too.
-            self._travel.park(front, 'SR2' if front == 'SR1' else 'SR1')
+            self._travel.park(front, other)
+        elif background and launched and self._launcher.running(other):
+            self._keep_in_front(other, launch_epoch)               # the started game waits behind the one being played
+            self._travel.park(other, target)
         else:
             with self._audio_policy_lock:
                 if launch_epoch == self._audio_startup_epoch:
@@ -1130,7 +1168,7 @@ class LauncherAPI:
             front = last['realm'] if last else 'SR1'
             result = self._launch('BOTH_' + front, confirmed=True, resume=True, resume_partner=True)
         else:
-            result = self._launch(missing[0], confirmed=True, resume=True)
+            result = self._launch(missing[0], confirmed=True, resume=True, background=True)
         if not result['ok']:
             failure = next(iter(result.get('errors', ())), {})
             return {'ok': False, 'error': failure.get('error', 'LAUNCH_FAILED'),
@@ -1156,8 +1194,17 @@ class LauncherAPI:
         """Host online in both games (BOTH), or only one (SR1 / SR2); the code appears once the games have opened it."""
         if mode not in ('BOTH', 'SR1', 'SR2'):
             raise ValueError('mode must be BOTH, SR1 or SR2')
+        self._remember_online_name(name)
         return self._request_online(('SR1', 'SR2') if mode == 'BOTH' else (mode,),
                                     lambda: self._travel.online.host(mode, name))
+
+    def _remember_online_name(self, name):
+        """The name the player typed is also given to Slime Rancher at every start (SRMP takes it as its username)."""
+        from apps.launcher import online_session
+        name = (name or '').strip()
+        if name and online_session.NAME.fullmatch(name):
+            with self._edit_config() as current:
+                current['mp_name'] = name
 
     def mp_join(self, code: str, name: str = '') -> dict:
         """Join SRMP only. Ranching Together requires a deliberately selected empty save."""
@@ -1167,6 +1214,7 @@ class LauncherAPI:
             return {'ok': False, 'error': 'BAD_CODE'}
         if 'SR2' in realms:
             return {'ok': False, 'error': 'SR2_JOIN_IN_GAME'}
+        self._remember_online_name(name)
         return self._request_online(realms, lambda: self._travel.online.join(code, name))
 
     def mp_online(self, realm: str, action: str) -> dict:

@@ -102,11 +102,28 @@ namespace SlimeBridge.SR1
         }
 
         private static string _lastError = "";
+        private static string? _startupName = StartupName();
+        private static string? StartupName() { var n = OnlineCodes.CleanName(Environment.GetEnvironmentVariable("SLIMEBRIDGE_ONLINE_NAME")); return n.Length > 0 ? n : null; }
+        private static float _nextName;
+
+        private static void ApplyStartupName()
+        {
+            if (_startupName == null || Time.realtimeSinceStartup < _nextName) return;
+            if (Time.realtimeSinceStartup > 180f || Link() == null && Time.realtimeSinceStartup > 60f) { _startupName = null; return; }
+            _nextName = Time.realtimeSinceStartup + 5f;
+            var link = Link();
+            if (link == null || link.GetMethod("SetName", BindingFlags.Public | BindingFlags.Static) == null) return;
+            var result = Call("SetName", _startupName);
+            if (result == "not_ready") return;
+            Debug.Log("[SlimeBridge] online: SRMP name " + (result.Length == 0 ? "set from SlimeBridge" : "not set: " + result));
+            _startupName = null;
+        }
 
         /// <summary>Main thread, about once a second: what the heartbeat tells the launcher.</summary>
         internal static void Refresh(bool now = false, string? error = null)
         {
             if (error != null) _lastError = error;
+            ApplyStartupName();
             if (_pendingKind != null)
             {
                 if (SignedIn()) { var pendingKind = _pendingKind; var pendingCode = _pendingCode ?? ""; _pendingKind = _pendingCode = _pendingName = null; Run(pendingKind, pendingCode); }

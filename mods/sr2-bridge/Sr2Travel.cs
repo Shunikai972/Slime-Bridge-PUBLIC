@@ -90,7 +90,10 @@ namespace SlimeBridge.SR2
             var notice = TravelNotice.Take();
             if (notice != null) _overlay.ShowHint(notice, 6f);
             if (_destinationMode && !_arrived && WorldReady() && !_overlay.IsCovering && !_held)
+            {
                 _overlay.CoverNow(TravelText.Arriving(), TravelText.Waiting("SR2"));
+                _throttle.Apply(false);                      // waiting behind the portal: few frames, lowest quality, muted
+            }
             Sr2Online.Refresh();
             _agent.Tick((double)Time.realtimeSinceStartup);
             if (_quitAt > 0f)

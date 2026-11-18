@@ -139,6 +139,8 @@ class TravelCoordinator:
         # The two games are one session: the one the player is in (front) and the one waiting at its portal (parked).
         self._front = self._parked = None
         self._parked_identity = None
+        # A game the launcher started in the background (behind the one being played), still loading its save.
+        self._waiting = {}
         # Online play with one shared code (hosting / joining both games' online mods).
         self.online = OnlineSession(self._send, self._heartbeat, self._launcher.running, self._world_ready,
                                     lambda record_id: self._events.get(record_id, []), self._clock, cancel=self._cancel)
@@ -283,6 +285,10 @@ class TravelCoordinator:
         mode = (self._settings().get('travel_save_mode') or 'LINKED').upper()
         running = self._launcher.running(destination)
         running_save = (self._heartbeat(destination).get('status') or {}).get('save_id') if running else None
+        if running and not running_save and self._loading_behind(destination) is None:
+            # Open on its menu (started by hand, or for online play): the player would wait forever.
+            if self._restart_at_menu(transition, destination):
+                running = False
         linked = self._links.lookup(transition['from'], transition['source_save'] or '') if mode == 'LINKED' else None
         if mode == 'LINKED':
             if linked and running and running_save and running_save != linked:
@@ -308,8 +314,14 @@ class TravelCoordinator:
             transition['dest_save'] = running_save
             self._log(transition, f"linked {transition['from']} {source} <-> {transition['to']} {running_save} (the save open over there)")
             return self._start_destination(transition)
+        loading = self._loading_behind(transition['to'])
+        if loading is not None and not loading['save'] and not running_save:
+            # started behind the portal to make this ranch's new save: link it as soon as it is open
+            transition['create_new'] = transition.get('create_new') or 'SlimeBridge'
+            transition['dest_save'] = None
+            return self._start_destination(transition)
         if self._launcher.running(transition['to']):
-            # it runs another ranch's save (or is still on its menu): never switch it behind the player's back
+            # it runs another ranch's save: never switch it behind the player's back
             return self._refuse(transition, 'DESTINATION_BUSY', {'running': running_save})
         transition['create_new'] = NEW_NAME.sub('', f"SlimeBridge {source}"[:48]).strip() or 'SlimeBridge'
         transition['dest_save'] = None
@@ -384,6 +396,8 @@ class TravelCoordinator:
                    carry_mode=self._carry_mode())
         if running:
             self._log(transition, f'{destination} is already running')
+            if self._loading_behind(destination) is not None and not self._world_ready(destination):
+                transition['deadline'] = DEADLINES['PREPARING_COLD']     # still loading its save behind the portal
         else:
             if self._prepare_destination is not None:
                 try:
@@ -497,6 +511,7 @@ class TravelCoordinator:
                     transition['carry_mismatch'] = {'moved': transition.get('carry_moved') or {}, 'removed': removed}
                     self._log(transition, f'carry mismatch: {src} removed {removed} for {transition.get("carry_moved") or {}}')
                 self._finish(transition, 'COMPLETE', 'ARRIVED')
+                self._waiting.pop(dst, None)
                 self._front, self._parked = dst, src
                 self._parked_identity = self._identity(src)
                 if self._session is not None:
@@ -529,6 +544,36 @@ class TravelCoordinator:
         if not paired or (self._parked is None and self._front is not None):
             self._note_session()
         return [self.public(t) for t in self.transitions]
+
+    def note_waiting(self, realm, save):
+        """``realm`` was started to wait behind the portal on ``save`` (None: a new save is being made for the session)."""
+        with self._lock:
+            self._waiting[realm] = {'save': save, 'since': self._clock()}
+
+    def _loading_behind(self, realm):
+        waiting = self._waiting.get(realm)
+        if waiting is None or not self._launcher.running(realm) or self._clock() - waiting['since'] > DEADLINES['PREPARING_COLD']:
+            self._waiting.pop(realm, None)
+            return None
+        return waiting
+
+    def _restart_at_menu(self, transition, realm, wait=12.0):
+        """A game sitting on its main menu (no save open) cannot receive the player: close it so it starts on the save."""
+        pid = self._pid(realm) or getattr(getattr(self._launcher, '_children', {}).get(realm), 'pid', None)
+        close = getattr(self._windows, 'request_close', None)
+        if not pid or close is None:
+            return False
+        try:
+            if close(pid) is False:
+                return False
+        except Exception:                                          # noqa: BLE001 - a game that refuses stays as it is
+            return False
+        deadline = time.monotonic() + wait
+        while self._launcher.running(realm) and time.monotonic() < deadline:
+            time.sleep(0.25)
+        stopped = not self._launcher.running(realm)
+        self._log(transition, f'{realm} was on its main menu: ' + ('closed, it starts again on the save' if stopped else 'it did not close'))
+        return stopped
 
     def park(self, front, parked):
         """Both games were started together (Continue): ``parked`` waits at its portal while the player is in ``front``."""

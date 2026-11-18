@@ -129,6 +129,7 @@ namespace SlimeBridge.SR1
             {
                 _overlay.CoverNow(TravelText.Arriving(), TravelText.Waiting("SR1"));
                 LockInput(true);
+                _throttle.Apply(false);                      // waiting behind the portal: few frames, lowest quality, muted
             }
             if (_held)
             {

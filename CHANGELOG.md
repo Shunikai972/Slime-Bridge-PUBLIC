@@ -3,6 +3,26 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.8] - 2026-11-18
+
+### Changed
+- Play with both games (either one in front) opens your session straight away.
+  - The front game loads your last save.
+  - The other one loads its linked save behind the portal card: minimized, muted, lowest graphics and few frames
+    per second as soon as its save is open.
+  - A crossing then only swaps the windows, and the arrival restores everything at once.
+- Hosting online while one game is open starts the other one behind it on the linked save (or a new save made for your
+  ranch), so both games can host.
+- The online name typed on the Multi page is given to Slime Rancher at every start: SRMP uses it, no need to type it
+  again in its menu.
+- Play keeps a real install up to date once the SlimeBridge plugin is installed in it: extracted species (Cotton,
+  Angler, the Largos...) reach the game at its next start.
+
+### Fixed
+- Crossing to a game left on its main menu said another game was open. That game is now restarted directly on the
+  linked save.
+- "Both games, SR2 in front" started Slime Rancher 2 on its menu instead of your save.
+
 ## [0.2.7] - 2026-11-18
 
 ### Fixed

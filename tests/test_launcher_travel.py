@@ -587,3 +587,31 @@ class LastSessionTests(unittest.TestCase):
             self.assertEqual(case.coord.poll()[-1]['state'], 'COMPLETE')
             self.assertEqual(session.get()['realm'], 'SR2')
             self.assertEqual(session.get()['save'], 'sr2-save')
+
+
+class MenuDestinationTests(CoordinatorTests):
+    def test_a_destination_on_its_main_menu_is_restarted_on_the_linked_save(self):
+        self.links.remember('sr1-save', 'sr2-linked')
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.proc.beats['SR2'] = {'pid': 222}                   # running, no save open (main menu)
+        self.launcher._running |= {'SR1', 'SR2'}
+        closed = []
+        self.windows.request_close = lambda pid: closed.append(pid) or self.launcher._running.discard('SR2') or True
+        cross(self.host)
+        self.assertEqual(self.state(), 'PREPARING')
+        self.assertEqual(closed, [222])
+        game, env = self.launcher.started[0]
+        self.assertEqual((game, env['SLIMEBRIDGE_TRAVEL_SAVE'], env['SLIMEBRIDGE_TRAVEL_MODE']), ('SR2', 'sr2-linked', 'DESTINATION'))
+
+    def test_a_destination_still_loading_behind_the_portal_is_waited_for(self):
+        self.links.remember('sr1-save', 'sr2-linked')
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.proc.beats['SR2'] = {'pid': 222}
+        self.launcher._running |= {'SR1', 'SR2'}
+        self.coord.note_waiting('SR2', 'sr2-linked')
+        self.windows.request_close = lambda pid: self.fail('a loading game is never closed')
+        cross(self.host)
+        last = self.coord.poll()[-1]
+        self.assertEqual(last['state'], 'PREPARING')
+        self.assertEqual(self.launcher.started, [])
+        self.assertEqual(self.coord.transitions[-1]['deadline'], travel.DEADLINES['PREPARING_COLD'])

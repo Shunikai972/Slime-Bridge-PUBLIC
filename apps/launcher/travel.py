@@ -485,7 +485,7 @@ class TravelCoordinator:
                 left = {k: v - accepted.get(k, 0) for k, v in offered.items() if isinstance(v, int) and v > accepted.get(k, 0)}
                 if left:
                     transition['carry_left'] = left
-                    self._log(transition, f'left in the {src} vacpack ({dst} has no such item): ' + ', '.join(f'{k} x{v}' for k, v in sorted(left.items())))
+                    self._log(transition, f'left in the {src} vacpack (no room in the {dst} vac, or {dst} has no such item): ' + ', '.join(f'{k} x{v}' for k, v in sorted(left.items())))
                 self._window(transition, 'minimize', src)
                 self._enter(transition, 'HOLDING', 'player arrived: the other game is being throttled')
         elif state == 'HOLDING':
@@ -554,8 +554,11 @@ class TravelCoordinator:
             except Exception:                                      # noqa: BLE001 - a rebuilt window is not a decision
                 pid = None
             if pid is not None and pid == self._pid(parked):
-                self._front, self._parked = parked, None          # the player went back to the parked game by hand
+                # The player went back to the waiting game by hand (Alt+Tab): that is a trip like the portal, so the vac
+                # follows them, instead of staying in the game they left.
+                self._front, self._parked = parked, None
                 self._parked_identity = None
+                self._cross_by_hand(front)
             return
         self._front = self._parked = None
         identity, self._parked_identity = self._parked_identity, None
@@ -569,6 +572,17 @@ class TravelCoordinator:
         if not self._send(parked, 'save_quit', record, target_pid=identity[0], target_save=identity[1]):
             return self._finish(record, 'FAILED', 'SESSION_CLOSE_QUEUE_FAILED')
         self._log(record, f'{front} closed: requested save and exit from {parked}')
+
+    def _cross_by_hand(self, source):
+        save = (self._heartbeat(source).get('status') or {}).get('save_id')
+        portal = next((p for p, destination in DESTINATIONS.items() if destination != source), None)
+        if not save or portal is None:
+            return None
+        transition = self._begin({'request_id': 'hand-' + uuid.uuid4().hex[:12], 'portal_id': portal, 'realm': source,
+                                  'save_id': save})
+        if transition is not None:
+            self._log(transition, f'the player went back to {DESTINATIONS[portal]} by hand: the vac follows')
+        return transition
 
     def _advance_session_close(self, record):
         realm = record['to']

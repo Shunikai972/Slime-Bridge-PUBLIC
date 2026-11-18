@@ -398,13 +398,16 @@ class CoordinatorTests(unittest.TestCase):
         result = self.coord.poll()[-1]
         self.assertEqual((result['state'], result['code']), ('FAILED', 'SESSION_SAVE_FAILED'))
 
-    def test_a_player_back_in_the_parked_game_by_hand_keeps_playing_it(self):
+    def test_a_player_back_in_the_parked_game_by_hand_takes_the_vac_along(self):
         self.assertEqual(self._crossed_to_sr2()['state'], 'COMPLETE')
-        self.windows.foreground_pid = lambda: 111                            # SR1's window was brought back by hand
+        self.windows.foreground_pid = lambda: 111                            # SR1's window was brought back by hand (Alt+Tab)
+        last = self.coord.poll()[-1]
+        self.assertEqual((last['from'], last['to'], last['portal_id']), ('SR2', 'SR1', 'portal.sr2.return_portal'))
+        self.assertEqual(self.host.travel_peek('SR2')['kind'], 'prepare_departure', 'the game left behind offers its vac')
+        self.assertTrue(any('by hand' in h['text'] for h in last['history']))
+        plugin_reply(self.host, 'SR2', 'departure_ready', carry={'CARROT_VEGGIE': 5})
         self.coord.poll()
-        self.launcher._running.discard('SR2')
-        self.coord.poll()
-        self.assertIsNone(self.host.travel_peek('SR1'), 'SR1 is where the player is: it is not closed')
+        self.assertEqual(self.host.travel_peek('SR1')['carry'], {'CARROT_VEGGIE': 5})
 
     def test_continue_parks_the_partner_and_closing_the_front_closes_it(self):
         self.proc.alive('SR1', 'sr1-save', 111)

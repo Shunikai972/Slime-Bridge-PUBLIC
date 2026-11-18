@@ -281,7 +281,7 @@ namespace SlimeBridge.SR1
             var left = CarryNames.Left(offered, accepted);
             if (left.Length > 0)
             {
-                Debug.Log("[SlimeBridge] travel: left in the other vac (no such item here): " + left);
+                Debug.Log("[SlimeBridge] travel: left in the other vac (no room, or no such item here): " + left);
                 TravelNotice.Post(TravelText.LeftBehind(source.Length > 0 ? source : "SR2", left));
             }
             _throttle.Restore();

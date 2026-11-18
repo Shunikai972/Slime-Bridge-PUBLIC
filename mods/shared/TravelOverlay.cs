@@ -284,8 +284,8 @@ namespace SlimeBridge.Shared
         internal static string LeftBehind(string sourceRealm, string items)
         {
             var fr = Application.systemLanguage == SystemLanguage.French;
-            return fr ? "Resté dans le sac de " + Game(sourceRealm) + " : " + items + " (ce jeu ne l’a pas : page Extraire de SlimeBridge)."
-                      : "Left in the " + Game(sourceRealm) + " vacpack: " + items + " (this game does not have it: Extract page in SlimeBridge).";
+            return fr ? "Resté dans le sac de " + Game(sourceRealm) + " : " + items + " (plus de place dans le sac, ou ce jeu ne l’a pas encore : page Paramétrage > Extraire)."
+                      : "Left in the " + Game(sourceRealm) + " vacpack: " + items + " (no room left in the vac, or this game does not have it yet: Setup > Extract).";
         }
 
         /// <summary>The game the player was in closed: this one saves and closes too.</summary>

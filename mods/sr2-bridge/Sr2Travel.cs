@@ -157,7 +157,7 @@ namespace SlimeBridge.SR2
                     var left = CarryNames.Left(message.Carry, accepted);
                     if (left.Length > 0)
                     {
-                        MelonLoader.MelonLogger.Msg("travel: left in the other vac (no such item here): " + left);
+                        MelonLoader.MelonLogger.Msg("travel: left in the other vac (no room, or no such item here): " + left);
                         TravelNotice.Post(TravelText.LeftBehind(message.Source.Length > 0 ? message.Source : "SR1", left));
                     }
                     _throttle.Restore();

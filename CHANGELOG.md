@@ -3,6 +3,14 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.7] - 2026-11-18
+
+### Fixed
+- Going back to the waiting game by hand (Alt+Tab) now counts as a trip through the portal: the vacpack follows you.
+  Before, the items stayed in the game you left, so the vacpack of the game you went back to looked emptied.
+- The "left in the vacpack" message now says why: no room left in the other vac, or a species that game does not have
+  yet (extract it on Setup > Extract).
+
 ## [0.2.6] - 2026-11-18
 
 ### Added

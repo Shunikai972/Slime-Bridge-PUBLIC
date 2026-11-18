@@ -1,7 +1,12 @@
 {
   "icons": {
+    "quantum_angler": "quantum_angler.png",
+    "quantum_batty": "quantum_batty.png",
     "quantum_cotton": "quantum_cotton.png",
+    "quantum_flutter": "quantum_flutter.png",
+    "quantum_ringtail": "quantum_ringtail.png",
     "quantum_slumber": "quantum_slumber.png",
+    "quantum_twin": "quantum_twin.png",
     "rad_angler": "rad_angler.png",
     "rad_batty": "rad_batty.png",
     "rad_cotton": "rad_cotton.png",

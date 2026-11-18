@@ -22,7 +22,7 @@ check('All nonfinal largo icons are honest placeholder, not procedural art',()=>
  const html=SB.Art.largo('mosaic','cotton');assert(html.includes('img/largos/unknown.png'));assert(!html.includes('<svg'));
 });
 check('Explicit artist mappings and alias canonicalization',()=>{
- for(const [a,b,file] of [['rad','angler','rad_angler.png'],['cotton','rad','rad_cotton.png'],['quantum','sloomber','quantum_slumber.png'],['quantum','cotton','quantum_cotton.png']]){
+ for(const [a,b,file] of [['rad','angler','rad_angler.png'],['cotton','rad','rad_cotton.png'],['quantum','sloomber','quantum_slumber.png'],['quantum','cotton','quantum_cotton.png'],['twin','quantum','quantum_twin.png'],['quantum','ringtail','quantum_ringtail.png'],['flutter','quantum','quantum_flutter.png'],['batty','quantum','quantum_batty.png'],['angler','quantum','quantum_angler.png']]){
   assert(SB.Art.largo(a,b).includes('img/largos/'+file),`${a}/${b}`);
  }
 });

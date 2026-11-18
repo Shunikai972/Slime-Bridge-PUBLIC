@@ -31,7 +31,8 @@ FORBIDDEN = re.compile(r'\.(assets|bundle|resS|resource|unity3d|assetbundle|sav|
                        r'psd|exr|wav|ogg|mp3|bank|sbmesh|exe|zip|7z|rar)$', re.IGNORECASE)
 ALLOWED_ART = {'apps/launcher/ui/img/pink-cotton-artist.png', 'apps/launcher/ui/img/app-icon.ico', 'apps/launcher/ui/img/find-games.png', 'apps/launcher/ui/img/play-sr1.png', 'apps/launcher/ui/img/play-sr2.png', 'apps/launcher/ui/img/need-games.gif'}   # original artwork drawn for SlimeBridge (see sync_public)
 ALLOWED_ART.update('apps/launcher/ui/img/largos/' + name for name in (
-    'quantum_cotton.png', 'quantum_slumber.png', 'rad_angler.png', 'rad_batty.png',
+    'quantum_angler.png', 'quantum_batty.png', 'quantum_cotton.png', 'quantum_flutter.png',
+    'quantum_ringtail.png', 'quantum_slumber.png', 'quantum_twin.png', 'rad_angler.png', 'rad_batty.png',
     'rad_cotton.png', 'rad_flutter.png', 'rad_hyper.png', 'rad_ringtail.png',
     'rad_slumber.png', 'rad_twin.png', 'unknown.png',
 ))

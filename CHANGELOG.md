@@ -3,6 +3,12 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.5] - 2026-11-18
+
+### Added
+- Launcher Largos page: the artist's icons for the Quantum Angler, Batty, Flutter, Ringtail and Twin Largos replace their
+  question-mark placeholders (15 of the 24 designs now have their final icon).
+
 ## [0.2.4] - 2026-11-18
 
 ### Fixed

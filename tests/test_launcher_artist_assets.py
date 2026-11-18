@@ -21,7 +21,8 @@ def test_victor_animation_has_transparent_corners_on_every_frame():
 def test_artist_largo_mapping_covers_user_files_and_one_honest_placeholder():
     import json
     manifest = json.loads((UI/'img/largos/artist-icons.json').read_text())
-    expected = {'quantum_cotton', 'quantum_slumber', 'rad_angler', 'rad_batty', 'rad_cotton',
+    expected = {'quantum_angler', 'quantum_batty', 'quantum_cotton', 'quantum_flutter', 'quantum_ringtail',
+                'quantum_slumber', 'quantum_twin', 'rad_angler', 'rad_batty', 'rad_cotton',
                 'rad_flutter', 'rad_hyper', 'rad_ringtail', 'rad_slumber', 'rad_twin'}
     assert set(manifest['icons']) == expected
     assert manifest['placeholder'] == 'unknown.png'

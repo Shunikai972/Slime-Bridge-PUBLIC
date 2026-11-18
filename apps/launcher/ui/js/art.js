@@ -106,8 +106,9 @@ ${ft.front}
   /** Supplied final icon art only; unfinished designs use the artist's question mark. */
   function largo(a, b, o = {}) {
     const alias = k => k === 'sloomber' ? 'slumber' : k;
-    const supplied = new Set(['quantum_cotton', 'quantum_slumber', 'rad_angler', 'rad_batty', 'rad_cotton',
-      'rad_flutter', 'rad_hyper', 'rad_ringtail', 'rad_slumber', 'rad_twin']);
+    const supplied = new Set(['quantum_angler', 'quantum_batty', 'quantum_cotton', 'quantum_flutter', 'quantum_ringtail',
+      'quantum_slumber', 'quantum_twin', 'rad_angler', 'rad_batty', 'rad_cotton', 'rad_flutter', 'rad_hyper', 'rad_ringtail',
+      'rad_slumber', 'rad_twin']);
     const direct = `${alias(a)}_${alias(b)}`, reverse = `${alias(b)}_${alias(a)}`;
     const key = supplied.has(direct) ? direct : supplied.has(reverse) ? reverse : 'unknown';
     const size = Number(o.size), width = Number.isFinite(size) && size > 0 ? ` width="${size}"` : '';

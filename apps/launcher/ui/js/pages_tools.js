@@ -1,15 +1,15 @@
 /* Asset extraction (drives the local SlimeBridge-AssetConverter) and cross-game Largo models. */
 (function (SB) {
   'use strict';
-  const { esc, pct, fmtBytes } = SB.ui, { slime, plort, icon, largo } = SB.Art, t = (...a) => SB.t(...a);
+  const { esc, pct, fmtBytes } = SB.ui, { icon, glyph, largo } = SB.Art, t = (...a) => SB.t(...a);
   const L = SB.local = SB.local || {};
   L.assets = L.assets || { direction: 'both', only_missing: true, kind: 'all', job: null };
 
   /* ------------------------------------------------------------------ assets */
   const seg = (key, value, options) => `<div class="seg" role="group">${options.map(([v, label]) => `<button data-act="opt" data-k="${key}" data-v="${v}" aria-pressed="${value === v}">${label}</button>`).join('')}</div>`;
-  const scopeCard = (v, active, title, body, rec) => `<button class="scope ${active ? 'on' : ''}" data-act="opt" data-k="only_missing" data-v="${v}" aria-pressed="${active}"><span class="scope-art">${v === 'true' ? plort('rad', { size: 38 }) : plort('pink', { size: 30 }) + plort('honey', { size: 30 }) + plort('sloomber', { size: 30 })}</span><span><b>${title}</b>${rec ? `<span class="pill good">${t('assets.recommended')}</span>` : ''}<br><small>${body}</small></span></button>`;
+  const scopeCard = (v, active, title, body, rec) => `<button class="scope ${active ? 'on' : ''}" data-act="opt" data-k="only_missing" data-v="${v}" aria-pressed="${active}"><span class="scope-ico">${glyph(v === 'true' ? 'check' : 'games')}</span><span><b>${title}</b>${rec ? `<span class="pill good">${t('assets.recommended')}</span>` : ''}<br><small>${body}</small></span></button>`;
 
-  /* ----- memory limit: a pink slime hops along the bar; the extraction runs in its own process under this ceiling ----- */
+  /* ----- memory limit: native range slider with a live track fill ----- */
   const RAM_MIN = 2, RAM_MAX = 32, RAM_TIERS = [[2, 'assets.ram_t0'], [5.5, 'assets.ram_t1'], [10.5, 'assets.ram_t2']];
   const ramValue = S => Math.max(RAM_MIN, Math.min(RAM_MAX, Number((S.preferences || {}).extract_ram_gb) || 8));
   const ramFill = v => ((v - RAM_MIN) / (RAM_MAX - RAM_MIN) * 100).toFixed(1) + '%';
@@ -19,12 +19,12 @@
     return `<section class="panel ram-panel">
     <div class="row between"><h2>${t('assets.ram')}</h2><b class="pill info" id="ram-val">${v} GB</b></div>
     <p class="muted">${t('assets.ram_body')}</p>
-    <div class="bar ram" id="ram-bar" style="--p:${ramFill(v)}"><i></i><span class="hopper">${slime('pink', { size: 54, cls: 'idle', dur: .9, hopH: -10 })}</span>
-      <input type="range" id="ram-range" min="${RAM_MIN}" max="${RAM_MAX}" step="1" value="${v}" aria-label="${esc(t('assets.ram'))}"></div>
+    <div class="ram-slider-wrap"><div class="bar ram" id="ram-bar" style="--p:${ramFill(v)}"><i></i>
+      <input type="range" id="ram-range" min="${RAM_MIN}" max="${RAM_MAX}" step="1" value="${v}" aria-label="${esc(t('assets.ram'))}"></div></div>
     <div class="row between ram-scale"><span class="faint small">${RAM_MIN} GB</span><span class="faint small">${RAM_MAX} GB</span></div>
     <ul class="ram-tiers" id="ram-tiers">${ramTiers(v)}</ul></section>`;
   }
-  SB.ramLive = (value, S) => {                      // while dragging: move the slime and the text, nothing is saved yet
+  SB.ramLive = (value, S) => {                      // while dragging: update the fill and label, nothing is saved yet
     const bar = document.getElementById('ram-bar'), val = document.getElementById('ram-val'), tiers = document.getElementById('ram-tiers');
     if (bar) bar.style.setProperty('--p', ramFill(value));
     if (val) val.textContent = value + ' GB';
@@ -35,7 +35,7 @@
     if (!job) return '';
     const run = job.status === 'RUNNING' || job.status === 'QUEUED', p = Math.max(0, Math.min(1, job.progress || 0));
     const bar = `<div class="job-head"><div class="phase"><b>${esc(phaseLabel(job))}</b><span class="muted">${job.total ? `${job.done || 0} / ${job.total}` : ''}</span></div><span class="pill ${run ? 'info live' : job.status === 'DONE' ? 'good' : job.status === 'FAILED' ? 'bad' : 'warn'}">${t('job.' + job.status)}</span></div>
-      <div class="bar" style="--p:${(p * 100).toFixed(1)}%"><i></i><span class="hopper">${slime('pink', { size: 54, cls: run ? 'hop' : 'idle', dur: .9, hopH: -10 })}</span></div>`;
+      <div class="bar" style="--p:${(p * 100).toFixed(1)}%"><i></i></div>`;
     let out = '';
     if (job.error) out += `<p class="err">${esc(job.error)}</p>`;
     if (job.status === 'DONE' && job.result) {
@@ -59,7 +59,7 @@
     const job = Z.job, run = job && (job.status === 'RUNNING' || job.status === 'QUEUED'), p = Math.max(0, Math.min(1, job ? job.progress || 0 : 0));
     if (!job) return '';
     return `<div class="job-head"><div class="phase"><b>${esc(job.phase_label || t('sanct.idle'))}</b></div><span class="pill ${run ? 'info live' : job.status === 'DONE' ? 'good' : 'bad'}">${esc(job.status)}</span></div>
-      <div class="bar" style="--p:${(p * 100).toFixed(1)}%"><i></i><span class="hopper">${slime('pink', { size: 54, cls: run ? 'hop' : 'idle', dur: .9, hopH: -10 })}</span></div>${job.error ? `<p class="err">${esc(job.error)}</p>` : ''}`;
+      <div class="bar" style="--p:${(p * 100).toFixed(1)}%"><i></i></div>${job.error ? `<p class="err">${esc(job.error)}</p>` : ''}`;
   }
   function sanctuary(S) {
     const Z = L.sanct;
@@ -96,7 +96,7 @@
     return `<div class="page">
   <div class="page-title"><h1>${t('nav.assets')}</h1><p>${t('assets.sub')}</p></div>
   <section class="panel tool">
-    <div class="tool-art">${plort('phosphor', { size: 54 })}</div>
+    <div class="tool-art"><div class="tool-badge">${glyph('extract')}</div></div>
     <div class="stack" style="flex:1"><div class="row between"><h2>${t('assets.tool_title')}</h2><span class="pill ${tool.found ? 'good' : 'bad'}">${tool.found ? t('assets.tool_ok') : t('assets.tool_missing')}</span></div>
       <p class="muted">${t('assets.tool_body')}</p>
       <div class="mono ellipsis" title="${esc(tool.path || '')}">${esc(tool.path || tool.reason || '')}</div>
@@ -157,7 +157,7 @@
   function dlBox(dl) {
     const run = dl.status === 'RUNNING';
     return `<div class="job-head"><div class="phase"><b>${run ? t('models.downloading', { id: esc(dl.current || '') }) : t('job.' + dl.status)}</b><span class="muted">${dl.index != null ? Math.min(dl.total, (dl.done || []).length + (run ? 1 : 0)) : 0} / ${dl.total}</span></div>${run ? `<button class="btn btn--danger btn--sm" data-act="models-cancel">${icon('stop')} ${t('assets.cancel')}</button>` : ''}</div>
-      <div class="bar" style="--p:${(Math.max(0, dl.progress || 0) * 100).toFixed(1)}%"><i></i><span class="hopper">${slime('honey', { size: 50, cls: run ? 'hop' : 'idle', dur: .9, hopH: -10 })}</span></div>
+      <div class="bar" style="--p:${(Math.max(0, dl.progress || 0) * 100).toFixed(1)}%"><i></i></div>
       ${(dl.errors || []).map(e => `<p class="err">${esc(e.id)}: ${esc(e.error)}</p>`).join('')}`;
   }
 

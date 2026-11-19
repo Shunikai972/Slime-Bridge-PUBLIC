@@ -151,48 +151,39 @@ ${deco ? `<g transform="translate(18 64)"><g class="float">${slime('pink', { siz
 </svg>`;
   }
 
-  /* ----- navigation icons: chunky two-tone cartoon glyphs on a 48 grid ----- */
-  const ST = 'stroke="#3a2a4d" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
-  const ICONS = {
-    home: `<path d="M6 24 L24 7 L42 24 V41 H6Z" fill="#ffd76a" ${ST}/><path d="M3 25 L24 5 L45 25" fill="none" stroke="#e8553d" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><rect x="19" y="27" width="10" height="14" rx="2" fill="#a45f2a" ${ST}/><circle cx="35" cy="30" r="3.5" fill="#fff" ${ST}/>`,
-    games: `<rect x="5" y="11" width="38" height="26" rx="9" fill="#9fe6c9" ${ST}/><circle cx="31" cy="22" r="3" fill="#ff6fa8" ${ST}/><circle cx="37" cy="27" r="3" fill="#ffd76a" ${ST}/><path d="M13 24 H21 M17 20 V28" ${ST} fill="none"/>`,
-    assets: `<path d="M7 17 L24 8 L41 17 V33 L24 42 L7 33Z" fill="#ffcf7a" ${ST}/><path d="M7 17 L24 26 L41 17 M24 26 V42" fill="none" ${ST}/><path d="M24 2 V15 M19 10 L24 15 L29 10" fill="none" stroke="#e8553d" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`,
-    models: `<path d="M5 38 C2 22 12 12 22 12 C33 12 41 22 39 38Z" fill="#ff9fd4" ${ST}/><path d="M18 40 C16 26 24 18 32 18 C41 18 47 26 45 40Z" fill="#9ae8ff" ${ST}/><circle cx="14" cy="28" r="2.2" fill="#3a2a4d"/><circle cx="24" cy="28" r="2.2" fill="#3a2a4d"/><circle cx="30" cy="31" r="2" fill="#3a2a4d"/><circle cx="39" cy="31" r="2" fill="#3a2a4d"/>`,
-    profiles: `<rect x="6" y="9" width="36" height="30" rx="7" fill="#c9b8ff" ${ST}/><circle cx="18" cy="21" r="5" fill="#fff" ${ST}/><path d="M10 34 C10 28 26 28 26 34" fill="#fff" ${ST}/><path d="M30 20 H38 M30 27 H38" fill="none" ${ST}/>`,
-    recovery: `<path d="M24 6 L40 12 V24 C40 33 33 39 24 43 C15 39 8 33 8 24 V12Z" fill="#9fe6c9" ${ST}/><path d="M16 24 L22 30 L33 18" fill="none" ${ST}/>`,
-    multiplayer: `<circle cx="16" cy="16" r="7" fill="#ffc2da" ${ST}/><path d="M3 41 C3 28 29 28 29 41Z" fill="#ff6fa8" ${ST}/><circle cx="33" cy="19" r="6" fill="#bfe6ff" ${ST}/><path d="M22 41 C22 31 45 31 45 41Z" fill="#4db9ff" ${ST}/>`,
-    options: `<circle cx="24" cy="24" r="9" fill="#fff3a8" ${ST}/><path d="M24 4 V10 M24 38 V44 M4 24 H10 M38 24 H44 M10 10 L14 14 M34 34 L38 38 M10 38 L14 34 M34 14 L38 10" ${ST} fill="none"/><circle cx="24" cy="24" r="3.4" fill="#e29a12" ${ST}/>`,
-    about: `<path d="M24 42 C8 31 5 22 5 17 C5 10 10 6 15 6 C19 6 22 8 24 12 C26 8 29 6 33 6 C38 6 43 10 43 17 C43 22 40 31 24 42Z" fill="#ff7a8e" ${ST}/><circle cx="24" cy="20" r="2.4" fill="#fff"/><path d="M24 25 V33" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>`,
-    sun: `<circle cx="24" cy="24" r="9" fill="#ffd54a" ${ST}/><path d="M24 5 V10 M24 38 V43 M5 24 H10 M38 24 H43 M11 11 L15 15 M33 33 L37 37 M11 37 L15 33 M33 15 L37 11" stroke="#e29a12" stroke-width="3.4" stroke-linecap="round"/>`,
-    moon: `<path d="M34 6 C20 6 10 16 10 28 C10 38 18 44 28 44 C36 44 42 40 44 34 C34 36 24 28 24 18 C24 13 28 8 34 6Z" fill="#fff3a8" ${ST}/>`,
-    play: `<path d="M10 6 L40 24 L10 42Z" fill="#fff" ${ST}/>`,
-    folder: `<path d="M4 14 C4 10 6 8 10 8 H19 L24 14 H38 C42 14 44 16 44 20 V36 C44 40 42 42 38 42 H10 C6 42 4 40 4 36Z" fill="#ffd76a" ${ST}/>`,
-    search: `<circle cx="20" cy="20" r="12" fill="#bfe6ff" ${ST}/><path d="M29 29 L42 42" stroke="#3a2a4d" stroke-width="6" stroke-linecap="round"/>`,
-    download: `<path d="M24 4 V30 M13 20 L24 31 L35 20" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 36 V42 H42 V36" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`,
-    check: `<path d="M8 25 L19 36 L40 12" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`,
-    star: `<path d="M24 4 L30 17 L44 19 L34 29 L36 43 L24 36 L12 43 L14 29 L4 19 L18 17Z" fill="currentColor" stroke="#3a2a4d" stroke-width="2.6" stroke-linejoin="round"/>`,
-    link: `<path d="M20 28 C14 28 10 24 10 19 C10 14 14 10 19 10 H25 M28 20 C34 20 38 24 38 29 C38 34 34 38 29 38 H23 M18 29 L30 19" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>`,
-    stop: `<rect x="10" y="10" width="28" height="28" rx="6" fill="#fff" ${ST}/>`,
-    refresh: `<path d="M38 18 A15 15 0 1 0 39 29" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/><path d="M40 6 V19 H27" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`,
-    plus: `<path d="M24 8 V40 M8 24 H40" stroke="#fff" stroke-width="7" stroke-linecap="round"/>`,
-    trash: `<path d="M10 14 H38 L35 42 H13Z" fill="#fff" ${ST}/><path d="M6 14 H42 M18 14 V8 H30 V14" fill="none" ${ST}/>`,
+  /* ----- button icons: clean monochrome vector strokes matching the sidebar glyphs ----- */
+  const ICON_PATHS = {
+    home: 'M4 15 L16 5 L28 15 M7 13 V27 H25 V13 M13 27 V19 H19 V27',
+    games: 'M9 9 H23 a6 6 0 0 1 6 6 V19 a4 4 0 0 1 -7 2.6 L21 20 H11 L10 21.6 A4 4 0 0 1 3 19 V15 a6 6 0 0 1 6 -6Z M10 13 V17 M8 15 H12 M21 14.6 H21.1 M24 17.4 H24.1',
+    assets: 'M6 12 L16 6 L26 12 V22 L16 28 L6 22Z M6 12 L16 18 L26 12 M16 18 V28',
+    extract: 'M6 12 L16 6 L26 12 V22 L16 28 L6 22Z M6 12 L16 18 L26 12 M16 18 V28',
+    models: 'M3 25 C2 16 8 9 13 9 C19 9 23 16 22 25Z M13 26 C12 20 16 15 21 15 C26 15 30 20 29 26Z',
+    profiles: 'M5 7 H27 V25 H5Z M11 17 a3 3 0 1 0 0 -6 a3 3 0 0 0 0 6 M7 23 c0 -4 8 -4 8 0 M19 12 H24 M19 17 H24',
+    recovery: 'M16 3 L27 7 V16 C27 22 22 26 16 29 C10 26 5 22 5 16 V7Z M11 16 L15 20 L22 12',
+    multiplayer: 'M11 14 a4 4 0 1 0 0 -8 a4 4 0 0 0 0 8 M3 26 c0 -5 4 -8 8 -8 s8 3 8 8 M22 13 a3.2 3.2 0 1 0 0 -6.4 M21 18.5 c4.5 -.4 8 2 8 7.5',
+    options: 'M16 20.5 a4.5 4.5 0 1 0 0 -9 a4.5 4.5 0 0 0 0 9 M13.5 4 h5 l.9 3.1 a9.5 9.5 0 0 1 2.4 1 l2.9 -1.5 l3.5 3.5 l-1.5 2.9 a9.5 9.5 0 0 1 1 2.4 l3.1 .9 v5 l-3.1 .9 a9.5 9.5 0 0 1 -1 2.4 l1.5 2.9 l-3.5 3.5 l-2.9 -1.5 a9.5 9.5 0 0 1 -2.4 1 l-.9 3.1 h-5 l-.9 -3.1 a9.5 9.5 0 0 1 -2.4 -1 l-2.9 1.5 l-3.5 -3.5 l1.5 -2.9 a9.5 9.5 0 0 1 -1 -2.4 l-3.1 -.9 v-5 l3.1 -.9 a9.5 9.5 0 0 1 1 -2.4 l-1.5 -2.9 l3.5 -3.5 l2.9 1.5 a9.5 9.5 0 0 1 2.4 -1 Z',
+    about: 'M16 27 C6 20 3 14 3 10 C3 6 6 4 9 4 C12 4 14 6 16 9 C18 6 20 4 23 4 C26 4 29 6 29 10 C29 14 26 20 16 27Z',
+    folder: 'M3 9 a2 2 0 0 1 2 -2 h7 l3 3 h12 a2 2 0 0 1 2 2 v12 a2 2 0 0 1 -2 2 H5 a2 2 0 0 1 -2 -2Z',
+    search: 'M14 24 a9 9 0 1 0 0 -18 a9 9 0 0 0 0 18 M21 21 L28 28',
+    download: 'M16 4 V20 M9 14 L16 21 L23 14 M5 26 H27',
+    check: 'M7 17 L14 24 L26 9',
+    star: 'M16 3 L20 12 L30 13 L22 20 L25 29 L16 24 L7 29 L10 20 L2 13 L12 12Z',
+    link: 'M13 19 a5 5 0 0 1 0 -7 l3 -3 a5 5 0 0 1 7 7 l-2 2 M19 13 a5 5 0 0 1 0 7 l-3 3 a5 5 0 0 1 -7 -7 l2 -2',
+    refresh: 'M26 12 A11 11 0 1 0 27 20 M27 4 V12 H19',
+    plus: 'M16 6 V26 M6 16 H26',
+    trash: 'M6 9 H26 M12 9 V5 H20 V9 M9 9 L10.5 27 H21.5 L23 9',
   };
   function icon(name, cls = 'ico') {
-    return `<svg class="${cls}" viewBox="0 0 48 48" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+    if (name === 'play') return `<svg class="${cls}" viewBox="0 0 32 32" aria-hidden="true"><path d="M9 6 L26 16 L9 26Z" fill="currentColor" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/></svg>`;
+    if (name === 'stop') return `<svg class="${cls}" viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="7" width="18" height="18" rx="3" fill="currentColor"/></svg>`;
+    return `<svg class="${cls}" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="${ICON_PATHS[name] || ''}"/></svg>`;
   }
 
-
-
-  /* ----- header wordmark: bubbly pink lettering with white outline (original, no game logo) ----- */
+  /* ----- header wordmark: clean, crisp launcher branding (no sparkle icon or bubble chrome) ----- */
   function wordmark(o = {}) {
-    const g = nid('wm');
-    return `<svg viewBox="0 0 560 128" ${o.size ? `height="${o.size}"` : ''} role="img" aria-label="SlimeBridge Launcher" style="overflow:visible">
-<defs><linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8ab4"/><stop offset=".55" stop-color="#ff4f8f"/><stop offset="1" stop-color="#e8306f"/></linearGradient></defs>
-<text x="8" y="84" font-family="Fredoka, sans-serif" font-weight="700" font-size="88" letter-spacing="1" fill="#a8195a" stroke="#a8195a" stroke-width="22" stroke-linejoin="round" transform="translate(0 6)">SlimeBridge</text>
-<text x="8" y="84" font-family="Fredoka, sans-serif" font-weight="700" font-size="88" letter-spacing="1" fill="url(#${g})" stroke="#fff" stroke-width="15" stroke-linejoin="round" paint-order="stroke">SlimeBridge</text>
-<path d="M30 40 q6 -14 22 -16" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".7"/>
-<text x="286" y="118" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="600" font-size="21" letter-spacing="14" fill="#fff" stroke="#16486b" stroke-width="5" stroke-linejoin="round" paint-order="stroke">LAUNCHER</text>
-<path d="M528 20 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4Z" fill="#fff" opacity=".95"/>
+    return `<svg viewBox="0 0 360 72" ${o.size ? `height="${o.size}"` : ''} role="img" aria-label="SlimeBridge Launcher" style="overflow:visible">
+<text x="2" y="45" font-family="Fredoka, sans-serif" font-weight="700" font-size="46" letter-spacing=".2" fill="#ffffff" stroke="#103652" stroke-width="7" stroke-linejoin="round" paint-order="stroke">Slime<tspan fill="#ff8db5">Bridge</tspan></text>
+<text x="4" y="65" font-family="Nunito, sans-serif" font-weight="800" font-size="11.5" letter-spacing="4.2" fill="rgba(255,255,255,.88)">LAUNCHER</text>
 </svg>`;
   }
 
@@ -206,7 +197,7 @@ ${deco ? `<g transform="translate(18 64)"><g class="float">${slime('pink', { siz
     recovery: 'M16 3 L27 7 V16 C27 22 22 26 16 29 C10 26 5 22 5 16 V7Z M11 16 L15 20 L22 12',
     models: 'M3 25 C2 16 8 9 13 9 C19 9 23 16 22 25Z M13 26 C12 20 16 15 21 15 C26 15 30 20 29 26Z',
     multiplayer: 'M11 14 a4 4 0 1 0 0 -8 a4 4 0 0 0 0 8 M3 26 c0 -5 4 -8 8 -8 s8 3 8 8 M22 13 a3.2 3.2 0 1 0 0 -6.4 M21 18.5 c4.5 -.4 8 2 8 7.5',
-    options: 'M16 21 a5 5 0 1 0 0 -10 a5 5 0 0 0 0 10 M16 3 V7 M16 25 V29 M3 16 H7 M25 16 H29 M7 7 l3 3 M22 22 l3 3 M7 25 l3 -3 M22 10 l3 -3',
+    options: 'M16 20.5 a4.5 4.5 0 1 0 0 -9 a4.5 4.5 0 0 0 0 9 M13.5 4 h5 l.9 3.1 a9.5 9.5 0 0 1 2.4 1 l2.9 -1.5 l3.5 3.5 l-1.5 2.9 a9.5 9.5 0 0 1 1 2.4 l3.1 .9 v5 l-3.1 .9 a9.5 9.5 0 0 1 -1 2.4 l1.5 2.9 l-3.5 3.5 l-2.9 -1.5 a9.5 9.5 0 0 1 -2.4 1 l-.9 3.1 h-5 l-.9 -3.1 a9.5 9.5 0 0 1 -2.4 -1 l-2.9 1.5 l-3.5 -3.5 l1.5 -2.9 a9.5 9.5 0 0 1 -1 -2.4 l-3.1 -.9 v-5 l3.1 -.9 a9.5 9.5 0 0 1 1 -2.4 l-1.5 -2.9 l3.5 -3.5 l2.9 1.5 a9.5 9.5 0 0 1 2.4 -1 Z',
     chevR: 'M12 6 L21 16 L12 26', chevL: 'M20 6 L11 16 L20 26', chevD: 'M6 12 L16 21 L26 12',
     folder: 'M3 9 a2 2 0 0 1 2 -2 h7 l3 3 h12 a2 2 0 0 1 2 2 v12 a2 2 0 0 1 -2 2 H5 a2 2 0 0 1 -2 -2Z',
     min: 'M8 22 H24', max: 'M8 8 H24 V24 H8Z', close: 'M9 9 L23 23 M23 9 L9 23',
@@ -224,19 +215,8 @@ ${deco ? `<g transform="translate(18 64)"><g class="float">${slime('pink', { siz
     return `<svg class="${cls}" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="${GLYPHS[name] || ''}"/></svg>`;
   }
 
-  /* pupils follow the cursor (cheap, throttled by rAF) */
-  function trackEyes() {
-    let raf = 0, mx = 0, my = 0;
-    window.addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; if (!raf) raf = requestAnimationFrame(apply); });
-    function apply() {
-      raf = 0;
-      document.querySelectorAll('.slime .pupil').forEach(p => {
-        const r = p.getBoundingClientRect(); if (!r.width) return;
-        const dx = mx - (r.left + r.width / 2), dy = my - (r.top + r.height / 2), d = Math.hypot(dx, dy) || 1, m = Math.min(3.4, d / 60);
-        p.style.transform = `translate(${(dx / d) * m}px, ${(dy / d) * m}px)`;
-      });
-    }
-  }
+  /* kept exported for startup compatibility; no cursor-chasing eyes */
+  function trackEyes() {}
 
   SB.Art = { slime, largo, plort, logo, mark, wordmark, glyph, icon, trackEyes, SPECIES, BODY };
 })(window.SB = window.SB || {});

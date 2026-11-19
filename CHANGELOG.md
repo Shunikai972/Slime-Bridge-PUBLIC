@@ -3,6 +3,22 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.15] - 2026-11-19
+
+### Changed
+- Launcher UI: replaced glossy gradient buttons, neon halos, shimmer animations, procedural SVG slimes/plorts,
+  confetti bursts, and decorative sparkles with crisp solid tactile buttons, consistent monochrome icons, clean
+  segmented tabs/controls, and the hand-drawn launcher artwork throughout.
+- Launcher UI: fixed the multiplayer name field label (`Your name` / `Ton pseudo`) and widened the name/code inputs so
+  placeholders stay readable; tightened the Home layout and Victor icon spacing.
+
+### Fixed
+- Slime Rancher Sanctuary Island: floating slime names above every statue now subscribe to `MessageDirector` language
+  updates (`SanctuaryStatueLabel`) and follow the game's active language dynamically (e.g. English names whenever the
+  game is in English, updating immediately on in-game language switches).
+- Portal transition and return-portal prompts in both Slime Rancher and Slime Rancher 2 now follow each game's active
+  in-game language instead of falling back to Windows OS language.
+
 ## [0.2.14] - 2026-11-19
 
 ### Fixed

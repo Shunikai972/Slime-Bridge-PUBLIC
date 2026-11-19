@@ -1,7 +1,7 @@
 /* Multiplayer, Options and About / Legal. */
 (function (SB) {
   'use strict';
-  const { esc } = SB.ui, { slime, plort, icon } = SB.Art, t = (...a) => SB.t(...a);
+  const { esc } = SB.ui, { icon, glyph } = SB.Art, t = (...a) => SB.t(...a);
   const L = SB.local = SB.local || {};
 
   const toggle = (act, arg, on, label, desc) => `<div class="setting"><div><div class="name">${label}</div>${desc ? `<div class="desc">${desc}</div>` : ''}</div><button class="switch" role="switch" aria-checked="${!!on}" aria-label="${esc(label)}" data-act="${act}" data-arg="${arg}"></button></div>`;
@@ -12,11 +12,11 @@
     const M = L.mp || { servers: { favourites: [], recent: [], directory_enabled: true }, host: { name: 'My Ranch', port: 7777, mode: 'HYBRID' } };
     const host = S.host, running = host.state === 'RUNNING';
     const online = M.online || {}, content = M.content || {};
-    const card = (realm, mascot, flip) => {
+    const card = (realm) => {
       const o = online[realm] || { state: 'no_game', loader: false }, s = o.state || 'no_game';
       const pill = s === 'current' ? 'good' : (s === 'outdated' || s === 'other') ? 'warn' : 'muted';
       return `<section class="panel stack">
-      <div class="row between"><h2>${slime(mascot, { size: 40, cls: 'idle', flip: !!flip })} ${t('mp.online_' + realm)}</h2><span class="pill ${pill}">${t('mp.on_s_' + s)}</span></div>
+      <div class="row between"><h2><img class="mp-ico" src="img/play-${realm.toLowerCase()}.png" alt=""> ${t('mp.online_' + realm)}</h2><span class="pill ${pill}">${t('mp.on_s_' + s)}</span></div>
       <p class="muted">${t('mp.how_' + realm)}</p>
       ${o.loader === false && s !== 'no_game' ? `<p class="err">${t('mp.noloader_' + realm)}</p>` : ''}
       <div class="row">
@@ -37,14 +37,14 @@
     const step = req ? (req.step === 'failed' ? failure(req.error) : t('mp.step_' + req.step)) : '';
     const udp = ((sess.games || {}).SR2 || {}).error === 'needs_udp_1919' ? `<p class="warn">${t('mp.udp_hint')}</p>` : '';
     const together = `<section class="panel stack mp-together">
-    <div class="row between"><h2>${slime('pink', { size: 40, cls: 'idle' })} ${t('mp.together')}</h2><span class="row" style="gap:8px">${'SR1'} ${gameState('SR1')} ${'SR2'} ${gameState('SR2')}</span></div>
+    <div class="row between"><h2>${glyph('multiplayer', 'mp-glyph')} ${t('mp.together')}</h2><span class="row" style="gap:8px">${'SR1'} ${gameState('SR1')} ${'SR2'} ${gameState('SR2')}</span></div>
     <p class="muted">${t('mp.launcher_scope')}</p>
     <div class="mp-code"><label>${t('mp.code')}</label>
       ${sess.code ? `<div class="row"><span class="mono mp-code-value" id="mp-code">${esc(sess.code)}</span><button class="btn btn--sky btn--sm" data-act="mp-copy" data-arg="${esc(sess.code)}">${icon('link')} ${t('mp.copy')}</button></div>` : `<p class="faint">${t('mp.no_code')}</p>`}</div>
     <div class="row">${segment('mp-mode', 'mode', mode, ['BOTH', 'SR1', 'SR2'].map(m => [m, t('mp.mode_' + m)]))}
       <button class="btn btn--bridge" data-act="mp-host" data-arg="${mode}" ${req && !req.done ? 'disabled aria-busy="true"' : ''}>${icon('play')} ${t('mp.host_btn')}</button></div>
-    <div class="row"><label class="faint" for="mp-name">${t('mp.name')}</label><input class="input" id="mp-name" maxlength="24" placeholder="${esc(t('mp.name_ph'))}" value="${esc(L.mpName ?? localStorage.getItem('sb.mpName') ?? '')}" style="max-width:220px" autocomplete="off" spellcheck="false"></div>
-    <div class="row"><input class="input mono" id="mp-join-code" maxlength="16" placeholder="${esc(t('mp.join_ph'))}" style="max-width:220px" autocomplete="off" spellcheck="false">
+    <div class="row"><label class="faint" for="mp-name">${t('mp.name')}</label><input class="input" id="mp-name" maxlength="24" placeholder="${esc(t('mp.name_ph'))}" value="${esc(L.mpName ?? localStorage.getItem('sb.mpName') ?? '')}" style="max-width:270px" autocomplete="off" spellcheck="false"></div>
+    <div class="row"><input class="input mono" id="mp-join-code" maxlength="16" placeholder="${esc(t('mp.join_ph'))}" style="max-width:270px" autocomplete="off" spellcheck="false">
       <button class="btn btn--sky" data-act="mp-join" ${req && !req.done ? 'disabled' : ''}>${icon('link')} ${t('mp.join_btn')}</button></div>
     <p class="muted small">${t('mp.sr2_join_in_game')}</p>
     ${step ? `<p class="${req.step === 'failed' ? 'err' : 'muted'}" role="status" aria-live="polite">${step}</p>` : ''}${udp}
@@ -53,11 +53,11 @@
   <div class="page-title"><h1>${t('nav.multiplayer')}</h1><p>${t('mp.sub')}</p></div>
   ${together}
   <div class="grid cols-2">
-    ${card('SR1', 'tabby')}
-    ${card('SR2', 'hunter', true)}
+    ${card('SR1')}
+    ${card('SR2')}
   </div>
   <section class="panel stack">
-    <h2>${slime('cotton', { size: 40, cls: 'idle' })} ${t('mp.content')}</h2>
+    <h2>${glyph('recovery', 'mp-glyph')} ${t('mp.content')}</h2>
     <p class="muted">${t('mp.content_body')}</p>
     ${Object.keys(content).length ? `<div class="row">${Object.entries(content).map(([realm, hash]) => `<div class="field"><label>${esc(realm)}</label><div class="mono">${esc(String(hash).slice(0, 12))}</div></div>`).join('')}</div>` : `<p class="faint small">${t('mp.content_none')}</p>`}
   </section>
@@ -126,7 +126,7 @@
     return `<div class="page">
   <div class="page-title"><h1>${t('nav.about')}</h1><p>${t('about.sub')}</p></div>
   <section class="panel legal-hero">
-    <div class="lh-art">${slime('pink', { size: 90, cls: 'hop', dur: 2.2 })}${plort('honey', { size: 40 })}</div>
+    <div class="lh-art"><img src="img/pink-cotton-artist.png" alt=""></div>
     <div class="stack" style="flex:1"><h2>${t('legal.title')}</h2>
       <p class="big-note"><b>${t('legal.notaff')}</b></p>
       <p class="muted">${t('legal.body1')}</p>

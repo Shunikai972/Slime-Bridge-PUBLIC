@@ -66,7 +66,7 @@
       <button class="head-ico ${page === 'tutorial' ? 'on' : ''}" data-act="go" data-arg="tutorial" aria-label="${esc(t('head.tuto'))}" title="${esc(t('head.tuto'))}">${glyph('bulb')}</button>
       <button class="head-ico ${SUBNAV.options.includes(page) ? 'on' : ''}" data-act="go" data-arg="options" aria-label="${esc(t('nav.options'))}" title="${esc(t('nav.options'))}">${glyph('options')}</button>
       <div class="profile" data-act="profile-menu" role="button" tabindex="0" aria-haspopup="true">
-        <span class="avatar">${SB.cutout(/pink/i, 'pink', 44, { cls: '' })}</span>
+        <span class="avatar"><img src="img/play-sr1.png" alt=""></span>
         <span class="who"><b>${t('profile.name')}</b><small><i class="dot ${on ? 'on' : ''}"></i>${on ? t('profile.on') : t('profile.off')}</small></span>${glyph('chevD', 'chev')}
         ${menu === 'profile' ? `<div class="menu" role="menu"><button data-act="${on ? 'host-stop' : 'host-start'}">${glyph(on ? 'stop' : 'play', 'gl mi')} ${on ? t('menu.host_stop') : t('menu.host_start')}</button><hr>
           <button data-act="lang-toggle">${glyph('news', 'gl mi')} ${SB.lang === 'fr' ? 'English' : 'Français'}</button><button data-act="go" data-arg="options">${glyph('options', 'gl mi')} ${t('nav.options')}</button><button data-act="go" data-arg="profiles">${glyph('profiles', 'gl mi')} ${t('nav.profiles')}</button><button data-act="go" data-arg="debug">${glyph('recovery', 'gl mi')} ${t('sub.debug')}</button><button data-act="go" data-arg="about">${glyph('heart', 'gl mi')} ${t('nav.about')}</button></div>` : ''}
@@ -81,12 +81,9 @@
     side.querySelector('.nav').scrollTop = top;
   }
   function renderChars() {
-    const N = SB.NEWS || {}, pick = re => (N.slimes || []).find(u => re.test(u));
-    const spot = (cls, style, re, fallback) => `<div class="ch ${cls}" style="${style}">${pick(re) ? `<img data-src="${esc(pick(re))}" data-w="480" data-h="480" data-fit="1" alt="">` : slime(fallback, { cls: 'idle' })}</div>`;
-    // the pink + cotton pair is an artist's drawing that ships with the launcher (no generated art)
+    // Keep artist art inside the sidebar (.side-art); no floating procedural slimes behind the header controls.
     $('#chars').innerHTML = '';
-    $('#chars-back').innerHTML = spot('c3', 'right:22px;top:46px;width:92px', /batty|flutter/i, 'batty');
-    SB.net.hydrate($('#chars')); SB.net.hydrate($('#chars-back'));
+    $('#chars-back').innerHTML = '<span class="ch-anchor" aria-hidden="true"></span>';
   }
   // BOTH_SR1 / BOTH_SR2: both games, that one in front (the other waits minimized); old 'BOTH' means SR1 in front
   const isBoth = tg => String(tg).startsWith('BOTH');
@@ -121,8 +118,7 @@
       <div class="play ${stop ? 'stop' : ready ? '' : 'off'}" ${unconfirmed ? `title="${esc(t('err.SESSION_CLOSE_HOST_LOST'))}"` : ''}><button class="go" data-act="${stop ? 'game-stop' : 'play'}" data-arg="${isBoth(tg) ? 'BOTH' : tg}" aria-label="${label}" ${closing || unconfirmed ? 'disabled' : ''}>${glyph(stop ? 'stop' : 'play')}<span>${label}</span></button><button class="more" data-act="play-menu" aria-label="More" aria-haspopup="true">${glyph('chevD')}</button>
         ${menu === 'play' ? `<div class="menu" role="menu"><button data-act="launch" data-arg="BOTH_SR1">${glyph('play', 'gl mi')} ${t('dock.both_sr1')}</button><button data-act="launch" data-arg="BOTH_SR2">${glyph('play', 'gl mi')} ${t('dock.both_sr2')}</button><button data-act="launch" data-arg="SR1">${glyph('play', 'gl mi')} ${NAMES.SR1}</button><button data-act="launch" data-arg="SR2">${glyph('play', 'gl mi')} ${NAMES.SR2}</button><hr><button data-act="go" data-arg="games">${glyph('folder', 'gl mi')} ${t('nav.games')}</button></div>` : ''}</div></div>
       <div class="dock-status"><span class="ok"><i class="tick ${st.tone === 'good' ? '' : st.tone}">${glyph(st.tone === 'good' ? 'check' : 'close')}</i><span class="t" title="${esc(st.text)}">${esc(st.text)}</span></span>
-        <div class="bar" style="--p:${(Math.max(0, Math.min(1, prog || 0)) * 100).toFixed(1)}%"><i></i></div><span>SlimeBridge ${esc(S.version)}</span><span>${work}</span>
-        <span class="tag">${slime('pink', { size: 30, cls: 'idle' })}${t('dock.tag')} <span style="color:var(--pink)">♥</span></span></div>`;
+        ${running || dling ? `<div class="bar" style="--p:${(Math.max(0, Math.min(1, prog || 0)) * 100).toFixed(1)}%"><i></i></div><span>${work}</span>` : ''}<span>SlimeBridge ${esc(S.version)}</span></div>`;
   }
   function renderRibbon() {
     $('#ribbon').innerHTML = `<span class="txt">${t('ribbon.a')}<a data-act="open-url" data-arg="${FAN_POLICY}">${t('ribbon.link')}</a>${t('ribbon.b')}</span>`;
@@ -583,7 +579,7 @@
   async function askLink(c) {
     const game = NAMES[c.to] || c.to || '?', rows = c.candidates || [];
     const list = rows.length ? rows.map((x, i) => `<label class="row link-row" style="gap:10px;cursor:${x.linked ? 'not-allowed' : 'pointer'};opacity:${x.linked ? .55 : 1}"><input type="radio" name="link-save" value="${esc(x.group)}" ${x.linked ? 'disabled' : ''} ${(x.open && !x.linked) || (!rows.some(y => y.open && !y.linked) && i === 0 && !x.linked) ? 'checked' : ''} style="width:20px;height:20px"><span><b>${x.new ? esc(t('cross.link_new', { game })) : esc(x.label || x.group)}</b>${x.open ? ` <span class="pill good">${t('cross.link_open')}</span>` : ''}${x.linked ? ` <span class="pill muted">${t('cross.link_taken')}</span>` : ''}</span></label>`).join('') : `<p class="err">${t('cross.link_none', { game })}</p>`;
-    const res = await modal({ title: t('cross.link_t', { game }), art: `<div class="art-real">${SB.cutout(/pink/i, 'pink', 92, { cls: 'hop' })}</div>`, body: `<p class="muted">${t('cross.link_b', { game })}</p><div class="stack small-gap" style="max-height:260px;overflow:auto">${list}</div><p class="faint small">${t('cross.link_note', { game })}</p>`, buttons: [{ label: t('common.cancel'), cls: 'btn--ghost', value: false }, { label: t('cross.link_go'), cls: 'btn--bridge', value: true }], collect: root => { const r = root.querySelector('input[name="link-save"]:checked'); return r ? r.value : null; } });
+    const res = await modal({ title: t('cross.link_t', { game }), art: `<div class="art-real"><img src="img/pink-cotton-artist.png" alt=""></div>`, body: `<p class="muted">${t('cross.link_b', { game })}</p><div class="stack small-gap" style="max-height:260px;overflow:auto">${list}</div><p class="faint small">${t('cross.link_note', { game })}</p>`, buttons: [{ label: t('common.cancel'), cls: 'btn--ghost', value: false }, { label: t('cross.link_go'), cls: 'btn--bridge', value: true }], collect: root => { const r = root.querySelector('input[name="link-save"]:checked'); return r ? r.value : null; } });
     const group = res && res.value ? res.data : null;
     await api.travel_link(c.id, group || null).catch(() => null);
   }

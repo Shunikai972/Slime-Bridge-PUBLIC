@@ -1,40 +1,26 @@
-/* Startup and game launch use the same artist branding and panel tokens as the launcher. */
+/* Startup and game launch screens: clean surfaces matching the launcher tokens. */
 #loading-root { position: fixed; inset: 0; z-index: 90; pointer-events: none; }
-.ld { position: absolute; inset: 0; display: grid; place-items: center; overflow: auto; pointer-events: auto; color: var(--ink); background: var(--container); transition: opacity .3s ease; }
-#splash { inset: 104px 24px 68px 268px; border: 3px solid var(--panel-edge); border-radius: var(--r-l); box-shadow: 0 8px 22px var(--panel-shadow); }
+.ld { position: absolute; inset: 0; display: grid; place-items: center; overflow: auto; pointer-events: auto; color: var(--ink); background: var(--container); transition: opacity .25s ease; }
+#splash { inset: 86px 20px 64px 256px; border: 1.5px solid var(--panel-edge); border-radius: var(--r-l); box-shadow: 0 8px 24px var(--panel-shadow); }
 .ld-logo { display: grid; justify-items: center; gap: 8px; }
-.ld-logo img { width: min(250px, 35vw); max-height: 25vh; object-fit: contain; }
-.ld-logo strong { font: 600 clamp(28px, 4vh, 42px) var(--font-display); color: var(--ink); }
+.ld-logo img { width: min(210px, 32vw); max-height: 22vh; object-fit: contain; }
+.ld-logo strong { font: 700 clamp(26px, 3.6vh, 38px) var(--font-display); color: var(--ink); }
 .ld .ld-art, .ld .ld-veil, .ld .ld-notice { display: none; }
-.ld.gone { opacity: 0; transform: scale(1.04); pointer-events: none; }
-.ld-art { position: absolute; inset: -20px; background: center / cover no-repeat; filter: blur(3px) saturate(1.15); opacity: 0; transform: scale(1.04); transition: opacity 1s ease; animation: ldDrift 22s ease-in-out infinite alternate; }
-.ld-art[style*="background-image"] { opacity: 1; }
-.ld-veil { position: absolute; inset: 0; background: radial-gradient(70% 60% at 50% 46%, rgba(9, 30, 52, .18), rgba(9, 30, 52, .78) 100%), linear-gradient(180deg, rgba(9, 30, 52, .45), rgba(9, 30, 52, .2) 40%, rgba(9, 30, 52, .8)); }
-.ld--launch .ld-veil { background: radial-gradient(70% 60% at 50% 46%, rgba(9, 30, 52, .4), rgba(9, 30, 52, .9) 100%); }
-.ld-center { position: relative; z-index: 2; display: grid; justify-items: center; gap: 12px; width: min(620px, 86vw); text-align: center; }
-.ld-logo svg { height: clamp(110px, 20vh, 170px); width: auto; filter: drop-shadow(0 10px 18px rgba(0, 20, 50, .5)); animation: logoIn .9s var(--ease-spring) both; }
-.ld-title { margin: 4px 0 0; font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 4.4vh, 38px); color: var(--ink); letter-spacing: .02em; }
-.ld-sub { margin: -4px 0 0; color: var(--ink-soft); font-weight: 700; font-size: 15px; max-width: 520px; }
-.ld-bar { position: relative; width: 100%; height: 22px; margin-top: 24px; border-radius: 99px; border: 3px solid var(--panel-edge); background: var(--field); overflow: hidden; }
-.ld-bar > i { position: absolute; inset: 0 auto 0 0; width: var(--p, 0%); min-width: 26px; border-radius: 99px; background: linear-gradient(180deg, #5bf09b, #1fc767); box-shadow: inset 0 3px 0 rgba(255, 255, 255, .5); transition: width .55s var(--ease-out); overflow: hidden; }
-.ld-bar > i::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(120deg, transparent 0 16px, rgba(255, 255, 255, .22) 16px 32px); animation: stripes 1s linear infinite; }
-.ld-hop { position: absolute; bottom: calc(100% - 6px); left: var(--p, 0%); width: 74px; transform: translateX(-50%); transition: left .55s var(--ease-out); pointer-events: none; filter: drop-shadow(0 5px 6px rgba(0, 20, 50, .45)); animation: ldHop .7s cubic-bezier(.3, 0, .4, 1) infinite; }
-.ld-hop img, .ld-hop svg { display: block; width: 100%; height: auto; }
-.ld-line { display: flex; width: 100%; justify-content: space-between; align-items: baseline; gap: 14px; color: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: 18px; }
-.ld-line .ld-pct { font-weight: 700; opacity: .9; }
-.ld-tip { min-height: 1.6em; color: var(--ink-soft); font-weight: 700; font-size: 15px; transition: opacity .22s; } .ld-tip.swap { opacity: 0; }
-.ld-actions { display: flex; gap: 10px; justify-content: center; margin-top: 4px; }
-.ld-notice { position: absolute; left: 0; right: 0; bottom: 10px; z-index: 2; padding: 0 16px; text-align: center; font-size: 11.5px; font-weight: 700; color: rgba(255, 255, 255, .9); text-shadow: 0 1px 2px rgba(0, 40, 70, .7); }
-.ld.ok .ld-hop { animation: none; } .ld.ok .ld-step { color: var(--mint-d); }
-.ld.bad .ld-bar > i { background: linear-gradient(180deg, #ff8294, #e0334d); } .ld.bad .ld-hop { animation: none; } .ld.bad .ld-step { color: var(--bad-d); }
-@keyframes ldHop { 0%, 100% { transform: translateX(-50%) translateY(0) scale(1.08, .92); } 50% { transform: translateX(-50%) translateY(-18px) scale(.94, 1.06); } }
-@keyframes ldDrift { from { transform: scale(1.04) translate(0, 0); } to { transform: scale(1.1) translate(-1.5%, -1%); } }
-.reduce-motion .ld-art, .reduce-motion .ld-hop { animation: none; }
-html.shot .ld-art, html.shot .ld-hop { animation: none !important; }
+.ld.gone { opacity: 0; pointer-events: none; }
+.ld-center { position: relative; z-index: 2; display: grid; justify-items: center; gap: 10px; width: min(540px, 84vw); text-align: center; }
+.ld-title { margin: 4px 0 0; font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 3.8vh, 32px); color: var(--ink); }
+.ld-sub { margin: -2px 0 0; color: var(--ink-soft); font-weight: 600; font-size: 14.5px; max-width: 480px; }
+.ld-bar { position: relative; width: 100%; height: 12px; margin-top: 14px; border-radius: 99px; border: 1px solid #c5dce8; background: #dfeef5; overflow: hidden; }
+.ld-bar > i { position: absolute; inset: 0 auto 0 0; width: var(--p, 0%); min-width: 12px; border-radius: 99px; background: var(--mint); transition: width .4s var(--ease-out); }
+.ld-line { display: flex; width: 100%; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: 16px; }
+.ld-line .ld-pct { font-weight: 700; opacity: .85; }
+.ld-tip { min-height: 1.5em; color: var(--ink-soft); font-weight: 600; font-size: 14px; transition: opacity .2s; } .ld-tip.swap { opacity: 0; }
+.ld-actions { display: flex; gap: 10px; justify-content: center; margin-top: 6px; }
+.ld.ok .ld-step { color: var(--mint-d); }
+.ld.bad .ld-bar > i { background: var(--bad); } .ld.bad .ld-step { color: var(--bad-d); }
 
-/* modals: same glass as the containers */
-.modal-back { background: rgba(8, 28, 50, .62); }
-.modal.panel { border: 4px solid #fff; border-radius: 30px; background: linear-gradient(180deg, #f4fcff, #d9f1fa); box-shadow: 0 8px 0 rgba(10, 60, 100, .3), 0 24px 60px rgba(0, 20, 50, .5); }
+/* modals */
+.modal-back { background: rgba(12, 32, 52, .56); }
+.modal.panel { border: 1.5px solid var(--panel-edge); border-radius: var(--r-l); background: #ffffff; box-shadow: 0 18px 46px rgba(8, 28, 50, .34); }
 .modal h2 { font-family: var(--font-display); color: var(--ink); }
-.modal .art-real { display: flex; justify-content: center; } .modal .art-real img { width: 92px; height: auto; filter: drop-shadow(0 6px 6px rgba(10, 40, 80, .3)); animation: ldHopSoft 1.6s ease-in-out infinite; }
-@keyframes ldHopSoft { 0%, 100% { transform: translateY(0) scale(1.05, .95); } 50% { transform: translateY(-10px) scale(.96, 1.04); } }
+.modal .art-real { display: flex; justify-content: center; } .modal .art-real img { width: 112px; height: auto; }

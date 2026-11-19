@@ -20,6 +20,86 @@ namespace SlimeBridge.SR1
         }
     }
 
+    /// <summary>
+    /// Keeps a statue's floating slime name synchronized with SR1's active game language
+    /// (at build time, on enable, and live whenever the player changes language in Options).
+    /// </summary>
+    internal sealed class SanctuaryStatueLabel : MonoBehaviour
+    {
+        internal string Slime = "";
+        internal TMPro.TMP_Text? TmpText;
+        internal TextMesh? PlainText;
+        private bool _registered;
+        private MessageDirector.Lang _lastLang = (MessageDirector.Lang)(-1);
+
+        internal void Bind(string slime, TMPro.TMP_Text? tmpText, TextMesh? plainText)
+        {
+            Slime = slime;
+            TmpText = tmpText;
+            PlainText = plainText;
+            EnsureRegistered();
+            Refresh(GameContext.Instance != null ? GameContext.Instance.MessageDirector : null);
+        }
+
+        public void OnEnable()
+        {
+            EnsureRegistered();
+            Refresh(GameContext.Instance != null ? GameContext.Instance.MessageDirector : null);
+        }
+
+        public void LateUpdate()
+        {
+            var game = GameContext.Instance;
+            var dir = game != null ? game.MessageDirector : null;
+            if (dir == null) return;
+            var lang = dir.GetCultureLang();
+            if (lang != _lastLang) Refresh(dir);
+        }
+
+        public void OnDestroy()
+        {
+            if (!_registered) return;
+            _registered = false;
+            try
+            {
+                var game = GameContext.Instance;
+                if (game != null && game.MessageDirector != null)
+                    game.MessageDirector.UnregisterBundlesListener(OnBundlesAvailable);
+            }
+            catch (Exception) { }
+        }
+
+        private void EnsureRegistered()
+        {
+            if (_registered) return;
+            try
+            {
+                var game = GameContext.Instance;
+                var dir = game != null ? game.MessageDirector : null;
+                if (dir == null) return;
+                _registered = true;
+                dir.RegisterBundlesListener(OnBundlesAvailable);
+            }
+            catch (Exception) { _registered = false; }
+        }
+
+        private void OnBundlesAvailable(MessageDirector msgDir) => Refresh(msgDir);
+
+        internal void Refresh(MessageDirector? msgDir)
+        {
+            if (string.IsNullOrEmpty(Slime)) return;
+            if (msgDir != null) _lastLang = msgDir.GetCultureLang();
+            var resolved = SanctuaryBuilder.ResolveSlimeName(Slime, msgDir);
+            if (TmpText != null && !string.Equals(TmpText.text, resolved, StringComparison.Ordinal))
+            {
+                TmpText.text = resolved;
+                TmpText.ForceMeshUpdate();
+            }
+            if (PlainText != null && !string.Equals(PlainText.text, resolved, StringComparison.Ordinal))
+                PlainText.text = resolved;
+        }
+    }
+
     internal sealed class BuiltStatue
     {
         public string Slime = "";
@@ -380,7 +460,10 @@ namespace SlimeBridge.SR1
                 label.transform.rotation = anchor.rotation * Quaternion.Euler(0f, 180f, 0f);   // read from the front
                 var light = statue.Spec.LightColor;
                 var tint = light != null && light.Length >= 3 ? new Color(light[0], light[1], light[2]) : Color.white;
-                if (!GameStyleLabel(label, SlimeName(statue.Slime), tint)) PlainLabel(label, SlimeName(statue.Slime), tint);
+                var initialName = ResolveSlimeName(statue.Slime, GameContext.Instance != null ? GameContext.Instance.MessageDirector : null);
+                var tmp = GameStyleLabel(label, initialName, tint);
+                TextMesh? plain = tmp == null ? PlainLabel(label, initialName, tint) : null;
+                label.AddComponent<SanctuaryStatueLabel>().Bind(statue.Slime, tmp, plain);
                 label.AddComponent<FaceCamera>();
             }
             catch (Exception ex) { _log.Add("badge failed for " + statue.Slime + ": " + ex.GetType().Name); Debug.Log("[SlimeBridge] statue badge failed for " + statue.Slime + ": " + ex); }
@@ -404,13 +487,13 @@ namespace SlimeBridge.SR1
         /// The name in the game's own font, crisp, white-to-tint with a dark outline: a small world-space canvas with a
         /// TextMeshProUGUI (the 3D TextMeshPro component cannot load fonts in SR1, the UI one is what the game's HUD uses).
         /// </summary>
-        private static bool GameStyleLabel(GameObject label, string name, Color tint)
+        private static TMPro.TextMeshProUGUI? GameStyleLabel(GameObject label, string name, Color tint)
         {
             GameObject? canvasObject = null;
             try
             {
                 var font = GameFont();
-                if (font == null) return false;
+                if (font == null) return null;
                 canvasObject = new GameObject("canvas", typeof(RectTransform));
                 canvasObject.transform.SetParent(label.transform, false);
                 var canvas = canvasObject.AddComponent<Canvas>();
@@ -446,17 +529,17 @@ namespace SlimeBridge.SR1
                     _labelLogged = true;
                     Debug.Log("[SlimeBridge] statue labels use the game font " + font.name);
                 }
-                return true;
+                return text;
             }
             catch (Exception ex)
             {
                 Debug.Log("[SlimeBridge] statue label (game font) failed: " + ex);
                 if (canvasObject != null) UnityEngine.Object.Destroy(canvasObject);
-                return false;
+                return null;
             }
         }
 
-        private static void PlainLabel(GameObject parent, string name, Color tint)
+        private static TextMesh PlainLabel(GameObject parent, string name, Color tint)
         {
             var label = new GameObject("plain");
             label.transform.SetParent(parent.transform, false);
@@ -470,19 +553,34 @@ namespace SlimeBridge.SR1
             if (font != null) renderer.sharedMaterial = font.material;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = false;
+            return text;
         }
 
-        /// <summary>The slime's name as the game shows it (Slimepedia), else a readable fallback.</summary>
-        private static string SlimeName(string slime)
+        /// <summary>The slime's name in SR1's currently active game language (actor/pedia bundle), else an English fallback.</summary>
+        internal static string ResolveSlimeName(string slime, MessageDirector? msgDir)
         {
+            var lower = slime.ToLowerInvariant();
             try
             {
-                var name = GameContext.Instance.MessageDirector.GetBundle("actor").Get("l." + slime.ToLowerInvariant() + "_slime");
-                if (!string.IsNullOrEmpty(name) && !name.StartsWith("l.", StringComparison.Ordinal)) return name;
+                var dir = msgDir ?? (GameContext.Instance != null ? GameContext.Instance.MessageDirector : null);
+                if (dir != null)
+                {
+                    var actorBundle = dir.GetBundle("actor");
+                    var actorName = actorBundle != null ? actorBundle.GetResourceString("l." + lower + "_slime", false) : null;
+                    if (!string.IsNullOrEmpty(actorName) && !actorName.StartsWith("l.", StringComparison.Ordinal)) return actorName;
+
+                    var pediaBundle = dir.GetBundle("pedia");
+                    var pediaName = pediaBundle != null ? pediaBundle.GetResourceString("t." + lower + "_slime", false) : null;
+                    if (!string.IsNullOrEmpty(pediaName) && !pediaName.StartsWith("t.", StringComparison.Ordinal)) return pediaName;
+                }
+                if (Enum.TryParse<Identifiable.Id>(slime.ToUpperInvariant() + "_SLIME", out var id))
+                {
+                    var nativeName = Identifiable.GetName(id, false);
+                    if (!string.IsNullOrEmpty(nativeName)) return nativeName;
+                }
             }
             catch (Exception) { }
-            var lower = slime.ToLowerInvariant();
-            return char.ToUpperInvariant(lower[0]) + lower.Substring(1);
+            return lower.Length > 0 ? char.ToUpperInvariant(lower[0]) + lower.Substring(1) + " Slime" : slime;
         }
 
         private static float FitWidth(GameObject root, float width)

@@ -45,7 +45,7 @@
     const N = feed(), items = (N.items || []).slice(0, 3);
     let body;
     if (SB.newsLoading && !items.length) body = [1, 2, 3].map(() => '<li class="skel shimmer"></li>').join('');
-    else if (!items.length) body = `<li class="news-empty"><div>${slime('cotton', { size: 56, cls: 'idle' })}</div><p>${t('news.none')}</p><button class="btn btn--ghost btn--sm" data-act="news-refresh">${icon('refresh')} ${t('news.retry')}</button></li>`;
+    else if (!items.length) body = `<li class="news-empty">${glyph('news')}<p>${t('news.none')}</p><button class="btn btn--ghost btn--sm" data-act="news-refresh">${icon('refresh')} ${t('news.retry')}</button></li>`;
     else body = items.map(newsItem).join('');
     return `<aside class="newsbox panel" aria-label="${t('news.title')}"><header><h2>${t('news.title')}</h2><a data-act="go" data-arg="news">${t('news.all')} ›</a></header><ul class="news-list">${body}</ul></aside>`;
   }
@@ -92,7 +92,7 @@
     <button class="btn btn--ghost btn--sm" data-act="news-refresh">${icon('refresh')} ${t('news.retry')}</button><button class="btn btn--sky btn--sm" data-act="open-url" data-arg="https://www.slimerancher.com/news/">${t('news.open_site')}</button></div>
   ${N.offline && items.length ? `<p class="pill warn">${t('news.offline')}</p>` : ''}
   ${items.length ? `<div class="news-grid">${items.map(i => `<button class="news-card" data-act="open-url" data-arg="${esc(i.url)}"><span class="nimg" ${i.image ? `data-bg="${esc(i.image)}" data-w="750" data-h="420"` : ''}></span><span class="nbody"><small>${esc(i.date)}</small><b>${esc(i.title)}</b><span class="s">${esc(i.summary)}</span></span></button>`).join('')}</div>`
-      : `<section class="panel"><div class="empty">${slime('cotton', { size: 70, cls: 'hop', dur: 2.4 })}<div><b>${t('news.none')}</b><p class="muted">${esc(N.error || '')}</p></div></div></section>`}
+      : `<section class="panel"><div class="empty">${glyph('news')}<div><b>${t('news.none')}</b><p class="muted">${esc(N.error || '')}</p></div></div></section>`}
   <p class="credit">${t('news.source')}</p></div>`;
   }
 
@@ -102,7 +102,7 @@
     const art = `<img class="gc-icon" src="img/play-${key}.png" alt="">`;          // artist icon (same as the home cards)
     const head = `<div class="gc-head"><div class="gc-art ${key}">${art}</div>
       <div class="gc-title"><h3>${NAMES[realm]}</h3><span class="muted small">${realm === 'SR1' ? t('games.engine1') : t('games.engine2')}</span></div>
-      <span class="pill ${p ? 'good live' : 'warn'}">${p ? t('games.found') : t('games.notfound')}</span></div>`;
+      <span class="pill ${p ? 'good' : 'warn'}">${p ? t('games.found') : t('games.notfound')}</span></div>`;
     if (!p) {
       return `<article class="panel game-card ${key}">${head}<p class="muted">${t('games.empty')}</p>
         <div class="row"><button class="btn btn--sky btn--sm" data-act="detect">${icon('search')} ${t('games.autodetect')}</button><button class="btn btn--ghost btn--sm" data-act="pick" data-arg="folder">${icon('folder')} ${t('games.choose_folder')}</button><button class="btn btn--ghost btn--sm" data-act="pick" data-arg="exe">${t('games.choose_exe')}</button></div></article>`;

@@ -254,50 +254,72 @@ namespace SlimeBridge.Shared
         }
     }
 
-    /// <summary>The few strings the transition shows, in the game's language (English fallback).</summary>
+    /// <summary>The few strings the transition shows, in the game's active language (English fallback).</summary>
     internal static class TravelText
     {
+        /// <summary>Reads the game's active in-game language first (never forces French on an English game running on a French OS).</summary>
+        internal static bool IsFrench()
+        {
+            try
+            {
+#if SLIMEBRIDGE_SR2
+                var locale = UnityEngine.Localization.Settings.LocalizationSettings.SelectedLocale;
+                if (locale != null)
+                {
+                    var code = locale.Identifier.Code;
+                    if (!string.IsNullOrEmpty(code)) return code.StartsWith("fr", StringComparison.OrdinalIgnoreCase);
+                }
+#else
+                var game = GameContext.Instance;
+                var dir = game != null ? game.MessageDirector : null;
+                if (dir != null) return dir.GetCultureLang() == MessageDirector.Lang.FR;
+#endif
+            }
+            catch (Exception) { }
+            return Application.systemLanguage == SystemLanguage.French;
+        }
+
         internal static string Game(string realm) => realm == "SR2" ? "Slime Rancher 2" : "Slime Rancher";
 
         internal static string Departing(string destinationRealm)
         {
-            var french = Application.systemLanguage == SystemLanguage.French;
+            var french = IsFrench();
             return (french ? "Voyage vers " : "Travelling to ") + Game(destinationRealm);
         }
 
         internal static string Waiting(string destinationRealm)
         {
-            var french = Application.systemLanguage == SystemLanguage.French;
+            var french = IsFrench();
             return french ? "Le portail s’ouvre sur un autre ranch. Ta sauvegarde t’y suit." : "The portal opens on another ranch. Your save follows you there.";
         }
 
         internal static string Parked(string homeRealm)
         {
-            var french = Application.systemLanguage == SystemLanguage.French;
+            var french = IsFrench();
             return (french ? "Tu es dans " : "You are in ") + Game(homeRealm == "SR1" ? "SR2" : "SR1");
         }
 
         internal static string Arriving()
         {
-            return Application.systemLanguage == SystemLanguage.French ? "Arrivée en cours" : "Arriving";
+            return IsFrench() ? "Arrivée en cours" : "Arriving";
         }
 
         internal static string Opening(string destinationRealm)
         {
-            var french = Application.systemLanguage == SystemLanguage.French;
+            var french = IsFrench();
             return (french ? "Le portail s’ouvre vers " : "The portal opens to ") + Game(destinationRealm) + "…";
         }
 
         internal static string Dormant(int filled, int total)
         {
-            var french = Application.systemLanguage == SystemLanguage.French;
+            var french = IsFrench();
             return french ? $"Le portail dort : {filled}/{total} statues remplies" : $"The portal sleeps: {filled}/{total} statues filled";
         }
 
         /// <summary>What the other game offered and this one has no such item for: it stays in the other game's vac.</summary>
         internal static string LeftBehind(string sourceRealm, string items)
         {
-            var fr = Application.systemLanguage == SystemLanguage.French;
+            var fr = IsFrench();
             return fr ? "Resté dans le sac de " + Game(sourceRealm) + " : " + items + " (plus de place dans le sac, ou ce jeu ne l’a pas encore : page Paramétrage > Extraire)."
                       : "Left in the " + Game(sourceRealm) + " vacpack: " + items + " (no room left in the vac, or this game does not have it yet: Setup > Extract).";
         }
@@ -305,14 +327,14 @@ namespace SlimeBridge.Shared
         /// <summary>The game the player was in closed: this one saves and closes too.</summary>
         internal static string SavingAndClosing(string otherRealm)
         {
-            var fr = Application.systemLanguage == SystemLanguage.French;
+            var fr = IsFrench();
             return fr ? Game(otherRealm) + " est fermé : sauvegarde et fermeture…" : Game(otherRealm) + " closed: saving and closing…";
         }
 
         /// <summary>Why a crossing did not happen, in words the player can act on (codes come from the launcher).</summary>
         internal static string Failure(string code, string otherRealm)
         {
-            var fr = Application.systemLanguage == SystemLanguage.French;
+            var fr = IsFrench();
             var other = Game(otherRealm);
             switch (code)
             {

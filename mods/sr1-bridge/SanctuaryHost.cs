@@ -523,6 +523,23 @@ namespace SlimeBridge.SR1
             if (op.StartsWith("perf:", StringComparison.Ordinal)) { StartPerf(op.Substring(5)); return; }
             if (op.StartsWith("materials:", StringComparison.Ordinal)) { ListMaterials(op.Substring(10)); return; }
             if (op.StartsWith("toggle:", StringComparison.Ordinal)) { _events.Add(Toggle(op.Substring(7))); return; }
+            if (_lab && op.StartsWith("lang:", StringComparison.Ordinal))
+            {
+                var lang = MessageDirector.GetLang(op.Substring(5));
+                GameContext.Instance.MessageDirector.SetCulture(lang);
+                _events.Add("lang=" + GameContext.Instance.MessageDirector.GetCultureLang());
+                return;
+            }
+            if (_lab && op == "labels")
+            {
+                var parts2 = new List<string>();
+                if (_builder != null)
+                    foreach (var lbl in _builder.Root.GetComponentsInChildren<SanctuaryStatueLabel>(true))
+                        parts2.Add(lbl.Slime + "=" + (lbl.TmpText != null ? lbl.TmpText.text : lbl.PlainText != null ? lbl.PlainText.text : ""));
+                parts2.Sort(StringComparer.Ordinal);
+                _events.Add("labels[" + GameContext.Instance.MessageDirector.GetCultureLang() + "]: " + string.Join(", ", parts2));
+                return;
+            }
             var parts = op.Split(':');
             var outcome = DevCommand(parts);
             _events.Add(outcome);

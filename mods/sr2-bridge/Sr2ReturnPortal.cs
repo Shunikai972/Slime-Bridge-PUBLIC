@@ -36,7 +36,7 @@ namespace SlimeBridge.SR2
             if (camera == null) return;
             var point = camera.WorldToScreenPoint(_anchor + Vector3.up * 1.5f);
             if (point.z <= 0 || point.x < 0 || point.x > Screen.width || point.y < 0 || point.y > Screen.height) return;
-            var label = Application.systemLanguage == SystemLanguage.French ? "↓ Portail vers Slime Rancher" : "↓ Portal to Slime Rancher";
+            var label = TravelText.IsFrench() ? "↓ Portail vers Slime Rancher" : "↓ Portal to Slime Rancher";
             GUI.Box(new Rect(point.x - 110f, Screen.height - point.y - 28f, 220f, 28f), label);
         }
         private readonly string _stateDir;
@@ -386,7 +386,7 @@ namespace SlimeBridge.SR2
             var flat = new Vector3(player.x - _anchor.x, 0f, player.z - _anchor.z).magnitude;
             var near = flat < HintRadius && Mathf.Abs(player.y - _anchor.y) < 8f;
             var onPad = flat < PadRadius && Mathf.Abs(player.y - _anchor.y) < 3.2f;
-            var french = Application.systemLanguage == SystemLanguage.French;
+            var french = TravelText.IsFrench();
             if (near && !onPad && Time.realtimeSinceStartup >= _nextHint)
             {
                 _nextHint = Time.realtimeSinceStartup + 3f;

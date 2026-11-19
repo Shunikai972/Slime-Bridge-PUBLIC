@@ -47,4 +47,16 @@ check('Play/launch actions never treat DOM Event 3rd arg as resume=true',()=>{
  assert(home.includes('data-act="launch"'), 'idle Home must offer launch (Play)');
  assert(home.includes('data-act="resume"'), 'idle Home with last_session must offer resume (Continue)');
 });
+check('UI uses clean crafted styling: no sparkle star, no button shimmer, mp.name preserved',()=>{
+ const wm=SB.Art.wordmark();
+ assert(!wm.includes('528 20'), 'wordmark must not include decorative sparkle star');
+ const uiCss=fs.readFileSync(root+'../css/ui.css','utf8');
+ assert(!uiCss.includes('@keyframes shine'), 'buttons must not have animated shine sweep');
+ assert(!uiCss.includes('rotate(-'), 'buttons must not tilt on hover');
+ const i18nCtx=vm.createContext({window:{SB:{}},navigator:{language:'fr'}});
+ i18nCtx.window.window=i18nCtx.window;
+ vm.runInContext(fs.readFileSync(root+'i18n.js','utf8'),i18nCtx,{filename:'i18n.js'});
+ assert.equal(i18nCtx.window.SB._dict.en['mp.name'],'Your name');
+ assert.equal(i18nCtx.window.SB._dict.fr['mp.name'],'Ton pseudo');
+});
 console.log(`UI_POLISH_CHECKS=${passed+fails} PASSED=${passed} FAILED=${fails}`);process.exitCode=fails?1:0;

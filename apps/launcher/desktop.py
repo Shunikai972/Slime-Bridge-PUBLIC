@@ -588,11 +588,12 @@ class LauncherAPI:
         if confirmed and remember and not data['backup_ack']:
             with self._edit_config() as current:
                 current['backup_ack'] = True
+        audio_front = other if background and self._launcher.running(other) else front
         with self._audio_policy_lock:
             self._audio_startup_epoch += 1
             launch_epoch = self._audio_startup_epoch
-            self._audio_startup_deadline = time.monotonic() + 180 if target == 'BOTH' else 0.0
-            self._select_audio_front(front)
+            self._audio_startup_deadline = time.monotonic() + 180 if ((target == 'BOTH' and not follow) or background) else 0.0
+            self._select_audio_front(audio_front)
         self._travel.note_waiting(waiting, (envs.get(waiting) or {}).get('SLIMEBRIDGE_TRAVEL_SAVE')) if waiting else None
         warnings, errors, launched = [], [], []
         # The bridge (portals, travel, shared inventory) needs BridgeHost whichever game is started first.

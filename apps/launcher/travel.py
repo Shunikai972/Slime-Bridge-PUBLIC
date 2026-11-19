@@ -665,6 +665,10 @@ class TravelCoordinator:
         if pending is None:
             return
         src, dst = pending['from'], pending['to']
+        f = self._follow
+        if f is not None and not f['launched'] and f['back'] == src and self._launcher.running(dst):
+            pending['since'] = self._clock()               # front game is still on its menu: wait for the follower to start
+            return
         if self._clock() - pending['since'] > DEADLINES['PREPARING_COLD'] or not (self._launcher.running(src) and self._launcher.running(dst)):
             self._pending_sync = None
             return

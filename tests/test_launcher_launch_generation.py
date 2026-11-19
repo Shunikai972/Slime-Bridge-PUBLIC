@@ -26,7 +26,7 @@ def test_superseded_launch_completion_cannot_clear_newer_audio_pin_or_focus_stal
     def host_start():
         if entered:return
         entered.append(True)
-        assert api.launch('BOTH_SR2',confirmed=True)['ok']
+        assert api.launch('BOTH_SR2',confirmed=True,resume=True)['ok']
     api._host.start.side_effect=host_start
     control=mock.Mock()
     control._checked.return_value=[1]
@@ -34,7 +34,7 @@ def test_superseded_launch_completion_cannot_clear_newer_audio_pin_or_focus_stal
     api._window_control=lambda:control
     api._travel._windows=control
     with mock.patch('apps.launcher.desktop.pack.is_lab_copy',return_value=False),mock.patch('apps.launcher.desktop.threading.Thread',InertThread),mock.patch('apps.launcher.desktop.time.sleep'):
-        api.launch(older_target,confirmed=True)
+        api.launch(older_target,confirmed=True,resume=older_target=='BOTH_SR1')
         # The newer BOTH_SR2 arrangement is deliberately still pending.
         for stale in queued[1:]:stale.target()
         api._sync_game_audio(follow_foreground=True)
@@ -51,11 +51,11 @@ def test_superseded_partial_completion_cannot_clear_newer_audio_pin(tmp_path):
     def host_start():
         if nested[0]:return
         nested[0]=True
-        assert api.launch('BOTH_SR2',confirmed=True)['ok']
+        assert api.launch('BOTH_SR2',confirmed=True,resume=True)['ok']
         api._primary=lambda realm:{'game':'SR1','root':str(tmp_path/'SR1')} if realm=='SR1' else None
     api._host.start.side_effect=host_start
     with mock.patch('apps.launcher.desktop.pack.is_lab_copy',return_value=False):
-        older=api.launch('BOTH_SR1',confirmed=True)
+        older=api.launch('BOTH_SR1',confirmed=True,resume=True)
     assert not older['ok']
     assert api._audio_startup_deadline>0 and api._audio_front=='SR2'
     assert api._keep_in_front.call_count==1
@@ -74,6 +74,6 @@ def test_current_partial_completion_releases_its_own_pin(tmp_path):
     api=ready(tmp_path)
     api._primary=lambda realm:{'game':realm,'root':str(tmp_path/realm)} if realm=='SR1' else None
     with mock.patch('apps.launcher.desktop.pack.is_lab_copy',return_value=False):
-        result=api.launch('BOTH_SR1',confirmed=True)
+        result=api.launch('BOTH_SR1',confirmed=True,resume=True)
     assert not result['ok'] and len(result['launched'])==1
     assert api._audio_startup_deadline==0

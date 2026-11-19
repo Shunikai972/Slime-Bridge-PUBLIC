@@ -470,6 +470,7 @@ def test_play_both_opens_the_chosen_game_on_its_menu_and_the_other_follows_its_s
     (game,env)=started[1]
     assert (game,env['SLIMEBRIDGE_TRAVEL_MODE'],env['SLIMEBRIDGE_TRAVEL_SAVE'])==(back,'DESTINATION','ranch-'+back.lower())
     assert (api._travel._front,api._travel._parked)==(front,back)
+    assert api._audio_front==front and api._audio_startup_deadline>0
 
 
 def test_a_new_game_in_front_makes_a_new_game_behind_and_links_them(tmp_path):
@@ -481,6 +482,7 @@ def test_a_new_game_in_front_makes_a_new_game_behind_and_links_them(tmp_path):
         api._travel._maybe_follow()
         (game,env)=started[1]
         assert (game,env['SLIMEBRIDGE_TRAVEL_NEW'])==('SR2','SlimeBridge brand-new')
+        assert api._audio_front=='SR1'
         beats['SR2']={'pid':222,'status':{'player_alive':True,'save_id':'made-for-it'}}
         api._travel._maybe_follow()
     assert api._travel._links.lookup('SR1','brand-new')=='made-for-it'
@@ -495,6 +497,7 @@ def test_online_starts_the_missing_game_behind_the_one_being_played(tmp_path):
     (game,env),=started
     assert (game,env['SLIMEBRIDGE_TRAVEL_MODE'],env['SLIMEBRIDGE_TRAVEL_SAVE'])==('SR2','DESTINATION','ranch-sr2')
     assert (api._travel._front,api._travel._parked)==('SR1','SR2')
+    assert api._audio_front=='SR1' and api._audio_startup_deadline>0
 
 
 def test_without_a_partner_the_started_game_makes_a_new_save_for_the_ranch(tmp_path):
@@ -526,12 +529,39 @@ def test_the_typed_online_name_reaches_slime_rancher(tmp_path):
 
 
 def test_starting_the_other_game_in_front_brings_the_vac_of_the_game_played_last(tmp_path):
-    api,started,patches=_launch_fixture(tmp_path)
+    beats={}
+    api,started,patches=_launch_fixture(tmp_path,beats=beats)
     api._travel._links.remember('ranch-sr1','ranch-sr2')
     api._session.set('SR1','ranch-sr1')                          # SR1 was played last
+    sent=[]
+    api._travel._send=lambda realm,kind,tr,**extra:sent.append((realm,kind,extra.get('portal_id'))) or True
     with patches[0],patches[1],patches[2],patches[3]:
         assert api.launch('BOTH_SR2',confirmed=True)['ok']
-    assert api._travel._pending_sync['from']=='SR1' and api._travel._pending_sync['to']=='SR2'
+        assert api._travel._pending_sync['from']=='SR1' and api._travel._pending_sync['to']=='SR2'
+        api._travel._maybe_start_sync()
+        assert api._travel._pending_sync is not None, 'menu wait must not cancel the pending vac sync'
+        beats['SR2']={'pid':222,'status':{'player_alive':True,'save_id':'ranch-sr2'}}
+        api._travel._maybe_follow()
+        beats['SR1']={'pid':111,'status':{'player_alive':True,'save_id':'ranch-sr1'}}
+        api._travel._maybe_start_sync()
+    assert sent==[('SR1','prepare_departure','sync')]
+
+
+def test_new_game_in_front_does_not_sync_old_ranch_vac(tmp_path):
+    beats={}
+    api,started,patches=_launch_fixture(tmp_path,beats=beats)
+    api._travel._links.remember('ranch-sr1','ranch-sr2')
+    api._session.set('SR1','ranch-sr1')
+    sent=[]
+    api._travel._send=lambda realm,kind,tr,**extra:sent.append((realm,kind)) or True
+    with patches[0],patches[1],patches[2],patches[3]:
+        assert api.launch('BOTH_SR2',confirmed=True)['ok']
+        beats['SR2']={'pid':222,'status':{'player_alive':True,'save_id':'brand-new'}}
+        api._travel._maybe_follow()
+        beats['SR1']={'pid':111,'status':{'player_alive':True,'save_id':'made-for-it'}}
+        api._travel._maybe_follow()
+        api._travel._maybe_start_sync()
+    assert sent==[] and api._travel._pending_sync is None
 
 
 def test_starting_the_game_played_last_in_front_needs_no_sync(tmp_path):

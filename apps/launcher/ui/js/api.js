@@ -75,6 +75,10 @@
 
   SB.mock = {
     async get_state() { await wait(60); return state(); },
+    async game_process_state() {
+      const { games } = state();
+      return Object.fromEntries(Object.entries(games).map(([realm, g]) => [realm, { running: !!g.running, closing: false }]));
+    },
     async autodetect() { await wait(900); return { ok: true, found: 2, added: [], installations: state().installations }; },
     async forget_game(realm) { S.games[realm].found = false; return { ok: true }; },
     async select_manual() { await wait(300); S.games.SR1.found = true; return install('SR1'); },

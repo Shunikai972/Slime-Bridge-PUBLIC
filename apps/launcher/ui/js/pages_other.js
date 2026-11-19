@@ -43,7 +43,7 @@
       ${sess.code ? `<div class="row"><span class="mono mp-code-value" id="mp-code">${esc(sess.code)}</span><button class="btn btn--sky btn--sm" data-act="mp-copy" data-arg="${esc(sess.code)}">${icon('link')} ${t('mp.copy')}</button></div>` : `<p class="faint">${t('mp.no_code')}</p>`}</div>
     <div class="row">${segment('mp-mode', 'mode', mode, ['BOTH', 'SR1', 'SR2'].map(m => [m, t('mp.mode_' + m)]))}
       <button class="btn btn--bridge" data-act="mp-host" data-arg="${mode}" ${req && !req.done ? 'disabled aria-busy="true"' : ''}>${icon('play')} ${t('mp.host_btn')}</button></div>
-    <div class="row"><label class="faint" for="mp-name">${t('mp.name')}</label><input class="input" id="mp-name" maxlength="24" placeholder="${esc(t('mp.name_ph'))}" value="${esc(L.mpName || localStorage.getItem('sb.mpName') || '')}" style="max-width:220px" autocomplete="off" spellcheck="false"></div>
+    <div class="row"><label class="faint" for="mp-name">${t('mp.name')}</label><input class="input" id="mp-name" maxlength="24" placeholder="${esc(t('mp.name_ph'))}" value="${esc(L.mpName ?? localStorage.getItem('sb.mpName') ?? '')}" style="max-width:220px" autocomplete="off" spellcheck="false"></div>
     <div class="row"><input class="input mono" id="mp-join-code" maxlength="16" placeholder="${esc(t('mp.join_ph'))}" style="max-width:220px" autocomplete="off" spellcheck="false">
       <button class="btn btn--sky" data-act="mp-join" ${req && !req.done ? 'disabled' : ''}>${icon('link')} ${t('mp.join_btn')}</button></div>
     <p class="muted small">${t('mp.sr2_join_in_game')}</p>

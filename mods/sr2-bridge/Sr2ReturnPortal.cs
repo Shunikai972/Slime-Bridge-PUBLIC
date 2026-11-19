@@ -19,19 +19,37 @@ namespace SlimeBridge.SR2
     {
         internal const string PortalId = "portal.sr2.return_portal";
         private const float PadRadius = 2.3f, HintRadius = 14f, SettleSeconds = 5f;
+        private const float NativeRetrySeconds = 8f;
+        private const int NativeRetryLimit = 4;
         private static readonly string[] NativeParts = { "labyPortal_bricksOuter_01_trim", "labyPortal_bricksSunken_01", "PortalLightPillar_Short" };
 
         private readonly Sr2TravelRealm? _travel;          // null when SR2 was not started by the launcher
         private readonly TravelOverlay _ownOverlay = new TravelOverlay();
         private TravelOverlay Overlay => _travel != null ? _travel.Overlay : _ownOverlay;
-        internal void Gui() { if (_travel == null) _ownOverlay.Draw(); }
+        internal void Gui()
+        {
+            if (_travel == null) _ownOverlay.Draw();
+            // Do not depend on a labyrinth scene's render assets to tell the player where the portal is.
+            if (!_markerReady || _root != null || !Application.isFocused || (_travel?.Busy ?? false) ||
+                Event.current?.type != EventType.Repaint) return;
+            var camera = Camera.main;
+            if (camera == null) return;
+            var point = camera.WorldToScreenPoint(_anchor + Vector3.up * 1.5f);
+            if (point.z <= 0 || point.x < 0 || point.x > Screen.width || point.y < 0 || point.y > Screen.height) return;
+            var label = Application.systemLanguage == SystemLanguage.French ? "↓ Portail vers Slime Rancher" : "↓ Portal to Slime Rancher";
+            GUI.Box(new Rect(point.x - 110f, Screen.height - point.y - 28f, 220f, 28f), label);
+        }
         private readonly string _stateDir;
         private readonly int _cost;
         private readonly string? _labOut;
         private GameObject? _root;
+        private bool _markerReady, _visualFocused;
+        private int _visualAttempts;
+        private float _visualRetryAt;
         private Vector3 _anchor;
         private float _yaw;
-        private bool _hasAnchor, _paid, _inside;
+        // Treat entry as already consumed until we observe the player off the pad while it is active.
+        private bool _hasAnchor, _paid, _inside = true;
         private string _saveId = "";
         private float _readySince = -1f, _lastCross = -100f, _nextHint;
         private readonly List<string> _events = new List<string>();
@@ -265,26 +283,53 @@ namespace SlimeBridge.SR2
 
         private void Build()
         {
-            _root = new GameObject("SlimeBridge_SR2_PortalRoot");
-            _root.transform.position = _anchor;
-            _root.transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
-            var built = 0;
             var natives = NativeAll(NativeParts);
-            foreach (var name in NativeParts)
+            if (natives.Count != NativeParts.Length)
             {
-                natives.TryGetValue(name, out var source);
-                if (source == null) { Note("native part missing: " + name); continue; }
-                var clone = UnityEngine.Object.Instantiate(source, _root.transform);
-                clone.name = "portal-" + name;
-                clone.transform.localPosition = new Vector3(0f, name.Contains("trim") ? 0.04f : name.Contains("Sunken") ? 0.06f : 0f, 0f);
-                clone.transform.localRotation = Quaternion.identity;
-                clone.transform.localScale = name.Contains("Pillar") ? new Vector3(0.45f, 0.5f, 0.45f) : Vector3.one * 0.3f;
-                clone.SetActive(true);
-                foreach (var behaviour in clone.GetComponentsInChildren<MonoBehaviour>()) if (behaviour != null) behaviour.enabled = false;   // appearance only
-                built++;
+                Note($"native portal parts unavailable ({natives.Count}/{NativeParts.Length}); using a marker");
+                return;
             }
-            Note("portal built from " + built + " native parts");
-            MelonLoader.MelonLogger.Msg("return portal built (" + built + "/" + NativeParts.Length + " native parts) at " + _anchor);
+            var root = new GameObject("SlimeBridge_SR2_PortalRoot");
+            try
+            {
+                root.SetActive(false);
+                root.transform.position = _anchor;
+                root.transform.rotation = Quaternion.Euler(0f, _yaw, 0f);
+                foreach (var name in NativeParts)
+                {
+                    var clone = UnityEngine.Object.Instantiate(natives[name], root.transform);
+                    clone.name = "portal-" + name;
+                    clone.transform.localPosition = new Vector3(0f, name.Contains("trim") ? 0.04f : name.Contains("Sunken") ? 0.06f : 0f, 0f);
+                    clone.transform.localRotation = Quaternion.identity;
+                    clone.transform.localScale = name.Contains("Pillar") ? new Vector3(0.45f, 0.5f, 0.45f) : Vector3.one * 0.3f;
+                    foreach (var behaviour in clone.GetComponentsInChildren<MonoBehaviour>(true))
+                        if (behaviour != null) behaviour.enabled = false;  // appearance only
+                    clone.SetActive(true);
+                }
+                root.SetActive(true);
+                _root = root;
+            }
+            catch
+            {
+                UnityEngine.Object.Destroy(root);
+                throw;
+            }
+            Note("portal built from " + NativeParts.Length + " native parts");
+        }
+
+        private void RefreshVisual(float now, bool focused)
+        {
+            if (!focused) { _visualFocused = false; return; }
+            if (!_visualFocused)
+            {
+                _visualFocused = true;
+                _visualAttempts = 0;
+                _visualRetryAt = now;
+            }
+            if (_root != null || _visualAttempts >= NativeRetryLimit || now < _visualRetryAt) return;
+            _visualAttempts++;
+            _visualRetryAt = now + NativeRetrySeconds;
+            Build();
         }
 
         // ----- per frame
@@ -292,6 +337,7 @@ namespace SlimeBridge.SR2
 
         internal void Tick()
         {
+            if (!Application.isFocused || (_travel?.Busy ?? false)) _inside = true;
             // The portal only reacts to where the player stands: ten checks a second are plenty, and every check crosses into the game
             // (save name string, player transform, currency). LAB scripts keep their per-frame cadence.
             if (_labOut == null)
@@ -300,11 +346,13 @@ namespace SlimeBridge.SR2
                 if (now < _nextTick) return;
                 _nextTick = now + 0.1f;
             }
+            _markerReady = false;
             try
             {
                 if (!WorldReady())
                 {
-                    _readySince = -1f; _inside = false;
+                    _readySince = -1f; _inside = true;
+                    _visualFocused = false;
                     if (_root != null) { UnityEngine.Object.Destroy(_root); _root = null; }
                     _saveId = "";
                     return;
@@ -312,20 +360,14 @@ namespace SlimeBridge.SR2
                 if (_readySince < 0f) _readySince = Time.realtimeSinceStartup;
                 if (Time.realtimeSinceStartup - _readySince < SettleSeconds) return;
                 var save = CurrentSave();
-                if (save.Length == 0) return;
-                if (save != _saveId)
-                {
-                    _saveId = save; LoadState();
-                    if (_root != null) { UnityEngine.Object.Destroy(_root); _root = null; }
-                }
-                if (_root == null)
-                {
-                    if (Time.realtimeSinceStartup < _retryAt || !EnsureAnchor()) return;
-                    Build();
-                }
+                if (save.Length == 0) { _inside = true; return; }
+                SelectSave(save);
                 // A save made for a crossing opens on the new-game story cards while the player already stands in the world:
                 // no hint over the cards and no crossing until the story has handed control to the player.
-                if (StoryOnScreen()) { _inside = false; return; }
+                if (StoryOnScreen()) { _inside = true; return; }
+                if (!_hasAnchor && (Time.realtimeSinceStartup < _retryAt || !EnsureAnchor())) return;
+                _markerReady = true;
+                RefreshVisual(Time.realtimeSinceStartup, Application.isFocused);
                 Interact();
                 if (_labOut != null) LabScript();
             }
@@ -337,7 +379,7 @@ namespace SlimeBridge.SR2
 
         private void Interact()
         {
-            if (_travel != null && _travel.Busy) return;
+            if (!Application.isFocused || (_travel?.Busy ?? false)) { _inside = true; return; }
             var player = PlayerTransform().position;
             var flat = new Vector3(player.x - _anchor.x, 0f, player.z - _anchor.z).magnitude;
             var near = flat < HintRadius && Mathf.Abs(player.y - _anchor.y) < 8f;
@@ -353,8 +395,9 @@ namespace SlimeBridge.SR2
                     : (french ? "Entre dans la lumière pour retourner dans Slime Rancher" : "Step into the light to return to Slime Rancher"), 3.4f);
             }
             if (!onPad) { _inside = false; return; }
-            if (_inside || Time.realtimeSinceStartup - _lastCross < 8f) return;
+            if (_inside) return;
             _inside = true;
+            if (Time.realtimeSinceStartup - _lastCross < 8f) return;
             if (_cost > 0 && !_paid)
             {
                 var state = Il2Cpp.SceneContext.Instance.PlayerState;
@@ -381,14 +424,24 @@ namespace SlimeBridge.SR2
         }
 
         // ----- arrival from the other game: come out of the light, facing away from the pad
+        private void SelectSave(string save)
+        {
+            if (save == _saveId) return;
+            _saveId = save;
+            LoadState();
+            _inside = true;
+            _visualFocused = _markerReady = false;
+            if (_root != null) { UnityEngine.Object.Destroy(_root); _root = null; }
+        }
+
         internal bool PlacePlayer()
         {
             try
             {
                 if (!WorldReady()) return false;
-                _saveId = CurrentSave();
-                if (_saveId.Length == 0) return false;
-                if (!_hasAnchor) LoadState();
+                var save = CurrentSave();
+                if (save.Length == 0) return false;
+                SelectSave(save);
                 if (!EnsureAnchor()) return false;
                 var forward = Quaternion.Euler(0f, _yaw, 0f) * Vector3.forward;      // the pad faces the player's home: come out on that side
                 var position = _anchor + forward * 4.2f + Vector3.up * 0.3f;

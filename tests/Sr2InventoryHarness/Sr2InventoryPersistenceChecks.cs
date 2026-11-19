@@ -1,6 +1,21 @@
 // Synthetic full payloads exercise the linked production adapter and real shared disk verifier.
+using SlimeBridge.SR2;
+
 internal static class PersistenceChecks
 {
+    private static void CloseProof()
+    {
+        using var w = new FixtureWorld((2, 10, true, true));
+        var originalSave = w.Director.OnSave;
+        Sr2InventoryPersistence Capture() => new(Il2Cpp.GameContext.Instance!, w.Scene, FixtureWorld.Identity);
+        w.Director.OnSave = () => true;
+        Program.Require(!Capture().SaveForClose().Verified, "unchanged revision allowed exit");
+        w.SavePayload(() => w.Payload(name: "wrong_ranch"));
+        Program.Require(!Capture().SaveForClose().Verified, "another ranch allowed exit");
+        w.Director.OnSave = originalSave;
+        Program.Require(Capture().SaveForClose().Verified, "fresh readable revision refused exit");
+    }
+
     internal static IEnumerable<(string Name, Action Test)> All()
     {
         yield return ("real Windows root junction refuses before INTENT/mutation/save", () => ReparseBeforeIntent("root"));
@@ -28,6 +43,7 @@ internal static class PersistenceChecks
         });
         yield return ("SaveAllNow false is not persistence proof", () => Bad(w => w.Director.OnSave = () => false));
         yield return ("SaveAllNow true with unchanged names is skipped, not proof", () => Bad(w => w.Director.OnSave = () => true));
+        yield return ("Close requires a freshly written readable revision, even when native save returns true", CloseProof);
         yield return ("ambiguous new revisions cannot prove persistence", () => Bad(w => w.Director.OnSave = () =>
         { w.Provider.AddSyntheticRevision(FixtureWorld.Identity + "_1", w.Payload()); w.Provider.AddSyntheticRevision(FixtureWorld.Identity + "_2", w.Payload()); return true; }));
         yield return ("duplicate revision in entire before set refuses before mutation", () =>

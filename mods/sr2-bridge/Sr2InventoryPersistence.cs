@@ -20,10 +20,10 @@ namespace SlimeBridge.SR2
         private readonly string? _savedName;
         private readonly int _savedSlot;
         private readonly string _identity, _root;
-        private readonly Il2Cpp.IdentifiableType _type;
+        private readonly Il2Cpp.IdentifiableType? _type;
         private readonly Dictionary<string, string> _before;
 
-        internal Sr2InventoryPersistence(Il2Cpp.GameContext game, Il2Cpp.SceneContext scene, string identity, Il2Cpp.IdentifiableType type)
+        internal Sr2InventoryPersistence(Il2Cpp.GameContext game, Il2Cpp.SceneContext scene, string identity, Il2Cpp.IdentifiableType? type = null)
         {
             _game = game; _scene = scene; _identity = identity; _type = type;
             _director = game.AutoSaveDirector ?? throw new InvalidOperationException("native director unavailable");
@@ -42,7 +42,14 @@ namespace SlimeBridge.SR2
             if (!Current()) throw new InvalidOperationException("loaded inventory/storage changed during capture");
         }
 
-        internal SaveProof Save(int expectedCount)
+        internal SaveProof Save(int expectedCount) => _type == null
+            ? new SaveProof(false, "", "", "inventory proof needs a bound item type") : SaveRevision(expectedCount);
+
+        // No item changed during a close request; the proof is the bound ranch's fresh, full native revision.
+        internal SaveProof SaveForClose() => _type != null
+            ? new SaveProof(false, "", "", "close proof must not bind an item type") : SaveRevision(0);
+
+        private SaveProof SaveRevision(int expectedCount)
         {
             var proof = InventoryRules.VerifyPersistence(() =>
             {
@@ -70,6 +77,7 @@ namespace SlimeBridge.SR2
 
         internal SaveProof Recheck(CommandResult receipt)
         {
+            if (_type == null) return new SaveProof(false, "", "", "inventory proof needs a bound item type");
             var proof = InventoryRules.VerifyPersistence(() => Current(), () =>
             {
                 if (Latest(Names()) != receipt.SaveFile) throw new InvalidDataException("receipt no longer names current native revision");
@@ -84,7 +92,7 @@ namespace SlimeBridge.SR2
         {
             try
             {
-                if (proof.Verified && (!Current() || LiveCount() != expectedCount || Latest(Names()) != proof.SaveFile))
+                if (proof.Verified && (!Current() || (_type != null && LiveCount() != expectedCount) || Latest(Names()) != proof.SaveFile))
                     return new SaveProof(false, "", "", "loaded inventory/storage changed during native readback");
                 return proof;
             }
@@ -189,6 +197,11 @@ namespace SlimeBridge.SR2
                 if (payload.Position != payload.Length || game._isLoadSummary || game.Player == null ||
                     game.World == null || game.Ranch == null || game.Actors == null || game.IdentTypeIndex == null)
                     throw new InvalidDataException("incomplete native game payload");
+                if (_type == null)
+                {
+                    if (game.Player.Ammo == null) throw new InvalidDataException("native saved ammo unavailable");
+                    return new SaveReadback(revision, game.GameName, 0, bytes, NativePath(revision));
+                }
                 // 1.x: the director's save translation builds the persistence-id -> type table for this exact payload.
                 var ids = _director._saveReferenceTranslation?.CreateLoadReferenceTranslation(game);
                 if (ids == null) throw new InvalidDataException("native identifiable reverse lookup unavailable");
@@ -222,7 +235,7 @@ namespace SlimeBridge.SR2
             for (var i = 0; i < slots.Length; i++)
             {
                 var slot = slots[i];
-                if (slot?.Id?.Pointer == _type.Pointer && slot.Count > 0)
+                if (slot?.Id?.Pointer == _type!.Pointer && slot.Count > 0)
                     count = checked(count + slot.Count);
             }
             return count;

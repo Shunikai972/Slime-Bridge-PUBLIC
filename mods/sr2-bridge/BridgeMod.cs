@@ -19,7 +19,7 @@ namespace SlimeBridge.SR2
     /// </summary>
     public sealed class BridgeMod : MelonMod
     {
-        public const string PluginVersion = "0.2.8";
+        public const string PluginVersion = "0.2.9";
         private static readonly int Pid = Environment.ProcessId;
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { UseProxy = false })
         {
@@ -503,6 +503,7 @@ namespace SlimeBridge.SR2
         /// <summary>The optional performance profile (launcher setting): applied once the game has settled, again when the quality level changes.</summary>
         public override void OnLateUpdate()
         {
+            if (_travel?.Quiescing == true) return;
             Sr2LabVacuumTrace.LateTick();
             SlimeBridge.Shared.PerformanceTuner.Tick(UnityEngine.Time.realtimeSinceStartup, _perfLog ??= text => LoggerInstance.Msg(text));
         }
@@ -511,8 +512,10 @@ namespace SlimeBridge.SR2
         {
             var message = Interlocked.Exchange(ref _pendingLog, null);
             if (message != null) LoggerInstance.Msg(message);
-            _worldProbe?.Tick(text => LoggerInstance.Msg(text));
             _travel?.Tick();
+            // Keep the heartbeat alive but don't run inventory or any other mod gameplay writers after close preparation.
+            if (_travel?.Quiescing == true) { PublishSnapshot(); return; }
+            _worldProbe?.Tick(text => LoggerInstance.Msg(text));
             _returnPortal?.Tick();
             MaybeEndNewGameIntro();
             // Imported-species registration runs BEFORE any save autoload: saved imported ids must
@@ -608,6 +611,11 @@ namespace SlimeBridge.SR2
                 _storageBinding?.Tick();
                 _inventory?.Tick();
             }
+            PublishSnapshot();
+        }
+
+        private void PublishSnapshot()
+        {
             if (_stop == null || DateTime.UtcNow < _nextSnapshot) return;
             LogDiagnosticsOnce();
             _nextSnapshot = DateTime.UtcNow.AddSeconds(2);

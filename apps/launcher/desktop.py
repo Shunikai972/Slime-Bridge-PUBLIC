@@ -87,7 +87,7 @@ class LauncherAPI:
                                                 settings=lambda: self._settings()[1]['bridge'], list_saves=savelist.list_groups,
                                                 notify=lambda _transition: self._raise_window(), session=self._session,
                                                 prepare_destination=self._prepare_travel_destination,
-                                                select_audio_front=self._select_audio_front)
+                                                select_audio_front=self._select_travel_front)
         self._downloads = None
         self._manifest = {'doc': None, 'error': None}
         self._lock = threading.Lock()
@@ -491,10 +491,11 @@ class LauncherAPI:
         data = self._load()
         rows = self._installations()
         games = {}
+        process = self.game_process_state()
         for realm in EXECUTABLES:
             primary = self._primary(realm)
             games[realm] = {'primary': primary, 'all': [r for r in rows if r['game'] == realm],
-                            'running': self._launcher.running(realm), 'store_page': STORE_PAGES[realm]}
+                            **process[realm], 'store_page': STORE_PAGES[realm]}
         return {'version': VERSION, 'installations': rows, 'games': games, 'legal_understood': bool(data['legal_understood']),
                 'preferences': {k: (bool(data[k]) if k == 'nexus_api_key' else data[k]) for k in _VALIDATORS if k in data},   # never the key itself
                 'host': self._host.state(), 'tool': self._tool(data),
@@ -509,7 +510,8 @@ class LauncherAPI:
         """``target``: SR1, SR2, BOTH (SR1 in front), BOTH_SR1 or BOTH_SR2 (both games, that one in front, the other waits
         minimized). ``resume``: load the save the player was last in, straight from the game's menu; when that save has a
         linked partner, the other game starts too on the partner save and waits at its portal (the session as it was left)."""
-        return self._launch(target, confirmed, remember, resume, resume_partner=True)
+        with self._travel._lock:
+            return self._launch(target, confirmed, remember, resume, resume_partner=True)
 
     def _session_pair(self):
         """The pair of saves the player plays now: the save open in a running game, else the last one, with its partner."""
@@ -544,6 +546,10 @@ class LauncherAPI:
                 and pair.get(front) and self._primary(other) is not None and not self._launcher.running(other)):
             target = 'BOTH'
         waiting = other if target == 'BOTH' else (target if background else None)
+        realms = ((front, other) if target == 'BOTH' else (target,))
+        closing = [r for r in EXECUTABLES if self._travel.session_closing(r) or (r in realms and self._launcher.closing(r))]
+        if closing:
+            return {'ok': False, 'launched': [], 'errors': [{'realm': r, 'error': 'GAME_CLOSING'} for r in closing]}
         envs = {}
         if target == 'BOTH' and pair.get(front):
             # Both games: the front one opens the session's save straight away, so the portal is instant.
@@ -574,7 +580,6 @@ class LauncherAPI:
             launch_epoch = self._audio_startup_epoch
             self._audio_startup_deadline = time.monotonic() + 180 if target == 'BOTH' else 0.0
             self._select_audio_front(front)
-        realms = ((front, other) if target == 'BOTH' else (target,))
         self._travel.note_waiting(waiting, (envs.get(waiting) or {}).get('SLIMEBRIDGE_TRAVEL_SAVE')) if waiting else None
         warnings, errors, launched = [], [], []
         # The bridge (portals, travel, shared inventory) needs BridgeHost whichever game is started first.
@@ -601,6 +606,8 @@ class LauncherAPI:
                     lab_env = pack.lab_env(realm, primary['root'])
             try:
                 resume_env = dict(envs.get(realm) or {})
+                if realm == waiting and not resume_env:
+                    resume_env['SLIMEBRIDGE_BACKGROUND_START'] = '1'  # the waiting game can start at its main menu
                 name_env = {'SLIMEBRIDGE_ONLINE_NAME': data['mp_name']} if realm == 'SR1' and data.get('mp_name') else {}
                 launched.append(self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(self._settings()[1]['bridge'], realm), **self._perf_env(), **lab_env, **resume_env, **name_env}))
                 if realm == front and not background:
@@ -639,32 +646,40 @@ class LauncherAPI:
         """Both games were started: the chosen one stays in front, the other is minimized as soon as its window shows."""
         back = 'SR2' if front == 'SR1' else 'SR1'
 
+        control = self._window_control()
+        game_windows = getattr(control, '_game_windows', None)
+
         def _arrange_windows():
-            control = self._window_control()
+            if game_windows is None:
+                return
             front_pid = (self._launcher._children.get(front) or None)
             back_pid = (self._launcher._children.get(back) or None)
-            deadline = time.time() + 180
+            deadline = time.monotonic() + 180
             minimized = False
-            while time.time() < deadline and not minimized and epoch == self._audio_startup_epoch:
+            while time.monotonic() < deadline and not minimized and epoch == self._audio_startup_epoch:
                 time.sleep(2.0)
                 try:
                     if back_pid is None or back_pid.poll() is not None:
                         return
-                    checked = getattr(control, '_checked', None)
-                    if checked is not None and not list(checked(back_pid.pid)):
-                        continue                                  # its window does not exist yet
                     for _ in range(2):                            # Unity rebuilds its window when it goes fullscreen
-                        with self._audio_policy_lock:
+                        with self._travel._lock, self._audio_policy_lock:
+                            if (epoch != self._audio_startup_epoch or
+                                    any(t['state'] in travel.ACTIVE for t in self._travel.transitions) or
+                                    any(self._travel.session_closing(r) or self._launcher.closing(r) for r in (front, back))):
+                                return
+                            if self._launcher._children.get(back) is not back_pid or back_pid.poll() is not None:
+                                return
+                            if not game_windows(back_pid.pid):
+                                break
+                            parked = control.minimize(back_pid.pid)
                             if epoch != self._audio_startup_epoch:
                                 return
-                            control.minimize(back_pid.pid)
-                            if epoch != self._audio_startup_epoch:
-                                return
-                            if front_pid is not None and front_pid.poll() is None:
-                                control.focus(front_pid.pid)
+                            if front_pid is not None and self._launcher._children.get(front) is front_pid and front_pid.poll() is None:
+                                control.focus_startup(front_pid.pid)
                         time.sleep(6.0)
-                    minimized = True
-                except Exception:  # noqa: BLE001 - its window may not exist yet
+                    else:
+                        minimized = parked  # confirmation from the last pass, not a queued minimize request
+                except (windows.WindowError, OSError):  # its window may not exist yet
                     minimized = False
         def _arrange():
             try:
@@ -689,6 +704,14 @@ class LauncherAPI:
         with self._audio_policy_lock:
             self._audio_front = front
             self._sync_game_audio()
+
+    def _select_travel_front(self, front):
+        with self._audio_policy_lock:
+            # A portal owns window placement through arrival/rollback. Even if it finishes
+            # before the startup worker wakes, that worker no longer owns this generation.
+            self._audio_startup_epoch += 1
+            self._audio_startup_deadline = 0.0
+            self._select_audio_front(front)
 
     def _sync_game_audio(self, follow_foreground=False):
         with self._audio_policy_lock:
@@ -734,6 +757,16 @@ class LauncherAPI:
                 self._audio_thread = threading.Thread(target=watch, name='slimebridge-audio', daemon=True)
                 self._audio_thread.start()
 
+    def game_process_state(self) -> dict:
+        with self._travel._lock:
+            states = {}
+            for realm in EXECUTABLES:
+                active = self._launcher.running(realm)
+                states[realm] = {'running': active, 'closing': active and (self._travel.session_closing(realm) or self._launcher.closing(realm))}
+                if active and self._travel.session_close_unconfirmed(realm):
+                    states[realm]['close_unconfirmed'] = True
+            return states
+
     def game_stop(self, target='BOTH') -> dict:
         if target not in ('SR1', 'SR2', 'BOTH'):
             return {'ok': False, 'error': 'BAD_TARGET'}
@@ -742,9 +775,16 @@ class LauncherAPI:
             if any(t['state'] in travel.ACTIVE for t in self._travel.transitions):
                 return {'ok': False, 'error': 'TRAVEL_ACTIVE'}
             realms = ('SR1', 'SR2') if target == 'BOTH' else (target,)
+            if any(self._travel.session_close_unconfirmed(r) for r in realms):
+                return {'ok': False, 'error': 'SESSION_CLOSE_HOST_LOST'}
+            if self._travel.online.pending_in(realms):
+                return {'ok': False, 'error': 'ONLINE_REQUEST_PENDING'}
             results = []
             control = self._window_control()
             for realm in realms:
+                if self._travel.session_closing(realm):
+                    results.append({'realm': realm, 'stopping': True, 'already_stopped': False})
+                    continue
                 try:
                     results.append(self._launcher.request_stop(realm, control, process_image_path))
                 except (RuntimeErrorWithCode, windows.WindowError, OSError) as exc:
@@ -753,13 +793,17 @@ class LauncherAPI:
             return {'ok': not errors, 'games': results, 'errors': errors}
 
     def host_start(self) -> dict:
-        try:
-            return {'ok': True, 'host': self._host.start()}
-        except RuntimeErrorWithCode as exc:
-            return {'ok': False, 'error': exc.code, 'detail': exc.detail, 'host': self._host.state()}
+        with self._travel._lock:
+            try:
+                return {'ok': True, 'host': self._host.start()}
+            except RuntimeErrorWithCode as exc:
+                return {'ok': False, 'error': exc.code, 'detail': exc.detail, 'host': self._host.state()}
 
     def host_stop(self) -> dict:
-        return {'ok': True, **self._host.stop(), 'host': self._host.state()}
+        with self._travel._lock:
+            if any(self._travel.session_closing(realm) for realm in EXECUTABLES):
+                return {'ok': False, 'error': 'GAME_CLOSING'}
+            return {'ok': True, **self._host.stop(), 'host': self._host.state()}
 
     def _window_control(self):
         """Window control restricted to live owned PIDs whose exact launch image still matches."""
@@ -1168,7 +1212,9 @@ class LauncherAPI:
             front = last['realm'] if last else 'SR1'
             result = self._launch('BOTH_' + front, confirmed=True, resume=True, resume_partner=True)
         else:
-            result = self._launch(missing[0], confirmed=True, resume=True, background=True)
+            realm = missing[0]
+            partner = 'SR2' if realm == 'SR1' else 'SR1'
+            result = self._launch(realm, confirmed=True, resume=True, background=self._launcher.running(partner))
         if not result['ok']:
             failure = next(iter(result.get('errors', ())), {})
             return {'ok': False, 'error': failure.get('error', 'LAUNCH_FAILED'),
@@ -1177,6 +1223,10 @@ class LauncherAPI:
 
     def _request_online(self, realms, start):
         with self._travel._lock:
+            if any(self._travel.session_closing(realm) or self._launcher.closing(realm) for realm in realms):
+                return {'ok': False, 'error': 'GAME_CLOSING'}
+            if any(t['state'] in travel.ACTIVE for t in self._travel.transitions):
+                return {'ok': False, 'error': 'TRAVEL_ACTIVE'}
             active = self._travel.online.request
             if active and (not active['done'] or active.get('cancelled') is False):
                 return {'ok': False, 'error': 'ONLINE_REQUEST_PENDING'}
@@ -1194,17 +1244,21 @@ class LauncherAPI:
         """Host online in both games (BOTH), or only one (SR1 / SR2); the code appears once the games have opened it."""
         if mode not in ('BOTH', 'SR1', 'SR2'):
             raise ValueError('mode must be BOTH, SR1 or SR2')
-        self._remember_online_name(name)
+        try:
+            name = self._remember_online_name(name)
+        except ValueError:
+            return {'ok': False, 'error': 'BAD_NAME'}
         return self._request_online(('SR1', 'SR2') if mode == 'BOTH' else (mode,),
                                     lambda: self._travel.online.host(mode, name))
 
     def _remember_online_name(self, name):
         """The name the player typed is also given to Slime Rancher at every start (SRMP takes it as its username)."""
         from apps.launcher import online_session
-        name = (name or '').strip()
-        if name and online_session.NAME.fullmatch(name):
+        name = online_session.OnlineSession._name(name)
+        if name:
             with self._edit_config() as current:
                 current['mp_name'] = name
+        return name
 
     def mp_join(self, code: str, name: str = '') -> dict:
         """Join SRMP only. Ranching Together requires a deliberately selected empty save."""
@@ -1214,7 +1268,10 @@ class LauncherAPI:
             return {'ok': False, 'error': 'BAD_CODE'}
         if 'SR2' in realms:
             return {'ok': False, 'error': 'SR2_JOIN_IN_GAME'}
-        self._remember_online_name(name)
+        try:
+            name = self._remember_online_name(name)
+        except ValueError:
+            return {'ok': False, 'error': 'BAD_NAME'}
         return self._request_online(realms, lambda: self._travel.online.join(code, name))
 
     def mp_online(self, realm: str, action: str) -> dict:

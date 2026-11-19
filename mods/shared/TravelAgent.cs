@@ -103,6 +103,9 @@ namespace SlimeBridge.Shared
             "arrive" => "arrived",
             "abort" => "aborted",
             "save_quit" => "saved",
+            "close_prepare" => "close_ready",
+            "close_commit" => "saved",
+            "close_abort" => "close_aborted",
             "online_host" => "online_done",
             "online_join" => "online_done",
             _ => "failed",
@@ -200,6 +203,7 @@ namespace SlimeBridge.Shared
         private int _inFlight;
         private double _nextPoll;
         private TravelMessage? _latest;
+        private string? _savedAck;
         private double _lastContact;
         private readonly Func<double> _clock;
         internal double PollSeconds = 0.05, SlowPollSeconds = 0.5;
@@ -213,6 +217,7 @@ namespace SlimeBridge.Shared
         }
 
         public double LastContact => Volatile.Read(ref _lastContact);
+        internal bool SavedAcknowledged(string id) => string.Equals(Volatile.Read(ref _savedAck), id, StringComparison.Ordinal);
 
         public TravelMessage? Next(double now)
         {
@@ -277,6 +282,7 @@ namespace SlimeBridge.Shared
                         request.ContentLength = payload.Length;
                         using (var stream = request.GetRequestStream()) stream.Write(payload, 0, payload.Length);
                         using (var response = (HttpWebResponse)request.GetResponse()) { }
+                        if (eventName == "saved" && ackId.Length > 0) Volatile.Write(ref _savedAck, ackId);
                         Volatile.Write(ref _lastContact, _clock());
                         // The acknowledged head is gone from the mailbox; do not keep re-serving the stale copy.
                         var latest = Volatile.Read(ref _latest);

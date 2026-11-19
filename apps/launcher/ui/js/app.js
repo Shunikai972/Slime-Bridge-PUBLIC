@@ -110,11 +110,15 @@
     const work = running ? `${t('job.' + job.phase) !== 'job.' + job.phase ? t('job.' + job.phase) : t('job.RUNNING')} ${job.done || 0}/${job.total || '…'}` : dling ? t('models.downloading', { id: esc(dl.current || '') }) : t('dock.no_dl');
     const path = isBoth(tg) ? t('dock.two') : (g[tg].primary ? g[tg].primary.root : '—');
     const pathTitle = isBoth(tg) ? ['SR1', 'SR2'].map(r => `${NAMES[r]}: ${g[r].primary ? g[r].primary.root : '—'}`).join('\n') : path;
-    const ready = st.tone !== 'bad', stop = (isBoth(tg) ? ['SR1', 'SR2'] : [tg]).some(r => g[r].running);
+    const realms = isBoth(tg) ? ['SR1', 'SR2'] : [tg];
+    const ready = st.tone !== 'bad', stop = realms.some(r => g[r].running);
+    const closing = stop && realms.every(r => !g[r].running || g[r].closing);
+    const unconfirmed = realms.some(r => g[r].running && g[r].close_unconfirmed);
+    const label = t(unconfirmed ? 'games.close_unconfirmed' : closing ? 'games.stopping' : stop ? 'games.stop' : 'dock.play');
     $('#dock').innerHTML = `<div class="dock-row">
       <div class="dock-card"><label for="dock-game">${t('dock.game')}</label><select id="dock-game" class="dock-select" data-change="play-target">${[['SR1', NAMES.SR1], ['SR2', NAMES.SR2], ['BOTH_SR1', t('dock.both_sr1')], ['BOTH_SR2', t('dock.both_sr2')]].map(([v, label]) => `<option value="${v}" ${tg === v ? 'selected' : ''}>${label}</option>`).join('')}</select></div>
 
-      <div class="play ${stop ? 'stop' : ready ? '' : 'off'}"><button class="go" data-act="${stop ? 'game-stop' : 'play'}" data-arg="${isBoth(tg) ? 'BOTH' : tg}" aria-label="${t(stop ? 'games.stop' : 'dock.play')}">${glyph(stop ? 'stop' : 'play')}<span>${t(stop ? 'games.stop' : 'dock.play')}</span></button><button class="more" data-act="play-menu" aria-label="More" aria-haspopup="true">${glyph('chevD')}</button>
+      <div class="play ${stop ? 'stop' : ready ? '' : 'off'}" ${unconfirmed ? `title="${esc(t('err.SESSION_CLOSE_HOST_LOST'))}"` : ''}><button class="go" data-act="${stop ? 'game-stop' : 'play'}" data-arg="${isBoth(tg) ? 'BOTH' : tg}" aria-label="${label}" ${closing || unconfirmed ? 'disabled' : ''}>${glyph(stop ? 'stop' : 'play')}<span>${label}</span></button><button class="more" data-act="play-menu" aria-label="More" aria-haspopup="true">${glyph('chevD')}</button>
         ${menu === 'play' ? `<div class="menu" role="menu"><button data-act="launch" data-arg="BOTH_SR1">${glyph('play', 'gl mi')} ${t('dock.both_sr1')}</button><button data-act="launch" data-arg="BOTH_SR2">${glyph('play', 'gl mi')} ${t('dock.both_sr2')}</button><button data-act="launch" data-arg="SR1">${glyph('play', 'gl mi')} ${NAMES.SR1}</button><button data-act="launch" data-arg="SR2">${glyph('play', 'gl mi')} ${NAMES.SR2}</button><hr><button data-act="go" data-arg="games">${glyph('folder', 'gl mi')} ${t('nav.games')}</button></div>` : ''}</div></div>
       <div class="dock-status"><span class="ok"><i class="tick ${st.tone === 'good' ? '' : st.tone}">${glyph(st.tone === 'good' ? 'check' : 'close')}</i><span class="t" title="${esc(st.text)}">${esc(st.text)}</span></span>
         <div class="bar" style="--p:${(Math.max(0, Math.min(1, prog || 0)) * 100).toFixed(1)}%"><i></i></div><span>SlimeBridge ${esc(S.version)}</span><span>${work}</span>
@@ -133,17 +137,27 @@
   function renderView(keep) {
     if (page === 'assets') page = 'games';                 // Extract is part of the Setup page now
     const root = $('#view'), top = root.scrollTop, def = SB.pages[page];
+    const nameInput = keep && page === 'multiplayer' ? $('#mp-name') : null;
+    const nameFocused = nameInput && nameInput === document.activeElement;
+    if (nameInput) L.mpName = nameInput.value;
     let html = def.render(S);
     if (page === 'games' && SB.pages.assets) html += `<div id="extract">${SB.pages.assets.render(S)}</div>`;   // games + extraction, one page
     if (page === 'about' && SB.pages.credits) html += SB.pages.credits.render(S);      // the credits live in About
     const tabs = subnav(page);
     if (tabs) html = html.replace(/^(\s*<(?:div|section) class="page[^"]*">)/, '$1' + tabs);
-    const nameInput = keep && page === 'multiplayer' ? $('#mp-name') : null;
-    if (nameInput) L.mpName = nameInput.value;                 // a refresh never wipes what is being typed
+
     const codeInput = keep && page === 'multiplayer' ? $('#mp-join-code') : null;
     const codeFocused = codeInput && codeInput === document.activeElement;
     const codeValue = codeInput && codeInput.value;
     if (keep) redraw(root, html); else root.innerHTML = html;
+    if (nameInput) {
+      const replacement = $('#mp-name');
+      replacement.value = L.mpName;
+      if (nameFocused) {
+        replacement.focus({ preventScroll: true });
+        replacement.setSelectionRange?.(nameInput.selectionStart, nameInput.selectionEnd, nameInput.selectionDirection);
+      }
+    }
     if (codeInput) {
       const replacement = $('#mp-join-code');
       replacement.value = codeValue;
@@ -195,17 +209,19 @@
   async function loadSanct() { const r = await safe(() => api.sanctuary_state()); if (r) { L.sanct = r; if (page === 'games') renderView(true); } }
   async function loadMp() { const r = await safe(() => api.mp_state()); if (r) { L.mp = r; if (!L.mpSession && !L.mpSubmitting) L.mpSession = r.session; if (page === 'multiplayer') renderView(true); } }
   // The shared online code changes in the games (Auto Host, lobby): follow it while the Multi page is open.
-  let mpTimer = 0, mpRevision = 0, mpPoll = 0, mpApplied = 0;
+  let mpTimer = 0, mpRevision = 0, mpInFlight = false;
   function followSession() {
     clearInterval(mpTimer);
     mpTimer = setInterval(async () => {
       if (page !== 'multiplayer') { clearInterval(mpTimer); mpTimer = 0; return; }
-      if (L.mpSubmitting) return;
-      const revision = mpRevision, poll = ++mpPoll;
-      const r = await api.mp_session().catch(() => null);
-      if (page !== 'multiplayer' || revision !== mpRevision || poll < mpApplied || !r || !r.ok) return;
-      mpApplied = poll;
-      if (JSON.stringify(r) !== JSON.stringify(L.mpSession)) { L.mpSession = r; renderView(true); }
+      if (L.mpSubmitting || mpInFlight) return;
+      const revision = mpRevision;
+      mpInFlight = true;
+      try {
+        const r = await api.mp_session().catch(() => null);
+        if (page !== 'multiplayer' || revision !== mpRevision || !r || !r.ok) return;
+        if (JSON.stringify(r) !== JSON.stringify(L.mpSession)) { L.mpSession = r; renderView(true); }
+      } finally { mpInFlight = false; }
     }, 1500);
   }
   function go(name) { if (!S || !SB.pages[name]) return; menu = null; page = name; location.hash = '#/' + name; renderHead(); renderView(false); }
@@ -363,13 +379,13 @@
         if (result) {
           if (result.error) toast(t('err.' + result.error), 'warn');
           (result.errors || []).forEach(e => toast(`${NAMES[e.realm]}: ${t('err.' + e.error)}`, 'bad'));
-          if (result.ok) toast(t('games.stopping'), 'good');
+          (result.games || []).filter(g => g.stopping).forEach(g => toast(`${NAMES[g.realm]}: ${t('games.stopping')}`, 'good'));
         }
         await refresh();
       } finally { busy.delete('game-stop'); }
     },
     'host-start': async () => { menu = null; const r = await safe(() => api.host_start()); if (r && !r.ok) toast(`BridgeHost: ${r.error}`, 'bad'); await refresh(); },
-    'host-stop': async () => { menu = null; await safe(() => api.host_stop()); await refresh(); },
+    'host-stop': async () => { menu = null; const r = await safe(() => api.host_stop()); if (r?.ok === false) toast(t('err.' + r.error), 'warn'); await refresh(); },
 
     opt: (a, el) => { const k = el.dataset.k, v = el.dataset.v; L.assets[k] = k === 'only_missing' ? v === 'true' : v; renderView(true); },
     tool: async () => { const r = await safe(() => api.choose_tool_folder()); if (r && r.ok) { toast(t('assets.tool_ok'), 'good'); await refresh(); } else if (r && r.error) toast(t('err.' + r.error), 'bad'); },
@@ -469,12 +485,13 @@
     try {
       const r = await safe(call);
       if (r && !r.ok) {
-        const key = { BAD_CODE: 'mp.launcher_bad_code', SR2_JOIN_IN_GAME: 'mp.sr2_join_in_game' }[r.error];
+        const key = { BAD_CODE: 'mp.launcher_bad_code', BAD_NAME: 'mp.bad_name', SR2_JOIN_IN_GAME: 'mp.sr2_join_in_game' }[r.error];
         toast(key ? t(key) : (r.error || t('mp.step_failed', { error: '?' })), 'bad');
       }
       if (r && r.ok) {
         L.mpSession = { ...(L.mpSession || current || {}), request: r.request };
         if (page === 'multiplayer') { renderView(true); followSession(); }
+        if (r.launched) await refresh();
       }
     } finally { L.mpSubmitting = false; }
   }
@@ -583,6 +600,22 @@
   }
   document.addEventListener('keydown', ev => { const el = ev.target; if (ev.key === 'Enter' && el && el.dataset && el.dataset.enter && A[el.dataset.enter]) A[el.dataset.enter](); });
   setInterval(watchCrossings, 2500);
+  let checkingGames = false;
+  setInterval(async () => {
+    // An online error can leave one or both games running even if the last UI state was idle.
+    if (!S || document.hidden || checkingGames || busy.has('game-stop')) return;
+    const state = S;
+    checkingGames = true;
+    try {
+      const result = await api.game_process_state().catch(() => null);
+      if (S !== state || busy.has('game-stop') || !result?.SR1 || !result?.SR2) return;
+      if (['SR1', 'SR2'].some(r => state.games[r].running !== result[r].running || !!state.games[r].closing !== result[r].closing ||
+          !!state.games[r].close_unconfirmed !== !!result[r].close_unconfirmed)) {
+        for (const r of ['SR1', 'SR2']) Object.assign(state.games[r], { close_unconfirmed: false }, result[r]);
+        if (page === 'home' || page === 'games') renderView(true); else renderDock();
+      }
+    } finally { checkingGames = false; }
+  }, 1500);
 
   /* ----- live console of both games (Console page) ----- */
   SB.console = {

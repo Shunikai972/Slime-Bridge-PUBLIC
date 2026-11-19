@@ -110,6 +110,24 @@ class FakeProc:
 
 
 class RuntimeTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == 'nt', 'Windows launcher startup flags')
+    def test_background_unity_starts_windowed_and_minimized_without_activation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'SlimeRancher2.exe').touch()
+            calls = []
+
+            def popen(cmd, **kwargs):
+                calls.append((cmd, kwargs))
+                return FakeProc()
+
+            launcher = runtime.GameLauncher(popen=popen)
+            launcher.launch({'game': 'SR2', 'root': str(root)}, extra_env={'SLIMEBRIDGE_TRAVEL_MODE': 'DESTINATION'})
+            cmd, kwargs = calls[0]
+            self.assertEqual(cmd[1:3], ['-screen-fullscreen', '0'])
+            self.assertTrue(kwargs['startupinfo'].dwFlags & subprocess.STARTF_USESHOWWINDOW)
+            self.assertEqual(kwargs['startupinfo'].wShowWindow, 7)  # SW_SHOWMINNOACTIVE
+
     def test_launcher_starts_the_verified_exe_with_bridge_env_and_never_twice(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = make_sr1(Path(tmp) / 'sr1')

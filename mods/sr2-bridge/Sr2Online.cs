@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Reflection;
+using System.Threading.Tasks;
 using SlimeBridge.Shared;
 using UnityEngine;
 
@@ -18,7 +19,11 @@ namespace SlimeBridge.SR2
         private static float _nextSearch, _nextRefresh;
         private static string _lastError = "";
         private const ushort ManualPort = 1919;                 // Ranching Together's default host port
-        private static bool _autoRequested, _manual;
+        private static bool _manual;
+        private static TravelDone? _hostDone;
+        private static object? _hostUi;
+        private static float _hostUntil;
+        private static Task<IPAddress?>? _manualAddress;
 
         private static bool Find()
         {
@@ -43,30 +48,72 @@ namespace SlimeBridge.SR2
         private static object? Prop(object? target, string name) => target?.GetType().GetProperty(name, Any)?.GetValue(target);
 
         private static bool ServerRunning() => Prop(_main?.GetProperty("Server", Any)?.GetValue(null), "IsRunning") is bool b && b;
-        private static bool ClientConnected() => Prop(_main?.GetProperty("Client", Any)?.GetValue(null), "IsConnected") is bool b && b;
+        private static object? Client() => _main?.GetProperty("Client", Any)?.GetValue(null);
+        private static bool ClientConnected() => Prop(Client(), "IsConnected") is true || Prop(Client(), "IsConnecting") is true;
 
-        /// <summary>Start Ranching Together's Auto Host; the code arrives a few seconds later (heartbeat). "" when started.</summary>
-        internal static string Host()
+        // Cancelling SlimeBridge's callback does not cancel Ranching Together's own Auto Host.
+        internal static bool CanQuiesce()
+        {
+            try
+            {
+                if (!Find()) return _main == null && _ui == null && _joinCode == null;
+                var server = _main!.GetProperty("Server", Any)?.GetValue(null);
+                var client = Client();
+                return Prop(server, "IsRunning") is false && Prop(client, "IsConnected") is false &&
+                    Prop(client, "IsConnecting") is false && Prop(client, "IsJoined") is false && Field(Ui(), "hostAutoInProgress") is false;
+            }
+            catch (Exception) { return false; }
+        }
+
+        /// <summary>Complete only once the native listener and its join code are both ready.</summary>
+        internal static void Host(TravelDone done)
         {
             string result;
             try
             {
                 if (!Find()) result = "ranching_together_missing";
-                else if (ServerRunning()) result = "";
+                else if (_hostDone != null) result = "auto_host_already_pending";
                 else if (ClientConnected()) result = "already_connected";
                 else
                 {
                     var ui = Ui();
                     var start = _ui!.GetMethod("StartAutoHost", Any, null, Type.EmptyTypes, null);
-                    if (ui == null || start == null) result = "ranching_together_too_old";
-                    else { _autoRequested = true; _manual = false; start.Invoke(ui, null); result = ""; }
+                    if (ui == null || start == null || _ui.GetField("hostAutoInProgress", Any) == null ||
+                        _ui.GetField("hostJoinCode", Any) == null) result = "ranching_together_too_old";
+                    else
+                    {
+                        if (!ServerRunning())
+                        {
+                            _manual = false;
+                            start.Invoke(ui, null);
+                        }
+                        _hostUi = ui;
+                        _hostUntil = Time.realtimeSinceStartup + 90f;
+                        _hostDone = done;
+                        Refresh(true, "");
+                        return;
+                    }
                 }
             }
             catch (TargetInvocationException ex) { result = "host_failed:" + (ex.InnerException?.GetType().Name ?? "error"); }
             catch (Exception ex) { result = "host_failed:" + ex.GetType().Name; }
-            MelonLoader.MelonLogger.Msg("online: auto host " + (result.Length > 0 ? "refused: " + result : "started"));
-            Refresh(true, result);
-            return result;
+            _lastError = result;
+            done(false, result);
+        }
+
+        internal static void CancelHost()
+        {
+            _hostDone = null;
+            _hostUi = null;
+            _manualAddress = null;
+        }
+
+        private static void FinishHost(string error)
+        {
+            var done = _hostDone;
+            CancelHost();
+            _lastError = error;
+            done?.Invoke(error.Length == 0, error);
         }
 
         /// <summary>Connect to the host behind a session code. "" when the connection started.</summary>
@@ -104,20 +151,35 @@ namespace SlimeBridge.SR2
         /// Auto Host found no UPnP router: host on UDP 1919 with the public address Ranching Together already found, as its
         /// own "manual host" does. The code works once the player forwards UDP 1919 on the router (or uses a tunnel).
         /// </summary>
-        private static void FallBackToManualHost(object ui)
+        private static void CheckHost(object? ui)
         {
-            _autoRequested = false;
-            try
+            if (_hostDone == null) return;
+            if (!ReferenceEquals(ui, _hostUi)) { FinishHost("auto_host: menu changed"); return; }
+            if (Time.realtimeSinceStartup >= _hostUntil) { FinishHost("auto_host: timed out"); return; }
+            if (Field(ui, "hostAutoInProgress") is true) return;
+            var code = Field(ui, "hostJoinCode") as string ?? "";
+            if (ServerRunning()) { FinishHost(OnlineCodes.IsSession(code) ? "" : "auto_host: no usable join code"); return; }
+            if (code.Length > 0) { FinishHost("auto_host: listener did not start"); return; }
+            if (string.IsNullOrEmpty(Field(ui, "hostAutoError") as string)) { FinishHost("auto_host: not started"); return; }
+            if (_manualAddress == null)
             {
-                var autoHost = Type.GetType("SR2MP.Shared.Utils.AutoHost, " + _ui!.Assembly.FullName, false);
-                var external = autoHost?.GetMethod("TryGetExternalIp", Any, null, Type.EmptyTypes, null)?.Invoke(null, null) as IPAddress;
-                var manual = _ui.GetMethod("TryHostManual", Any, null, new[] { typeof(string), typeof(ushort), typeof(ushort) }, null);
-                if (external == null || manual == null) { _lastError = "auto_host: no UPnP and no public address"; return; }
-                manual.Invoke(ui, new object[] { external.ToString(), ManualPort, ManualPort });
-                _manual = true;
-                MelonLoader.MelonLogger.Msg("online: no UPnP router: hosting on UDP " + ManualPort + " (forward it on the router for friends to join)");
+                var external = _ui!.Assembly.GetType("SR2MP.Shared.Utils.AutoHost", false)?
+                    .GetMethod("TryGetExternalIp", Any, null, Type.EmptyTypes, null);
+                _manualAddress = Task.Run(() =>
+                {
+                    try { return external?.Invoke(null, null) as IPAddress; }
+                    catch (Exception) { return null; }
+                });
+                return;
             }
-            catch (Exception ex) { _lastError = "auto_host: manual fallback failed " + ex.GetType().Name; }
+            if (!_manualAddress.IsCompleted) return;
+            var address = _manualAddress.GetAwaiter().GetResult();
+            var manual = _ui!.GetMethod("TryHostManual", Any, null, new[] { typeof(string), typeof(ushort), typeof(ushort) }, null);
+            if (address == null || manual == null) { FinishHost("auto_host: no UPnP and no public address"); return; }
+            if (ClientConnected()) { FinishHost("already_connected"); return; }
+            manual.Invoke(ui, new object[] { address.ToString(), ManualPort, ManualPort });
+            _manual = ServerRunning() && OnlineCodes.IsSession(Field(ui, "hostJoinCode") as string ?? "");
+            FinishHost(_manual ? "" : "auto_host: manual listener or code unavailable");
         }
 
         /// <summary>Main thread, about once a second: what the heartbeat tells the launcher.</summary>
@@ -126,34 +188,23 @@ namespace SlimeBridge.SR2
             if (error != null) _lastError = error;
             if (!now && Time.realtimeSinceStartup < _nextRefresh) return;
             _nextRefresh = Time.realtimeSinceStartup + 1f;
-            try
-            {
-                if (_autoRequested && Find() && !ServerRunning())
-                {
-                    var ui = Ui();
-                    var failed = (Field(ui, "hostAutoError") as string ?? "").Length > 0 && !(Field(ui, "hostAutoInProgress") is bool busy && busy);
-                    if (ui != null && failed) FallBackToManualHost(ui);
-                }
-            }
-            catch (Exception) { _autoRequested = false; }
             var state = new OnlineState();
             try
             {
                 if (Find())
                 {
                     var ui = Ui();
+                    CheckHost(ui);
                     state.mod = true;
                     state.signed_in = ui != null;
-                    state.hosting = ServerRunning();
-                    state.connected = ClientConnected();
-                    state.code = state.hosting ? (Field(ui, "hostJoinCode") as string ?? "") : "";
-                    var autoError = Field(ui, "hostAutoError") as string ?? "";
-                    if (state.code.Length > 0) state.error = _manual ? "needs_udp_1919" : "";
-                    else if (_autoRequested && autoError.Length > 0) state.error = "";              // falling back to UDP 1919
-                    else state.error = autoError.Length > 0 && !_manual ? "auto_host: " + autoError.Replace('\n', ' ') : _lastError;
+                    var code = Field(ui, "hostJoinCode") as string ?? "";
+                    state.hosting = !(Field(ui, "hostAutoInProgress") is true) && ServerRunning() && OnlineCodes.IsSession(code);
+                    state.connected = Prop(Client(), "IsJoined") is true;
+                    state.code = state.hosting ? code : "";
+                    state.error = state.hosting ? (_manual ? "needs_udp_1919" : "") : _lastError;
                 }
             }
-            catch (Exception ex) { state.error = "status_failed:" + ex.GetType().Name; }
+            catch (Exception ex) { state.error = "status_failed:" + ex.GetType().Name; if (_hostDone != null) FinishHost(state.error); }
             OnlineStatus.Set(state);
         }
     }

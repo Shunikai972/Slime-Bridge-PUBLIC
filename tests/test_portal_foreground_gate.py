@@ -11,16 +11,19 @@ def scenario(tmp_path, source='SR1', **changes):
     calls = []
     backend = SimpleNamespace(requires_focus_confirmation=True, restore=lambda pid: True,
         minimize=lambda pid: True, focus=lambda pid: False)
-    host = SimpleNamespace(state=lambda: {'state': 'STOPPED'})
+    host = SimpleNamespace(state=lambda: {'state': 'STOPPED'}, admin_token=lambda: '')
     coordinator = travel.TravelCoordinator(host, SimpleNamespace(running=lambda realm: True),
         lambda realm: {'game': realm}, lambda: True, backend, travel.TravelLinks(tmp_path/'links.json'), clock=lambda: 10.0)
     coordinator._pid = lambda realm: 111 if realm == source else 222
     coordinator._world_ready = lambda realm: True
     coordinator._saw = lambda *args: True
     coordinator._latest_carry = lambda *args: {}
-    coordinator._send = lambda *args, **kwargs: calls.append((args, kwargs))
+    def send(*args, **kwargs):
+        calls.append((args, kwargs))
+        return True
+    coordinator._send = send
     row = dict(id='synthetic', portal_id='portal.sr1.sanctuary_gate' if source == 'SR1' else 'portal.sr2.return_portal',
-        state='PREPARING', since=0.0, deadline=45.0, launched=False,
+        state='PREPARING', since=0.0, deadline=45.0, launched=False, dest_save=None,
         history=[], **{'from': source, 'to': destination})
     row.update(changes)
     # The source has not failed; its departure_ready is available.

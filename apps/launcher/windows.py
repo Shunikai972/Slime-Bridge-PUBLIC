@@ -112,6 +112,23 @@ class Win32Windows:
                 return True
         return False
 
+    def focus_startup(self, pid):
+        """Best effort on a separate input queue; never restore a minimized front game."""
+        for hwnd in self._game_windows(pid):
+            if self._user32.IsIconic(hwnd):
+                continue
+            owner = self._wt.DWORD()
+            self._user32.GetWindowThreadProcessId(hwnd, self._ct.byref(owner))
+            if owner.value != pid or not self._verify(pid):
+                continue
+            # Startup holds the travel admission lock. Do not wait for a game to
+            # restore or attach its input queue: cross-queue activation is asynchronous.
+            if self._user32.GetForegroundWindow() != hwnd:
+                self._user32.SetForegroundWindow(hwnd)
+            if self._user32.GetForegroundWindow() == hwnd:
+                return True
+        return False
+
     def minimize(self, pid):
         windows = self._checked(pid)
         for hwnd in windows:

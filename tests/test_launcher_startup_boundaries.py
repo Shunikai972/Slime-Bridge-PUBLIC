@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
     'cached-news-cannot-replace-newer-refresh', 'cached-news-in-order-control',
     'ready-state-navigation-control', 'multiplayer-join-with-enter', 'multiplayer-unsafe-join-message',
     'multiplayer-rejects-stale-poll-and-renders-while-typing',
+    'multiplayer-name-survives-poll', 'game-stop-updates-without-a-second-click',
+    'game-stop-appears-after-failed-online-launch', 'host-loss-shows-unconfirmed-close-until-exit',
     'loading-control-and-branding',
 ])
 def test_startup_boundary(scenario):

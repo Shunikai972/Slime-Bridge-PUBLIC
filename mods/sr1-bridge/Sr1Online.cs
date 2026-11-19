@@ -72,7 +72,8 @@ namespace SlimeBridge.SR1
             {
                 // SRMP signs in under the player's own name only: the one typed in SlimeBridge, else the one in its menu.
                 _nextSignIn = 0f;
-                _pendingName = name;
+                _pendingName = name.Length > 0 ? name : _startupName;
+                _startupName = null; // this request now owns the name; Refresh must not overwrite it
                 var signIn = SignIn();
                 if (signIn.Length > 0) { _pendingName = null; Refresh(true, signIn); return signIn; }
                 _pendingKind = kind; _pendingCode = code; _pendingUntil = Time.realtimeSinceStartup + 90f;

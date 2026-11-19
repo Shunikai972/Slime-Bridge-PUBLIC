@@ -151,7 +151,8 @@ namespace SlimeBridge.SR1
                 }
                 return;                                      // closing: never resume by hand on the way out
             }
-            if (_held && _throttle.ReturnedByHand(Application.isFocused, Time.realtimeSinceStartup)) ReturnByHand();
+            // Alt+Tab back to this parked game changes nothing: the vac and the player are in the other game, and only the
+            // portal brings them back (resuming here would show a world without its vac).
         }
 
         private void ReturnByHand()
@@ -288,6 +289,7 @@ namespace SlimeBridge.SR1
             _throttle.Restore();
             var report = HeldReport();
             _held = false; _arrived = true;
+            TravelScreen.FullscreenAgainOnArrival();          // started small behind the other game: the player's fullscreen comes back
             var placed = SanctuaryHost.Instance?.PlacePlayerAtPortal(true) ?? false;
             SanctuaryHost.Instance?.PulsePortal();
             var how = (placed ? "portal" : "in_place") + (report.Length > 0 ? "; " + report : "");

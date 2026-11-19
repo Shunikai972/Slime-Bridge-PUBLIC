@@ -45,6 +45,20 @@ def test_already_queued_portal_cannot_begin_after_stop_intent(tmp_path,closing):
     coord._select_audio_front.assert_not_called()
 
 
+@pytest.mark.parametrize('target', ['SR2', 'BOTH'])
+def test_stop_cannot_overtake_an_accepted_online_request(tmp_path, target):
+    api, _ = api_for(tmp_path)
+    api._travel.online.host('SR2')
+    api._launcher.request_stop = mock.Mock(return_value={'realm': 'SR2', 'stopping': True})
+    assert api.game_stop(target) == {'ok': False, 'error': 'ONLINE_REQUEST_PENDING'}
+    api._launcher.request_stop.assert_not_called()
+    api._travel.online.request.update(done=True, cancelled=False)
+    assert api.game_stop(target) == {'ok': False, 'error': 'ONLINE_REQUEST_PENDING'}
+    api._launcher.request_stop.assert_not_called()
+    api._travel.online.request['cancelled'] = True
+    assert api.game_stop(target)['ok']
+
+
 def test_launcher_cannot_join_sr2_on_the_players_save(tmp_path):
     api, _ = api_for(tmp_path)
     api._host.start = mock.Mock()
@@ -74,6 +88,47 @@ def test_sr1_online_does_not_start_the_linked_sr2_save(tmp_path, op):
     assert result['ok']
     assert [c.args[0]['game'] for c in launch.call_args_list] == ['SR1']
     assert launch.call_args.kwargs['extra_env']['SLIMEBRIDGE_TRAVEL_SAVE'] == 'sr1-save'
+
+
+def test_invalid_online_name_does_not_launch_games(tmp_path):
+    api, _ = api_for(tmp_path)
+    api._start_for_online = mock.Mock()
+    assert api.mp_host('BOTH', 'invalid name') == {'ok': False, 'error': 'BAD_NAME'}
+    assert api.mp_join('K7QX2PA', 'invalid name') == {'ok': False, 'error': 'BAD_NAME'}
+    api._start_for_online.assert_not_called()
+
+
+@pytest.mark.parametrize('realm', ['SR1', 'SR2'])
+def test_online_cold_solo_does_not_hide_the_only_game(tmp_path, realm):
+    api, _ = api_for(tmp_path)
+    for child in api._launcher._children.values():
+        child.poll.return_value = 0
+    api._primary = mock.Mock(return_value={'game': realm})
+    api._launch = mock.Mock(return_value={'ok': True})
+    assert api._start_for_online((realm,))['ok']
+    assert not api._launch.call_args.kwargs.get('background')
+
+
+def test_online_does_not_reuse_a_dead_childs_heartbeat(tmp_path):
+    api, _ = api_for(tmp_path)
+    code = 'Rk7mP2xQa'
+    beat = {'pid': 999, 'status': {'player_alive': True, 'save_id': 'old'},
+            'online': {'mod': True, 'signed_in': True, 'hosting': True, 'code': code}}
+    api._host.state = lambda: {'heartbeats': {'SR2': beat}}
+    assert api._travel.online.state()['code'] == ''
+    assert not api._travel._world_ready('SR2')
+    beat['pid'] = 222
+    assert api._travel.online.state()['code'] == code
+    assert api._travel._world_ready('SR2')
+
+
+def test_play_both_refuses_to_replace_a_session_during_verified_close(tmp_path):
+    api, _ = api_for(tmp_path)
+    api._travel._close['SR2'] = {'to': 'SR2'}
+    api._launcher.launch = mock.Mock()
+    result = api.launch('BOTH_SR2', confirmed=True)
+    assert not result['ok'] and result['errors'] == [{'realm': 'SR2', 'error': 'GAME_CLOSING'}]
+    api._launcher.launch.assert_not_called()
 
 
 def test_both_online_preflights_missing_game_before_launch(tmp_path):
@@ -243,7 +298,92 @@ def test_older_window_arrangement_cannot_release_newer_startup_pin(tmp_path):
     with mock.patch('apps.launcher.desktop.threading.Thread',InlineThread),mock.patch('apps.launcher.desktop.time.sleep'):
         api._keep_in_front('SR1', api._audio_startup_epoch)
     assert api._audio_startup_deadline==456.0
-    control.focus.assert_not_called()
+    control.focus_startup.assert_not_called()
+
+
+def test_startup_waits_for_unity_window_not_loader_console(tmp_path):
+    api, _ = api_for(tmp_path)
+    control = api._window_control()
+    control._checked.return_value = [100]
+    control._game_windows.side_effect = [windows.WindowError('console only'), [200], [200]]
+    sleeps = []
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        if seconds == 2.0 and sleeps.count(2.0) == 2:
+            control.minimize.assert_not_called()
+            control.focus_startup.assert_not_called()
+
+    with mock.patch('apps.launcher.desktop.time.sleep', side_effect=sleep), \
+            mock.patch('apps.launcher.desktop.threading.Thread') as thread:
+        api._keep_in_front('SR1', api._audio_startup_epoch)
+        thread.call_args.kwargs['target']()
+    assert control.minimize.call_count == 2
+    assert sleeps.count(2.0) >= 2
+
+
+def test_startup_uses_non_waiting_foreground_request(tmp_path):
+    api, _ = api_for(tmp_path)
+    control = api._window_control()
+    control._game_windows.return_value = [200]
+    control.focus.side_effect = AssertionError('synchronous focus under the travel lock')
+    with mock.patch('apps.launcher.desktop.time.sleep'), \
+            mock.patch('apps.launcher.desktop.threading.Thread') as thread:
+        api._keep_in_front('SR1', api._audio_startup_epoch)
+        thread.call_args.kwargs['target']()
+    assert control.focus_startup.call_args_list == [mock.call(111), mock.call(111)]
+
+
+def test_startup_window_worker_stands_down_after_stop(tmp_path):
+    api, exe = api_for(tmp_path)
+    control = api._window_control()
+    control._game_windows.return_value = [200]
+    with mock.patch('apps.launcher.desktop.time.sleep'), \
+            mock.patch('apps.launcher.desktop.threading.Thread') as thread, \
+            mock.patch('tools.lab.process_guard.process_image_path', return_value=exe):
+        api._keep_in_front('SR1', api._audio_startup_epoch)
+        assert api.game_stop('SR2')['ok']
+        thread.call_args.kwargs['target']()
+    assert api.game_process_state()['SR2'] == {'running': True, 'closing': True}
+    control.minimize.assert_not_called()
+    control.focus_startup.assert_not_called()
+
+
+def test_crossing_completed_between_startup_passes_keeps_destination_in_front(tmp_path):
+    api, _ = api_for(tmp_path)
+    control = api._window_control()
+    control._checked.return_value = control._game_windows.return_value = [200]
+    coord = api._travel
+    coord._install_for = lambda realm: {'game': realm}
+    coord._send = mock.Mock(return_value=True)
+    coord._settings = lambda: {'travel_carry': 'NONE'}
+    coord._heartbeat = lambda realm: {'pid': 111 if realm == 'SR1' else 222,
+                                     'status': {'player_alive': True, 'save_id': realm + '-save'}}
+    coord._windows = control
+    coord._saw = lambda _row, _realm, event: event in ('departure_ready', 'arrived', 'held')
+    row = {'id': 'crossing', 'portal_id': 'portal.sr1.sanctuary_gate', 'from': 'SR1', 'to': 'SR2',
+           'state': 'PREPARING', 'since': coord._clock(), 'history': [], 'deadline': 60,
+           'launched': False, 'dest_save': 'SR2-save'}
+
+    def sleep(seconds):
+        if seconds != 6.0 or row['state'] == 'COMPLETE':
+            return
+        with coord._lock:
+            coord.transitions.append(row)
+            coord._start_destination(row)
+            for _ in range(3):
+                coord._advance(row)
+        assert row['state'] == 'COMPLETE'
+
+    with mock.patch('apps.launcher.desktop.time.sleep', side_effect=sleep), \
+            mock.patch('apps.launcher.desktop.threading.Thread') as thread:
+        api._keep_in_front('SR1', api._audio_startup_epoch)
+        thread.call_args.kwargs['target']()
+    assert row['state'] == 'COMPLETE'
+    assert control.minimize.call_args_list == [mock.call(222), mock.call(111)]
+    assert control.focus_startup.call_args_list == [mock.call(111)]
+    assert control.focus.call_args_list == [mock.call(222)]
+    assert api._audio_startup_deadline == 0
 
 
 @pytest.mark.parametrize('last,partner',[('SR1','SR2'),('SR2','SR1')])
@@ -360,7 +500,7 @@ def test_play_arms_the_extracted_content_where_the_plugin_is_installed(tmp_path,
 def test_the_typed_online_name_reaches_slime_rancher(tmp_path):
     api,started,patches=_launch_fixture(tmp_path)
     api._remember_online_name('Noam_42')
-    api._remember_online_name('bad name')                       # refused: the previous one stays
+    assert api.mp_host('SR1', 'bad name') == {'ok': False, 'error': 'BAD_NAME'}
     with patches[0],patches[1],patches[2],patches[3]:
         assert api.launch('BOTH_SR1',confirmed=True)['ok']
     envs=dict(started)

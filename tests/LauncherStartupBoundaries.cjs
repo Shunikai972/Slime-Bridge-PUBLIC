@@ -62,7 +62,7 @@ class Element {
 function state(legal=true){return {version:'startup-boundary-fixture',platform:'inert',installations:[],preferences:{language:'en',reduce_motion:true,play_target:'SR1',backup_ack:false,native_frame:false},games:{SR1:{primary:null,all:[],running:false},SR2:{primary:null,all:[],running:false}},host:{state:'STOPPED'},legal_understood:legal,paths:{models:'fixture',output:'fixture',cache:'fixture'},tool:{found:false,path:null},last_session:null};}
 function create(options={}){
   const clock=new Clock();const doc=new Element('#document',null);doc.ownerDocument=doc;doc.hidden=false;doc.createElement=t=>new Element(t,doc);doc.getElementById=id=>doc.querySelector('#'+id);const html=doc.appendChild(new Element('html',doc));doc.documentElement=html;const body=html.appendChild(new Element('body',doc));body.innerHTML='<div id="bg"></div><div id="app"><header id="head"></header><aside id="side"></aside><main id="stage"><div id="view"></div><footer id="dock"></footer></main><footer id="ribbon"></footer></div><div id="chars-back"></div><div id="chars"></div><canvas id="fx"></canvas><div id="toasts"></div><div id="modal-root"></div><div id="loading-root"></div>';
-  const calls=[];const unknown=[];const local=new Map();const backend=new Proxy({get_state:async()=>state(options.legal??true),autodetect:never,news_cached:async()=>null,news_refresh:async()=>null,image_data:async()=>null,update_check:async()=>({ok:false}),acknowledge_legal:async()=>({understood:true}),extract_status:async()=>null,sanctuary_state:async()=>null,get_settings:async()=>({sections:[]}),...options.api},{get(target,name){if(typeof target[name]!=='function'){unknown.push(String(name));return async()=>{throw Error('Unimplemented inert API: '+String(name));};}return (...args)=>{calls.push({name,args,at:clock.now});return target[name](...args);};}});
+  const calls=[];const unknown=[];const local=new Map();const backend=new Proxy({get_state:async()=>state(options.legal??true),game_process_state:async()=>null,autodetect:never,news_cached:async()=>null,news_refresh:async()=>null,image_data:async()=>null,update_check:async()=>({ok:false}),acknowledge_legal:async()=>({understood:true}),extract_status:async()=>null,sanctuary_state:async()=>null,get_settings:async()=>({sections:[]}),...options.api},{get(target,name){if(typeof target[name]!=='function'){unknown.push(String(name));return async()=>{throw Error('Unimplemented inert API: '+String(name));};}return (...args)=>{calls.push({name,args,at:clock.now});return target[name](...args);};}});
   const winEvents=new Map();const SB={local:{assets:{job:null}},Art:Object.fromEntries(['slime','plort','icon','glyph','largo','wordmark'].map(k=>[k,()=>'<svg></svg>'])),Scene:{background:()=>'<svg></svg>',hero:()=>'<svg></svg>',parallax(){}},has:()=>true};SB.Art.trackEyes=()=>{};
   const window={SB,pywebview:{api:backend},addEventListener:(type,fn)=>{const list=winEvents.get(type)||[];list.push(fn);winEvents.set(type,list);}};
   class FakeDate extends Date {constructor(...args){super(...(args.length?args:[clock.now]));}static now(){return clock.now;}}
@@ -119,6 +119,8 @@ const cases={
     await h.click(h.q('[data-act="go"][data-arg="multiplayer"]'));
     await h.clock.tick(1500);
     assert.equal(polls,1);
+    await h.clock.tick(12000);
+    assert.equal(polls,1,'a hung backend must not accumulate multiplayer RPCs');
     h.q('#mp-join-code').value='K7QX2PA';
     await h.click(h.q('[data-act="mp-join"]'));
     old.resolve({ok:true,games:{},request:null});
@@ -130,6 +132,73 @@ const cases={
     assert.match(h.q('#view').innerHTML,/SRMP lobby joined/);
     assert.equal(h.q('#mp-join-code').value,'OTHER12');
   },
-  async 'loading-control-and-branding'(){const h=create();const sc=h.SB.loading.open({id:'splash'});assert.match(sc.el.innerHTML,/pink-cotton-artist/);const bar=sc.el.querySelector('.ld-bar');assert.equal(bar.getAttribute('role'),'progressbar');sc.progress(70,'fixture progress');assert.equal(bar.getAttribute('aria-valuenow'),'70');assert.equal(sc.el.querySelector('.ld-step').textContent,'fixture progress');sc.fail('fixture failed');assert.ok(sc.el.classList.contains('bad'));const actions=sc.actions('<button data-retry>Retry</button>');assert.ok(actions.querySelector('[data-retry]'));const closing=sc.close();await h.clock.tick(750);await closing;assert.equal(h.q('#splash'),null);},
+  async 'multiplayer-name-survives-poll'(){
+    for (const draft of ['Test_Name', '']) {
+      const h=create({api:{mp_state:async()=>({ok:true}),mp_session:async()=>({ok:true,games:{},request:null}),mp_host:never}});
+      h.local.set('sb.mpName','Old_Name');
+      await booted(h);
+      await h.click(h.q('[data-act="go"][data-arg="multiplayer"]'));
+      const name=h.q('#mp-name');name.value=draft;name.focus();
+      await h.clock.tick(1500);
+      assert.notEqual(h.q('#mp-name'),name,'must exercise a polling redraw');
+      const replacement=h.q('#mp-name');
+      assert.equal(replacement.getAttribute('value'),draft);
+      assert.equal(h.doc.activeElement,replacement);
+      await h.click(h.q('[data-act="mp-host"]'));
+      assert.equal(h.calls.find(x=>x.name==='mp_host').args[1],draft);
+    }
+  },
+  async 'game-stop-updates-without-a-second-click'(){
+    let running=true, closing=false;
+    const h=create({api:{get_state:async()=>{
+      const s=state();Object.assign(s.games.SR1,{running,closing});return s;
+    },game_process_state:async()=>({SR1:{running,closing},SR2:{running:false,closing:false}}),game_stop:async()=>{
+      closing=true;
+      return {ok:false,games:[{realm:'SR1',stopping:true},{realm:'SR2',error:'CLOSE_NOT_CONFIRMED'}],errors:[{realm:'SR2',error:'CLOSE_NOT_CONFIRMED'}]};
+    }}});
+    h.window.confirm=()=>true;
+    await booted(h);
+    const tasks=await h.click(h.q('#dock [data-act="game-stop"]'));await Promise.all(tasks);
+    assert.match(h.q('#toasts .toast.good').textContent,/Slime Rancher: Closing the game/);
+    assert.notEqual(h.q('#dock .go').getAttribute('disabled'),null);
+    running=closing=false;
+    await h.clock.tick(4000);
+    assert.ok(h.q('#dock [data-act="play"]'));
+    assert.equal(h.calls.filter(x=>x.name==='game_stop').length,1);
+  },
+  async 'game-stop-appears-after-failed-online-launch'(){
+    for(const error of ['LAUNCH_FAILED', 'HOST_START_FAILED']) {
+      const games={SR1:{running:false,closing:false},SR2:{running:false,closing:false}};
+      const h=create({api:{mp_state:async()=>({ok:true}),mp_session:async()=>({ok:true,games:{},request:null}),
+        mp_host:async()=>{
+          games.SR1.running=true;
+          if(error==='HOST_START_FAILED') {games.SR2.running=true;return {ok:false,error};}
+          return {ok:false,error,realm:'SR2',launched:{ok:false,launched:[{realm:'SR1',pid:111}]}};
+        },game_process_state:async()=>structuredClone(games)}});
+      await booted(h);
+      await h.click(h.q('[data-act="go"][data-arg="multiplayer"]'));
+      assert.ok(h.q('#dock [data-act="play"]'));
+      await h.click(h.q('[data-act="mp-host"]'));
+      assert.match(h.q('#toasts .toast.bad').textContent,new RegExp(error));
+      await h.clock.tick(3000);
+      assert.ok(h.q('#dock [data-act="game-stop"]'),`${error}: a live launcher child must have a Stop control`);
+      assert.equal(h.SB.app.state.games.SR2.running,games.SR2.running);
+    }
+  },
+  async 'host-loss-shows-unconfirmed-close-until-exit'(){
+    let live={running:true,closing:true,close_unconfirmed:false};
+    const h=create({api:{get_state:async()=>{const s=state();s.preferences.play_target='SR2';Object.assign(s.games.SR2,live);return s;},
+      game_process_state:async()=>({SR1:{running:false,closing:false,close_unconfirmed:false},SR2:{...live}})}});
+    await booted(h);
+    assert.match(h.q('#dock .go').getAttribute('aria-label'),/Closing the game/);
+    live={...live,close_unconfirmed:true};
+    await h.clock.tick(3000);
+    assert.match(h.q('#dock .go').getAttribute('aria-label'),/Close unconfirmed/);
+    assert.notEqual(h.q('#dock .go').getAttribute('disabled'),null);
+    live={running:false,closing:false,close_unconfirmed:false};
+    await h.clock.tick(3000);
+    assert.ok(h.q('#dock [data-act="play"]'));
+  },
+  async 'loading-control-and-branding'(){const h=create();const sc=h.SB.loading.open({id:'splash'});assert.match(sc.el.innerHTML,/pink-cotton-artist/);const bar=sc.el.querySelector('.ld-bar');assert.equal(bar.getAttribute('role'),'progressbar');sc.progress(70,'fixture progress');assert.equal(bar.getAttribute('aria-valuenow'),'70');sc.fail('fixture failed');assert.ok(sc.el.classList.contains('bad'));const actions=sc.actions('<button data-retry>Retry</button>');assert.ok(actions.querySelector('[data-retry]'));const closing=sc.close();await h.clock.tick(750);await closing;assert.equal(h.q('#splash'),null);},
 };
 (async()=>{for(const [name,fn] of Object.entries(cases)){if(CASE!=='all'&&CASE!==name)continue;try{await fn();results.push({name,passed:true});console.log('PASS '+name);}catch(error){results.push({name,passed:false,error:String(error),stack:error.stack});console.error('FAIL '+name+'\n'+error.stack);}}assert.ok(results.length,'known case required');const failures=results.filter(r=>!r.passed);clearTimeout(watchdog);console.log(JSON.stringify({synthetic_dom:true,visual_acceptance:false,source_root:ROOT,cases:results,passed:results.length-failures.length,failed:failures.length},null,2));process.exitCode=failures.length?1:0;})().catch(e=>{console.error(e);process.exitCode=1;});

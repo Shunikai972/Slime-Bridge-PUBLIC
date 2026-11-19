@@ -55,8 +55,12 @@ class HostProcess:
             pass
         return dict(getattr(self, '_last_status', None) or {}) if self.running() else {}
 
+    def owned_child(self):
+        child = self._child
+        return child if child is not None and child.poll() is None else None
+
     def running(self):
-        return self._child is not None and self._child.poll() is None
+        return self.owned_child() is not None
 
     def state(self):
         if not self.running():
@@ -177,6 +181,14 @@ class GameLauncher:
         child = self._children.get(realm)
         return child is not None and child.poll() is None
 
+    def owned_child(self, realm):
+        child = self._children.get(realm)
+        return child if child is not None and child.poll() is None else None
+
+    def current_pid(self, realm):
+        child = self.owned_child(realm)
+        return child.pid if child is not None else None
+
     def closing(self, realm):
         child = self._children.get(realm)
         if child is None or child.poll() is not None:
@@ -208,15 +220,35 @@ class GameLauncher:
             return {'realm': realm, 'pid': self._children[realm].pid, 'already_running': True, 'exe': str(exe)}
         env = dict(os.environ)
         env.update(extra_env or {})
+        options = extra_env or {}
+        background = options.get('SLIMEBRIDGE_TRAVEL_MODE') == 'DESTINATION' or options.get('SLIMEBRIDGE_BACKGROUND_START') == '1'
+        command = [str(exe)]
         kwargs = {'cwd': str(exe.parent), 'env': env, 'close_fds': True}
         if os.name == 'nt':
             kwargs['creationflags'] = getattr(subprocess, 'DETACHED_PROCESS', 0) | getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)
+            if background:
+                # Started small and windowed behind the game being played. Unity would remember that window mode, so the
+                # player's own display settings are put back when this game exits; the plugin goes fullscreen again on
+                # arrival when the player had fullscreen.
+                kept = _keep_display_settings(realm) if self._popen is subprocess.Popen else {}
+                if kept.get('fullscreen'):
+                    kwargs.setdefault('env', dict(os.environ))
+                    kwargs['env']['SLIMEBRIDGE_FULLSCREEN_ON_ARRIVAL'] = '1'
+                command.extend(('-screen-fullscreen', '0'))
+                startup = subprocess.STARTUPINFO()
+                startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startup.wShowWindow = 7  # SW_SHOWMINNOACTIVE: the first window must not activate
+                kwargs['startupinfo'] = startup
         try:
-            child = self._popen([str(exe)], **kwargs)
+            child = self._popen(command, **kwargs)
         except OSError as exc:
             raise RuntimeErrorWithCode('LAUNCH_FAILED', str(exc)) from exc
         self._children[realm] = child
         self._executables[realm] = exe.resolve()
+        if background and realm in _PENDING_DISPLAY:
+            import threading
+            threading.Thread(target=lambda c=child, r=realm: (c.wait(), restore_display_settings(r)), daemon=True,
+                             name=f'display-settings-{realm}').start()
         self._closing.pop(realm, None)
         if self._on_started is not None:
             self._on_started(realm, child.pid)
@@ -238,3 +270,35 @@ class GameLauncher:
 
     def status(self):
         return {realm: self.running(realm) for realm in EXECUTABLES}
+
+def _keep_display_settings(realm):
+    """Snapshot the game's Unity display settings now and restore them once its process is gone (watcher thread)."""
+    if os.name != 'nt' or realm not in ('SR1', 'SR2'):
+        return {}
+    try:
+        from tools.lab import screen_guard
+        saved = screen_guard.snapshot((realm,))
+    except Exception:                                          # noqa: BLE001 - display settings are a comfort, never a blocker
+        return {}
+    values = saved.get(realm) or {}
+    fullscreen = any(name.startswith('Screenmanager Fullscreen mode') and int.from_bytes(bytes(value), 'little') != 3
+                     if isinstance(value, (bytes, bytearray)) else name.startswith('Screenmanager Fullscreen mode') and value != 3
+                     for name, (value, _kind) in values.items())
+    _PENDING_DISPLAY[realm] = saved
+    return {'fullscreen': fullscreen}
+
+
+_PENDING_DISPLAY = {}
+
+
+def restore_display_settings(realm):
+    """Put back what ``_keep_display_settings`` saw for ``realm`` (called when that game's process has exited)."""
+    saved = _PENDING_DISPLAY.pop(realm, None)
+    if not saved:
+        return False
+    try:
+        from tools.lab import screen_guard
+        screen_guard.restore(saved)
+        return True
+    except Exception:                                          # noqa: BLE001
+        return False

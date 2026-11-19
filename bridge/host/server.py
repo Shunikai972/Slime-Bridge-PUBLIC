@@ -39,7 +39,9 @@ TRAVEL_EVENT_LIMIT = 500
 TRAVEL_QUEUE_LIMIT = 16
 TRAVEL_EXPECTED_EVENTS = {'prepare_departure': 'departure_ready', 'hold': 'held', 'resume': 'resumed',
                           'arrive': 'arrived', 'abort': 'aborted', 'save_quit': 'saved',
+                          'close_prepare': 'close_ready', 'close_commit': 'saved', 'close_abort': 'close_aborted',
                           'online_host': 'online_done', 'online_join': 'online_done'}
+SR2_CLOSE_KINDS = frozenset(('close_prepare', 'close_commit', 'close_abort'))
 TRAVEL_MESSAGE_KINDS = tuple(TRAVEL_EXPECTED_EVENTS)
 TRAVEL_EVENT_KINDS = frozenset(TRAVEL_EXPECTED_EVENTS.values()) | {'failed'}
 ONLINE_CODE = re.compile(r'\A[A-Za-z0-9]{0,16}\Z')
@@ -80,13 +82,15 @@ def _valid_travel_send(data) -> bool:
         return False
     if data['realm'] == 'SR2' and message['kind'] == 'online_join':
         return False
+    if data['realm'] != 'SR2' and message['kind'] in SR2_CLOSE_KINDS:
+        return False
     if not isinstance(message.get('transition_id'), str) or _TRAVEL_ID.fullmatch(message['transition_id']) is None:
         return False
     allowed = {'kind', 'transition_id', 'destination', 'source', 'portal_id', 'reason', 'policy', 'carry', 'carry_mode', 'code', 'name'}
     if 'name' in message and (not isinstance(message['name'], str) or ONLINE_NAME.fullmatch(message['name']) is None):
         return False
     target_fields = {'target_pid', 'target_save'}
-    if message['kind'] == 'save_quit':
+    if message['kind'] == 'save_quit' or message['kind'] in SR2_CLOSE_KINDS:
         if (type(message.get('target_pid')) is not int or not 0 < message['target_pid'] < 2 ** 31 or
                 not _bounded_str(message.get('target_save'), 128) or not message['target_save'].strip()):
             return False
@@ -645,6 +649,23 @@ class BridgeHost:
     def travel_enqueue(self, realm: str, message: dict):
         with self._lock:
             queue = self._travel_queue[realm]
+            if message['kind'] in SR2_CLOSE_KINDS:
+                kind, tid = message['kind'], message['transition_id']
+                existing = next((m for m in queue if m['kind'] == kind and m['transition_id'] == tid), None)
+                if existing is not None:
+                    return existing['message_id']
+                if kind == 'close_abort':
+                    queue[:] = [m for m in queue if m['transition_id'] != tid]
+                    # The historical event stays observable, but it can no longer be
+                    # retried as a new quit grant, even after the abort leaves the queue.
+                    for event in self._travel_events:
+                        if event['realm'] == realm and event['transition_id'] == tid and event['event'] == 'saved':
+                            event['close_revoked'] = True
+                if len(queue) >= TRAVEL_QUEUE_LIMIT + 1:
+                    return None
+                entry = dict(message, message_id=secrets.token_hex(8))
+                queue.insert(0, entry)
+                return entry['message_id']
             if message['kind'] in ('resume', 'abort'):
                 # A way back must never wait behind an instruction the plugin is stuck on.
                 queue[:] = [m for m in queue if m['transition_id'] != message['transition_id']]
@@ -670,8 +691,11 @@ class BridgeHost:
             if ack:
                 queue = self._travel_queue[realm]
                 head = queue[0] if queue else None
+                if kind == 'saved' and any(m['kind'] == 'close_abort' and m['transition_id'] == tid for m in queue):
+                    return False
                 if head is None or head['message_id'] != ack:
-                    return any((e.get('ack_id'), e['realm'], e['transition_id'], e['event'], e['detail'], e['carry']) ==
+                    return any(not e.get('close_revoked') and
+                               (e.get('ack_id'), e['realm'], e['transition_id'], e['event'], e['detail'], e['carry']) ==
                                (ack, realm, tid, kind, detail, carry) for e in self._travel_events)
                 if head['transition_id'] != tid or kind not in (TRAVEL_EXPECTED_EVENTS[head['kind']], 'failed'):
                     return False

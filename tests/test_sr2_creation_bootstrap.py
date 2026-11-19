@@ -49,7 +49,13 @@ class Sr2SpeciesRegistrar {
     public void Tick(Action<string> log) { }
 }
 class Sr2SanctuaryProbe { public void Tick(Action<string> log) { } }
-class TravelStub { public void Unload() { } public void Tick() { } public void Gui() { } }
+class TravelStub {
+    public bool Quiescing;
+    public Action? OnTick;
+    public void Unload() { }
+    public void Tick() { OnTick?.Invoke(); }
+    public void Gui() { }
+}
 class Sr2LabImportedOps {
     public static bool Requested;
     public bool Done = true;
@@ -108,7 +114,8 @@ class Flow : SyntheticMod {
     void LogSaveServicesOnce() { }
     void MaybeEndNewGameIntro() { }
     void LogDiagnosticsOnce() { }
-    GameStatus? SnapshotOnMainThread() => null;
+    public void EnableSnapshot() { _stop = new(); _nextSnapshot = DateTime.MinValue; }
+    GameStatus? SnapshotOnMainThread() { Events.Add("heartbeat"); return new(); }
     static bool OracleExecutableMatches() => true;
     public override void OnUpdate()
 '''
@@ -177,7 +184,19 @@ class Program {
         var unloaded = Fresh(true, true); LabFocusDiagnostics.Requested = true;
         unloaded.OnSceneWasUnloaded(1, "synthetic");
         Require(unloaded._focusDiagnostics!.Stopped, "unstarted diagnostic must stop on unload");
-        Console.WriteLine("21/21 extracted-production-OnUpdate flow checks passed (synthetic; no game or native creation)");
+        var closing = Fresh(true, true);
+        var closeTravel = new TravelStub();
+        closeTravel.OnTick = () => { closing.Events.Add("close-tick"); closeTravel.Quiescing = true; };
+        closing._travel = closeTravel;
+        closing._returnPortal = new() { OnTick = () => closing.Events.Add("portal") };
+        closing.EnableSnapshot();
+        closing.OnUpdate();
+        Require(string.Join(",", closing.Events) == "close-tick,heartbeat", "close preparation blocks writers in the same frame but still samples the heartbeat");
+        closing.Events.Clear();
+        closeTravel.OnTick = () => closeTravel.Quiescing = false;
+        closing.OnUpdate();
+        Require(closing.Events.Contains("portal") && closing.Events.Contains("inventory"), "a disarmed close resumes the normal pipeline");
+        Console.WriteLine("23/23 extracted-production-OnUpdate flow checks passed (synthetic; no game or native creation)");
     }
 }
 '''
@@ -190,6 +209,7 @@ class SR2CreationBootstrapTests(unittest.TestCase):
             self.skipTest('dotnet SDK unavailable')
         bridge = (ROOT / 'mods/sr2-bridge/BridgeMod.cs').read_text(encoding='utf-8')
         body = on_update_body(bridge)
+        body += '\nprivate void PublishSnapshot()\n' + on_update_body(bridge, 'private void PublishSnapshot()')
         body += '\npublic override void OnSceneWasUnloaded(int buildIndex, string sceneName)\n' + on_update_body(bridge, 'public override void OnSceneWasUnloaded(')
         with tempfile.TemporaryDirectory(prefix='sr2-creation-boot-flow-') as temporary:
             work = Path(temporary)
@@ -205,7 +225,7 @@ class SR2CreationBootstrapTests(unittest.TestCase):
                 cwd=work, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=90,
                 text=True, encoding='utf-8', errors='replace')
             self.assertEqual(result.returncode, 0, result.stdout)
-            self.assertIn('21/21 extracted-production-OnUpdate flow checks passed', result.stdout)
+            self.assertIn('23/23 extracted-production-OnUpdate flow checks passed', result.stdout)
 
 
 if __name__ == '__main__':

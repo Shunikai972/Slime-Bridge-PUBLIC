@@ -17,7 +17,7 @@ const state = {version:'test', installations:[], preferences:{language:'fr',redu
   games:{SR1:{primary:null},SR2:{primary:null}},host:{state:'STOPPED'},legal_understood:true};
 const never = () => new Promise(()=>{});
 const api = {get_state:()=>scenario==='state-error'?Promise.reject(new Error('fixture unavailable')):Promise.resolve(state),
-  news_cached:()=>scenario==='news-hang'?never():Promise.resolve(null),news_refresh:never, update_check:async()=>({ok:false}),
+  news_cached:()=>scenario==='news-hang'?never():Promise.resolve(null),news_refresh:never, update_check:async()=>({ok:false}),game_process_state:async()=>null,
   autodetect:()=>{scans++;return scenario==='scan-hang'?never():Promise.resolve({ok:true});},image_data:async()=>null};
 const SB = {local:{assets:{job:null}},api,net:{hydrate:async()=>{},img:async()=>null},pages:{home:{render:()=>{rendered++;return '<div class="page">home</div>';}}},
  ui:{$:node,$$:()=>[],esc:String,toast(){},modal(){},sleep:()=>Promise.resolve(),confetti(){}},

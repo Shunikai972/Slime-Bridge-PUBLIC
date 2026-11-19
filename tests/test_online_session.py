@@ -53,6 +53,9 @@ class OnlineSessionTests(unittest.TestCase):
         self.assertEqual(self.s.request['step'], 'sr2_auto_host')
         self.g.online('SR2', hosting=True, code=SESSION)
         self.s.tick()
+        self.assertEqual(len(self.g.sent), 1, 'heartbeat alone cannot complete a dispatched host attempt')
+        self.g.events[self.s.request['id']] = [{'realm': 'SR2', 'event': 'online_done'}]
+        self.s.tick()
         self.assertEqual(self.g.sent[-1], ('SR1', 'online_host', {'code': SESSION}))
         self.assertEqual(self.s.request['step'], 'sr1_lobby')
         self.g.online('SR1', hosting=True, code=SESSION)
@@ -85,7 +88,7 @@ class OnlineSessionTests(unittest.TestCase):
         self.both_running()
         self.s.host('BOTH')
         self.s.tick()
-        self.g.online('SR2', error='auto_host: UPnP is not available on this network.')
+        self.g.events[self.s.request['id']] = [{'realm': 'SR2', 'event': 'failed', 'detail': 'auto_host: UPnP is unavailable'}]
         self.s.tick()
         self.assertTrue(self.s.request['done'])
         self.assertEqual(self.s.request['step'], 'failed')
@@ -99,9 +102,7 @@ class OnlineSessionTests(unittest.TestCase):
         self.s.tick()
         self.assertFalse(self.s.request['done'])
         self.assertEqual(self.g.sent, [('SR2', 'online_host', {})])
-        self.g.online('SR2')
-        self.s.tick()
-        self.g.online('SR2', error='auto_host: no UPnP')
+        self.g.events[self.s.request['id']] = [{'realm': 'SR2', 'event': 'failed', 'detail': 'auto_host: no UPnP'}]
         self.s.tick()
         self.assertEqual(self.s.request['error'], 'SR2: auto_host: no UPnP')
 

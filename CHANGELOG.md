@@ -3,6 +3,24 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.9] - 2026-11-19
+
+### Fixed
+- The game started behind the other one opens small and minimized without taking the front. When you cross into it,
+  it goes back to fullscreen if you play fullscreen. Your display settings are put back when it closes.
+- The Slime Rancher 2 return portal stays visible: if the game has not loaded its 3D parts yet (it was waiting in the
+  background), a marker stands in for them.
+- Alt+Tab back to the waiting game no longer teleports you or moves the vacpack. That game stays paused behind its card
+  until you take the portal.
+- Multi > Host works when both games are already open.
+  - Slime Rancher uses the online name you typed.
+  - The launcher waits until Slime Rancher 2 is really hosting before showing it.
+- "Save and quit" in Slime Rancher 2 now waits for a fresh, readable save of the loaded ranch before the game closes.
+- The Play/Stop button updates by itself when the games close, also after an online start that failed.
+- Stop waits for a running multiplayer request instead of cutting it.
+- If BridgeHost stops in the middle of a save-and-close, the launcher frees the game again after 30 seconds instead of
+  refusing it forever.
+
 ## [0.2.8] - 2026-11-18
 
 ### Changed

@@ -65,6 +65,8 @@ class OnlineSession:
     # ---- what the player asked -------------------------------------------------------------------------------------
     @staticmethod
     def _name(name):
+        if not isinstance(name, str):
+            raise ValueError('BAD_NAME')
         name = (name or '').strip()
         if name and not NAME.fullmatch(name):
             raise ValueError('BAD_NAME')
@@ -95,6 +97,15 @@ class OnlineSession:
     # ---- driven by the launcher's travel loop ----------------------------------------------------------------------
     def _fail(self, error):
         self.request.update(error=error, done=True, step='failed', cancelled=self._cancel(self.request))
+
+    def cancel_for_close(self, realm):
+        r = self.request
+        if r and not r['done'] and realm in r['realms']:
+            self._fail('GAME_CLOSING')
+
+    def pending_in(self, realms):
+        r = self.request
+        return bool(r and (not r['done'] or r.get('cancelled') is False) and set(realms).intersection(r['realms']))
 
     def _reported_failure(self, realm):
         for event in self._events(self.request['id']):
@@ -139,24 +150,14 @@ class OnlineSession:
     def _tick_host(self, r):
         if 'SR2' in r['realms']:
             sr2 = self.online('SR2') or {}
-            if not sr2.get('hosting'):
-                if 'SR2' not in r['sent']:
+            ready = sr2.get('hosting') and SESSION_CODE.fullmatch(sr2.get('code') or '')
+            if not ready or ('SR2' in r['sent'] and not any(
+                    e.get('realm') == 'SR2' and e.get('event') == 'online_done' for e in self._events(r['id']))):
+                if 'SR2' not in r['sent'] and not sr2.get('hosting'):
                     if not self._ready_to_host('SR2'):
                         r['step'] = 'waiting_games'
                         return
                     self._ask('SR2', 'online_host')
-                    r['previous_sr2_error'] = sr2.get('error') or ''
-                    r['step'] = 'sr2_auto_host'
-                    return
-                r['step'] = 'sr2_auto_host'
-                if sr2:
-                    error = sr2.get('error') or ''
-                    if error != r.get('previous_sr2_error') and error.startswith('auto_host:'):
-                        return self._fail('SR2: ' + error)
-                    if not error:
-                        r['previous_sr2_error'] = ''
-                return
-            if not SESSION_CODE.fullmatch(sr2.get('code') or ''):
                 r['step'] = 'sr2_auto_host'
                 return
             r['code'] = sr2['code']

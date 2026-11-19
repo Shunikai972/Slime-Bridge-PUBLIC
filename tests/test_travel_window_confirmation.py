@@ -55,6 +55,19 @@ def test_focus_accepts_only_confirmed_owned_foreground():
     assert state['foreground'] == 88
 
 
+@pytest.mark.parametrize('iconic', [False, True])
+def test_startup_focus_does_not_join_input_queues_or_enqueue_a_restore(iconic):
+    instance, state = backend(accepts=True)
+    state['iconic'] = iconic
+    def forbidden(*_args):
+        raise AssertionError('startup must not restore or share a window thread input queue')
+    instance._user32.ShowWindow = instance._user32.ShowWindowAsync = forbidden
+    instance._user32.BringWindowToTop = instance._user32.AttachThreadInput = forbidden
+    instance._checked = lambda pid: [99, 88]
+    assert instance.focus_startup(123) is (not iconic)
+    assert state['foreground'] == (77 if iconic else 88)
+
+
 def test_focus_detaches_input_even_after_native_exception():
     instance, state = backend(raises=True)
     with pytest.raises(OSError):

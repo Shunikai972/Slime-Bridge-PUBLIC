@@ -36,12 +36,13 @@ namespace SlimeBridge.SR2
             if (next) _index = (_index + 1) % _list.Count;
             var canonical = _list[_index];
             if (!spawn) { TravelNotice.Post($"SlimeBridge dev: {canonical} ({_index + 1}/{_list.Count}) - F8 to spawn"); return; }
-            var result = Spawn(canonical);
+            var result = SpawnCanonical(_registrar, canonical);
             TravelNotice.Post("SlimeBridge dev: " + (result.Length == 0 ? "spawned " + canonical : canonical + ": " + result));
             MelonLoader.MelonLogger.Msg("dev spawn " + canonical + (result.Length == 0 ? " ok" : ": " + result));
         }
 
-        private string Spawn(string canonical)
+        /// <summary>Spawn one imported species or Largo in front of the player; "" when done, else why not.</summary>
+        internal static string SpawnCanonical(Sr2SpeciesRegistrar _registrar, string canonical)
         {
             if (!CounterpartCreator.TryReadWorld(out var world) || world?.Scene?.Player == null) return "no world loaded";
             try { _registrar.EnsureRuntimeMembership(); _registrar.EnsureAppearances(); } catch (Exception) { /* best effort */ }

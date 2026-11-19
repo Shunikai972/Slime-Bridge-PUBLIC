@@ -3,6 +3,12 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.11] - 2026-11-19
+
+### Added
+- Slime Rancher 2: the `slimebridge` command in the console (Ctrl+Tab, Starlight's console that comes with Ranching
+  Together), like the one in Slime Rancher: `slimebridge list`, `slimebridge largos`, `slimebridge spawn <id> [count]`.
+
 ## [0.2.10] - 2026-11-19
 
 ### Fixed

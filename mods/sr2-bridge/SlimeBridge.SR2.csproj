@@ -57,6 +57,11 @@
       <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- Starlight (Ranching Together's dependency) for the console command: build reference only, never copied or shipped. -->
+    <Reference Include="Starlight">
+      <HintPath>$(SR2LabPath)/Mods/Starlight.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Unity.InputSystem">
       <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/Unity.InputSystem.dll</HintPath>
       <Private>false</Private>

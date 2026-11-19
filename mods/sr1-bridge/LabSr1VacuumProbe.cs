@@ -11,7 +11,7 @@ namespace SlimeBridge.SR1
     // Temporary explicit LAB observer. No materials, transforms, native held state or physics are changed.
     internal sealed class LabSr1VacuumProbe : MonoBehaviour
     {
-        private Vacuumable _vac;
+        private Vacuumable? _vac;
         private string _out = "";
         private int _rows, _thread;
         private float _next = -1f;

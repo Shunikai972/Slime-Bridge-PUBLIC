@@ -125,7 +125,7 @@ namespace SlimeBridge.SR1
                 node.transform.localPosition = Vector(row, "local_position", Vector3.zero);
                 node.transform.localScale = Vector(row, "local_scale", Vector3.one);
                 var effect = node.AddComponent<ImportedEffect>();
-                effect.Kind = kind;
+                effect.Kind = kind!;
                 var colors = row.TryGetValue("colors", out var c) ? c as Dictionary<string, object> : null;
                 effect.Tint = ColorOf(row, "color") ?? ColorOf(colors, "_ColorEdge") ?? ColorOf(colors, "_ColorBottom") ?? ColorOf(colors, "_Color") ?? Color.yellow;
                 effect.Core = ColorOf(colors, "_ColorCore") ?? effect.Tint;

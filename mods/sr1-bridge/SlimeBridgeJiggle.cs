@@ -52,6 +52,8 @@ namespace SlimeBridge.SR1
             if (_earLeft != null) _earLeftRest = _earLeft.localRotation;
             if (_earRight != null) _earRightRest = _earRight.localRotation;
             _lastWorldPosition = transform.position;
+            if (_core == null && _top == null && _earLeft == null && _earRight == null && _tail.Count == 0)
+                enabled = false;
         }
 
         private void Update()
@@ -60,16 +62,20 @@ namespace SlimeBridge.SR1
             if (dt <= 0f) return;
             _phase += dt;
             // Movement lag: the body drags the tail; the actor's own movement supplies the energy.
-            var position = transform.position;
-            var velocity = (position - _lastWorldPosition) / dt;
-            _lastWorldPosition = position;
-            var localVelocity = transform.InverseTransformDirection(velocity);
-            _lag = Vector3.Lerp(_lag, new Vector3(-localVelocity.x, 0f, -localVelocity.z), Mathf.Clamp01(dt * 4f));
+            if (_tail.Count > 0)
+            {
+                var position = transform.position;
+                var velocity = (position - _lastWorldPosition) / dt;
+                _lastWorldPosition = position;
+                var localVelocity = transform.InverseTransformDirection(velocity);
+                _lag = Vector3.Lerp(_lag, new Vector3(-localVelocity.x, 0f, -localVelocity.z), Mathf.Clamp01(dt * 4f));
+            }
 
-            var breathe = 1f + 0.03f * Mathf.Sin(_phase * 2.1f);
             if (_core != null)
             {
-                _core.localScale = new Vector3(_coreScale.x / Mathf.Sqrt(breathe), _coreScale.y * breathe, _coreScale.z / Mathf.Sqrt(breathe));
+                var breathe = 1f + 0.03f * Mathf.Sin(_phase * 2.1f);
+                var invSqrt = 1f / Mathf.Sqrt(breathe);
+                _core.localScale = new Vector3(_coreScale.x * invSqrt, _coreScale.y * breathe, _coreScale.z * invSqrt);
                 _core.localRotation = _coreRest * Quaternion.Euler(2f * Mathf.Sin(_phase * 1.3f), 0f, 2f * Mathf.Cos(_phase * 1.7f));
             }
             if (_top != null)

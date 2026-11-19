@@ -27,7 +27,7 @@ namespace SlimeBridge.SR2
         private static Phase _phase = Phase.Idle;
         private static float _settleSince = -1f;
         private static float _spawnTime = -1f;
-        private static GameObject _target;
+        private static GameObject? _target;
         private static bool _warnedGuard;
 
         internal static bool Requested => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SLIMEBRIDGE_MESH_DUMP"));
@@ -89,7 +89,7 @@ namespace SlimeBridge.SR2
             catch (Exception) { return false; }
         }
 
-        private static GameObject SpawnTarget()
+        private static GameObject? SpawnTarget()
         {
             try
             {
@@ -185,7 +185,7 @@ namespace SlimeBridge.SR2
                             " (skinned " + renderers.Length + ", static " + meshRenderers.Length + ", textures " + textureFiles.Count + ")");
         }
 
-        private static Transform ResolveVisualRoot(GameObject instance)
+        private static Transform? ResolveVisualRoot(GameObject instance)
         {
             try
             {
@@ -225,11 +225,11 @@ namespace SlimeBridge.SR2
             sb.Append(rows.Count == 0 ? "]" : "\n    " + string.Join(",\n    ", rows) + "\n  ]}");
         }
 
-        private static Il2Cpp.SlimeDefinition FindSpecies(string target)
+        private static Il2Cpp.SlimeDefinition? FindSpecies(string target)
         {
             var definitions = Il2Cpp.GameContext.Instance.SlimeDefinitions;
             var slimes = definitions.Slimes;
-            Il2Cpp.SlimeDefinition fallback = null;
+            Il2Cpp.SlimeDefinition? fallback = null;
             for (var i = 0; i < slimes.Length; i++)
             {
                 var def = slimes[i];
@@ -345,13 +345,13 @@ namespace SlimeBridge.SR2
             return names;
         }
 
-        private static void AppendMaterials(StringBuilder sb, Material[] materials, string outDir, List<string> textureFiles)
+        private static void AppendMaterials(StringBuilder sb, Material[]? materials, string outDir, List<string> textureFiles)
         {
             sb.Append(", \"materials\": [");
             for (var i = 0; i < (materials?.Length ?? 0); i++)
             {
                 if (i > 0) sb.Append(", ");
-                var material = materials[i];
+                var material = materials![i];
                 if (material == null) { sb.Append("null"); continue; }
                 sb.Append("{\"name\": ").Append(RegistrySnapshotFormat.Quote(material.name));
                 sb.Append(", \"shader\": ").Append(RegistrySnapshotFormat.Quote(material.shader != null ? material.shader.name : ""));
@@ -406,7 +406,7 @@ namespace SlimeBridge.SR2
         private static void WriteTexturePng(Texture2D texture, string path)
         {
             Texture2D readable = texture;
-            RenderTexture temporary = null;
+            RenderTexture? temporary = null;
             if (!texture.isReadable)
             {
                 temporary = RenderTexture.GetTemporary(texture.width, texture.height, 0);

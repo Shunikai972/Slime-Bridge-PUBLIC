@@ -38,7 +38,7 @@ namespace SlimeBridge.SR1
             {
                 SlimeExpressionFace face = default;
                 var hasFace = appearance.Face != null;
-                if (hasFace) face = appearance.Face.GetExpressionFace(SlimeFace.SlimeExpression.Happy);
+                if (hasFace) face = appearance.Face!.GetExpressionFace(SlimeFace.SlimeExpression.Happy);
                 foreach (var structure in appearance.Structures)
                 {
                     if (structure?.Element?.Prefabs == null) continue;
@@ -202,7 +202,7 @@ namespace SlimeBridge.SR1
     {
         public void LateUpdate()
         {
-            var camera = Camera.main;
+            var camera = CachedMainCamera.Get();
             if (camera != null) transform.rotation = camera.transform.rotation;
         }
     }

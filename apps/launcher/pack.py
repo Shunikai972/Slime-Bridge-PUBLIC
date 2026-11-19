@@ -17,6 +17,7 @@ import uuid
 from pathlib import Path
 
 from apps.launcher import plugins, sanctuary
+from apps.launcher.fsutil import is_reparse as _reparse
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 EXE = {'SR1': 'SlimeRancher.exe', 'SR2': 'SlimeRancher2.exe'}
@@ -202,11 +203,6 @@ def prepare(realm, game_root, repo_root=REPO_ROOT, installs=None, models_dir=Non
 
 
 POINTER_PARTS = ('SlimeBridge', 'content.json')
-
-
-def _reparse(path):
-    path = Path(path)
-    return path.is_symlink() or (hasattr(path, 'is_junction') and path.is_junction())
 
 
 def write_player_pointer(realm, game_root, repo_root=REPO_ROOT):

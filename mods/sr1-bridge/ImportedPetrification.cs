@@ -288,20 +288,30 @@ namespace SlimeBridge.SR1
             return _liveVisual;
         }
 
+        private static readonly Stack<Transform> RendererWalkStack = new Stack<Transform>(32);
+
         private static void SetSubtreeRenderersEnabled(GameObject root, bool enabled)
         {
             const int budget = 512;
-            var stack = new Stack<Transform>();
-            stack.Push(root.transform);
-            var visited = 0;
-            while (stack.Count > 0 && visited < budget)
+            var stack = RendererWalkStack;
+            stack.Clear();
+            try
             {
-                visited++;
-                var current = stack.Pop();
-                if (current == null) continue;
-                var renderer = current.gameObject.GetComponent<Renderer>();
-                if (renderer != null) renderer.enabled = enabled;
-                for (var i = 0; i < current.childCount; i++) stack.Push(current.GetChild(i));
+                stack.Push(root.transform);
+                var visited = 0;
+                while (stack.Count > 0 && visited < budget)
+                {
+                    visited++;
+                    var current = stack.Pop();
+                    if (current == null) continue;
+                    var renderer = current.gameObject.GetComponent<Renderer>();
+                    if (renderer != null && renderer.enabled != enabled) renderer.enabled = enabled;
+                    for (var i = 0; i < current.childCount; i++) stack.Push(current.GetChild(i));
+                }
+            }
+            finally
+            {
+                stack.Clear();
             }
         }
 

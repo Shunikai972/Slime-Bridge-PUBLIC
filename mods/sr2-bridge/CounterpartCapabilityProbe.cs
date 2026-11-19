@@ -139,7 +139,7 @@ namespace SlimeBridge.SR2
                         {
                             if (!Name.IsMatch(rawName ?? "") || !storage.HasGameData(rawName))
                                 throw new InvalidOperationException("invalid raw native name/data");
-                            var summary = director.LoadSummary(rawName);
+                            var summary = director!.LoadSummary(rawName);
                             if (summary == null || summary.IsInvalid || summary.SaveName != rawName ||
                                 !Name.IsMatch(summary.Name ?? "") || summary.SaveSlotIndex < 0 ||
                                 summary.SaveSlotIndex >= report.slot_count || summary.IconId == null ||

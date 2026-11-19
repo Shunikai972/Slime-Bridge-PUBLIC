@@ -3,6 +3,7 @@ crossing steps, read incrementally (each call returns only what was written sinc
 """
 from __future__ import annotations
 
+from collections import deque
 import os
 import re
 import time
@@ -10,6 +11,7 @@ from pathlib import Path
 
 MAX_LINES = 400
 MAX_BYTES = 256 * 1024
+MAX_HISTORY_SEEN = 2048
 ERROR = re.compile(r'exception|error|failed|refused|\bcrash', re.IGNORECASE)
 BRIDGE = re.compile(r'slimebridge|travel|portal|sanctuary|bridgehost', re.IGNORECASE)
 
@@ -28,6 +30,7 @@ class Console:
         self._clock = clock
         self._offsets: dict[str, tuple[int, float]] = {}
         self._history_seen: set[tuple] = set()
+        self._history_order: deque[tuple] = deque()
 
     def _read_new(self, source: str, path: Path | None):
         if path is None or not path.is_file():
@@ -64,6 +67,9 @@ class Console:
                 if key in self._history_seen:
                     continue
                 self._history_seen.add(key)
+                self._history_order.append(key)
+                while len(self._history_order) > MAX_HISTORY_SEEN:
+                    self._history_seen.discard(self._history_order.popleft())
                 text = f"{transition.get('from')} -> {transition.get('to')}: {step.get('text')}"
                 entries.append({'source': 'LAUNCHER', 'text': text, 'kind': 'error' if ERROR.search(text) or 'ROLLED_BACK' in text else 'bridge'})
         return entries[-MAX_LINES:]

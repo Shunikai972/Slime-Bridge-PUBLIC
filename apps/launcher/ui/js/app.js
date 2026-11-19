@@ -210,13 +210,14 @@
     clearInterval(mpTimer);
     mpTimer = setInterval(async () => {
       if (page !== 'multiplayer') { clearInterval(mpTimer); mpTimer = 0; return; }
-      if (L.mpSubmitting || mpInFlight) return;
+      if (document.hidden || L.mpSubmitting || mpInFlight) return;
       const revision = mpRevision;
       mpInFlight = true;
       try {
         const r = await api.mp_session().catch(() => null);
         if (page !== 'multiplayer' || revision !== mpRevision || !r || !r.ok) return;
-        if (JSON.stringify(r) !== JSON.stringify(L.mpSession)) { L.mpSession = r; renderView(true); }
+        const nextJson = JSON.stringify(r);
+        if (nextJson !== L.mpSessionJson) { L.mpSession = r; L.mpSessionJson = nextJson; renderView(true); }
       } finally { mpInFlight = false; }
     }, 1500);
   }
@@ -277,6 +278,7 @@
     try { localStorage.setItem('sb.mpName', name); } catch (e) { /* storage refused */ }
     return name;
   }
+  let pollInFlight = false;
   function schedulePoll() {
     clearInterval(pollTimer);
     const job = L.assets.job, dl = L.models && L.models.download;
@@ -288,32 +290,36 @@
     if (r && r.job && (!L.assets.job || r.job.id !== L.assets.job.id || silent)) { L.assets.job = r.job; if (page === 'games') renderView(true); renderDock(); schedulePoll(); }
   }
   async function pollTick() {
-    const job0 = L.assets.job;
-    if (job0 && ['RUNNING', 'QUEUED'].includes(job0.status)) {
-      const r = await api.extract_status().catch(() => null);
-      if (r && r.job) {
-        const was = job0.status; L.assets.job = r.job; renderDock();
-        const box = $('#jobbox'); if (box) redraw(box, SB.jobBox(r.job));
-        if (was !== r.job.status && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'games') renderView(true); if (r.job.status === 'DONE') { toast(t('assets.done'), 'good'); confetti($('.play') || document.body, 26); } }
+    if (pollInFlight) return;
+    pollInFlight = true;
+    try {
+      const job0 = L.assets.job;
+      if (job0 && ['RUNNING', 'QUEUED'].includes(job0.status)) {
+        const r = await api.extract_status().catch(() => null);
+        if (r && r.job) {
+          const was = job0.status; L.assets.job = r.job; renderDock();
+          const box = $('#jobbox'); if (box) redraw(box, SB.jobBox(r.job));
+          if (was !== r.job.status && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'games') renderView(true); if (r.job.status === 'DONE') { toast(t('assets.done'), 'good'); confetti($('.play') || document.body, 26); } }
+        }
       }
-    }
-    const dl0 = L.models && L.models.download;
-    if (dl0 && ['RUNNING', 'QUEUED'].includes(dl0.status)) {
-      const r = await api.models_state().catch(() => null);
-      if (r) {
-        L.models = r; renderDock(); const box = $('#dlbox'); if (box && r.download) redraw(box, SB.dlBox(r.download));
-        if (r.download && dl0.status !== r.download.status && !['RUNNING', 'QUEUED'].includes(r.download.status)) { if (page === 'models') renderView(true); if (r.download.status === 'DONE') toast(t('models.done'), 'good'); }
+      const dl0 = L.models && L.models.download;
+      if (dl0 && ['RUNNING', 'QUEUED'].includes(dl0.status)) {
+        const r = await api.models_state().catch(() => null);
+        if (r) {
+          L.models = r; renderDock(); const box = $('#dlbox'); if (box && r.download) redraw(box, SB.dlBox(r.download));
+          if (r.download && dl0.status !== r.download.status && !['RUNNING', 'QUEUED'].includes(r.download.status)) { if (page === 'models') renderView(true); if (r.download.status === 'DONE') toast(t('models.done'), 'good'); }
+        }
       }
-    }
-    const sj0 = L.sanct && L.sanct.job;
-    if (sj0 && ['RUNNING', 'QUEUED'].includes(sj0.status)) {
-      const r = await api.sanctuary_state().catch(() => null);
-      if (r) {
-        L.sanct = r; const box = $('#sanctbox'); if (box) redraw(box, SB.sanctBox(r));
-        if (r.job && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'games') renderView(true); toast(r.job.status === 'DONE' ? t('sanct.done') : (r.job.error || t('sanct.failed')), r.job.status === 'DONE' ? 'good' : 'bad'); if (r.job.status === 'DONE') confetti($('.sanct') || document.body, 24); }
+      const sj0 = L.sanct && L.sanct.job;
+      if (sj0 && ['RUNNING', 'QUEUED'].includes(sj0.status)) {
+        const r = await api.sanctuary_state().catch(() => null);
+        if (r) {
+          L.sanct = r; const box = $('#sanctbox'); if (box) redraw(box, SB.sanctBox(r));
+          if (r.job && !['RUNNING', 'QUEUED'].includes(r.job.status)) { if (page === 'games') renderView(true); toast(r.job.status === 'DONE' ? t('sanct.done') : (r.job.error || t('sanct.failed')), r.job.status === 'DONE' ? 'good' : 'bad'); if (r.job.status === 'DONE') confetti($('.sanct') || document.body, 24); }
+        }
       }
-    }
-    schedulePoll();
+      schedulePoll();
+    } finally { pollInFlight = false; }
   }
 
   /* ----- actions ----- */
@@ -583,19 +589,23 @@
     const group = res && res.value ? res.data : null;
     await api.travel_link(c.id, group || null).catch(() => null);
   }
+  let crossingsInFlight = false;
   async function watchCrossings() {
-    if (!S || !S.host || S.host.state !== 'RUNNING') return;
-    const r = await api.crossings_poll().catch(() => null); if (!r || !r.ok) return;
-    for (const c of r.crossings) {
-      if (c.state === 'NEEDS_LINK' && !askedLink.has(c.id)) { askedLink.add(c.id); askLink(c); continue; }
-      const key = (c.request_id || c.id) + ':' + c.state;
-      if (seenCrossings.has(key) || !['COMPLETE', 'ROLLED_BACK', 'FAILED', 'CANCELLED'].includes(c.state)) continue; seenCrossings.add(key);
-      const game = NAMES[c.to] || c.to || '?';
-      if (c.code === 'SESSION_CLOSED') toast(t('cross.session_closed', { game }), 'good');
-      else if (c.state === 'COMPLETE') toast(t('cross.ok'), 'good');
-      else if (c.code === 'NEEDS_BACKUP_CONFIRMATION') toast(t('cross.backup'), 'warn');
-      else if (c.state === 'ROLLED_BACK' || c.state === 'FAILED') toast(t('cross.' + String(c.code || '').toLowerCase(), { game }) !== 'cross.' + String(c.code || '').toLowerCase() ? t('cross.' + String(c.code).toLowerCase(), { game }) : t('cross.failed', { game, code: c.code || '' }), 'bad');
-    }
+    if (!S || !S.host || S.host.state !== 'RUNNING' || crossingsInFlight) return;
+    crossingsInFlight = true;
+    try {
+      const r = await api.crossings_poll().catch(() => null); if (!r || !r.ok) return;
+      for (const c of r.crossings) {
+        if (c.state === 'NEEDS_LINK' && !askedLink.has(c.id)) { askedLink.add(c.id); askLink(c); continue; }
+        const key = (c.request_id || c.id) + ':' + c.state;
+        if (seenCrossings.has(key) || !['COMPLETE', 'ROLLED_BACK', 'FAILED', 'CANCELLED'].includes(c.state)) continue; seenCrossings.add(key);
+        const game = NAMES[c.to] || c.to || '?';
+        if (c.code === 'SESSION_CLOSED') toast(t('cross.session_closed', { game }), 'good');
+        else if (c.state === 'COMPLETE') toast(t('cross.ok'), 'good');
+        else if (c.code === 'NEEDS_BACKUP_CONFIRMATION') toast(t('cross.backup'), 'warn');
+        else if (c.state === 'ROLLED_BACK' || c.state === 'FAILED') toast(t('cross.' + String(c.code || '').toLowerCase(), { game }) !== 'cross.' + String(c.code || '').toLowerCase() ? t('cross.' + String(c.code).toLowerCase(), { game }) : t('cross.failed', { game, code: c.code || '' }), 'bad');
+      }
+    } finally { crossingsInFlight = false; }
   }
   document.addEventListener('keydown', ev => { const el = ev.target; if (ev.key === 'Enter' && el && el.dataset && el.dataset.enter && A[el.dataset.enter]) A[el.dataset.enter](); });
   setInterval(watchCrossings, 2500);
@@ -619,19 +629,30 @@
   /* ----- live console of both games (Console page) ----- */
   SB.console = {
     lines: [], state: { filter: 'all', paused: false, sources: { SR1: true, SR2: true, LAUNCHER: true } },
-    visible() { const s = this.state; return this.lines.filter(l => s.sources[l.source] && (s.filter === 'all' || (s.filter === 'error' ? l.kind === 'error' : l.kind !== 'game'))); },
+    matches(l) { const s = this.state; return s.sources[l.source] && (s.filter === 'all' || (s.filter === 'error' ? l.kind === 'error' : l.kind !== 'game')); },
+    visible() { return this.lines.filter(l => this.matches(l)); },
     row(l) { return `<div class="cl ${l.kind} src-${l.source.toLowerCase()}"><b>${l.source}</b>${esc(l.text)}</div>`; },
     html() { const v = this.visible(); return v.length ? v.slice(-1500).map(l => this.row(l)).join('') : `<p class="muted console-empty">${t('console.empty')}</p>`; },
   };
+  let consoleInFlight = false;
   async function pollConsole() {
-    if (page !== 'debug' || SB.console.state.paused) return;
-    const r = await api.console_poll().catch(() => null);
-    if (!r || !r.ok || !r.lines.length) return;
-    SB.console.lines.push(...r.lines); if (SB.console.lines.length > 4000) SB.console.lines.splice(0, SB.console.lines.length - 4000);
-    const box = $('#console-log'); if (!box) return;
-    const atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
-    box.innerHTML = SB.console.html();
-    if (atEnd) box.scrollTop = box.scrollHeight;
+    if (page !== 'debug' || document.hidden || SB.console.state.paused || consoleInFlight) return;
+    consoleInFlight = true;
+    try {
+      const r = await api.console_poll().catch(() => null);
+      if (!r || !r.ok || !r.lines.length) return;
+      SB.console.lines.push(...r.lines); if (SB.console.lines.length > 4000) SB.console.lines.splice(0, SB.console.lines.length - 4000);
+      const box = $('#console-log'); if (!box) return;
+      const added = r.lines.filter(l => SB.console.matches(l));
+      if (!added.length) return;
+      const atEnd = box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
+      if (box.querySelector('.console-empty') || box.childElementCount + added.length > 1500) {
+        box.innerHTML = SB.console.html();
+      } else {
+        box.insertAdjacentHTML('beforeend', added.map(l => SB.console.row(l)).join(''));
+      }
+      if (atEnd) box.scrollTop = box.scrollHeight;
+    } finally { consoleInFlight = false; }
   }
   setInterval(pollConsole, 1000);
   document.addEventListener('DOMContentLoaded', boot);

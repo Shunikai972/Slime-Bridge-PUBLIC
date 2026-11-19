@@ -666,7 +666,7 @@ namespace SlimeBridge.SR1
                 var slimes = context.SlimeDefinitions.Slimes ?? new SlimeDefinition[0];
                 var kept = new List<SlimeDefinition>();
                 foreach (var slime in slimes)
-                    if (slime == null || slime.IdentifiableId != id) kept.Add(slime);
+                    if (slime != null && slime.IdentifiableId != id) kept.Add(slime);
                 context.SlimeDefinitions.Slimes = kept.ToArray();
                 defDict?.Remove(id);
                 prefabDict?.Remove(id);

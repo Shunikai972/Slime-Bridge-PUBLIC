@@ -13,6 +13,7 @@ namespace SlimeBridge.SR1
         private static readonly FieldInfo? ExplosionFx = typeof(BoomSlimeExplode).GetField("explodeFX", BindingFlags.Instance | BindingFlags.NonPublic);
         private BoomSlimeExplode? _boom;
         private GameObject? _fallbackFx;
+        private bool _fxChecked;
         private readonly List<Slot> _slots = new List<Slot>();
         private MaterialPropertyBlock? _block;
         private float _lastCrack = -1f, _lastChar = -1f;
@@ -53,6 +54,7 @@ namespace SlimeBridge.SR1
             var driver = visual.GetComponent<ImportedBoomVisual>() ?? visual.AddComponent<ImportedBoomVisual>();
             driver._boom = boom;
             driver._fallbackFx = NativeAppearance()?.ExplosionAppearance?.explodeFx;
+            driver._fxChecked = false;
             driver._slots.Clear(); driver._slots.AddRange(slots);
             driver._block = driver._block ?? new MaterialPropertyBlock();
             driver._lastCrack = -1f; driver._lastChar = -1f;
@@ -103,8 +105,12 @@ namespace SlimeBridge.SR1
             if (_boom == null || _block == null) return;
             // Imported prefab/applicator initialization can leave the native cached FX empty.
             // Borrow the real Boom asset only when absent, after Awake; never replace a valid FX.
-            if (ExplosionFx != null && _fallbackFx != null && ExplosionFx.GetValue(_boom) as GameObject == null)
-                ExplosionFx.SetValue(_boom, _fallbackFx);
+            if (!_fxChecked && ExplosionFx != null && _fallbackFx != null)
+            {
+                if (ExplosionFx.GetValue(_boom) as GameObject == null)
+                    ExplosionFx.SetValue(_boom, _fallbackFx);
+                _fxChecked = true;
+            }
             if (!Evaluate(_boom.GetReadiness(), _boom.GetRecoveriness(), out var cracks, out var charAmount)) return;
             if (Mathf.Abs(cracks - _lastCrack) < .001f && Mathf.Abs(charAmount - _lastChar) < .001f) return;
             foreach (var slot in _slots)

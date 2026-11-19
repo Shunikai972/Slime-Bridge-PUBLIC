@@ -3,6 +3,17 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.16] - 2026-11-19
+
+### Performance
+- Launcher backend: eliminated triple redundant installation, integrity, and plugin-hash scans in `get_state()`, `mp_state()`, `extract_start()`, and `_launch()`; added thread-safe stat-keyed SHA-256 caching and unified reparse detection (`apps/launcher/fsutil.py`) shared across `plugins`, `loaders`, `online`, `srmp`, `sanctuary`, and `pack`.
+- Launcher backend: early-exited SR2 bundle counting at `MIN_SR2_BUNDLES` (40 instead of 824+ entries) and deduplicated `deepest_path()` in `integrity.py`; removed per-second integrity and DLL-hash scans from `console_poll()`; replaced full-desktop `EnumWindows` with an O(1) HWND check in `Win32Windows.foreground_pid()`; bounded `Console._history_seen` and slowed the idle audio watcher when no game is running.
+- Launcher UI: added in-flight guards to `pollTick`, `watchCrossings`, and `pollConsole`, paused inactive polling when hidden, cached serialized session comparisons in `followSession`, and switched the live console to incremental DOM appending.
+- Runtime plugins: added `CachedMainCamera` for Sanctuary statue labels and mini billboards (avoiding 16–30 per-frame `Camera.main` tag scans in Unity 2019), throttled fallback `SanctuaryStatueLabel.LateUpdate` checks, eliminated per-frame delegate allocations in `BridgeMod.OnUpdate`/`OnLateUpdate` and per-frame `DateTime.UtcNow`/env-var lookups in `BridgeEntry.Update`, replaced LINQ allocations in `FrameWatch` with zero-allocation loops, reused the traversal stack in `ImportedPetrification`, cached Boom reflection checks in `ImportedBoomVisual`, skipped idle bone transforms in `SlimeBridgeJiggle`, and resolved `RegionRegistry` directly via `scene.RegionRegistry`.
+
+### Changed
+- Resolved all C# compiler warnings across `SlimeBridge.SR1` (180 -> 0) and `SlimeBridge.SR2` (42 -> 0), including migrating SRML console logging to `Console.ConsoleInstance`.
+
 ## [0.2.15] - 2026-11-19
 
 ### Changed

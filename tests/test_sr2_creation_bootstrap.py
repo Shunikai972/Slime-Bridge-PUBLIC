@@ -100,6 +100,8 @@ class Flow : SyntheticMod {
     CancellationTokenSource? _stop = null;
     DateTime _nextSnapshot = DateTime.MinValue;
     SyntheticLogger LoggerInstance = new();
+    Action<string>? _perfLog;
+    Action<string> LogMsg => _perfLog ??= text => LoggerInstance.Msg(text);
     SyntheticInventory _inventory;
     SyntheticStorage? _storageBinding;
     public Flow() { _inventory = new(this); _storageBinding = new(this); }

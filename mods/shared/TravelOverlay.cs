@@ -230,18 +230,22 @@ namespace SlimeBridge.Shared
                 _subStyle = LabelStyle(FontStyle.Normal);
             }
             // Swirl of slime blobs orbiting and bouncing around the centre.
-            var size = Mathf.Min(w, h) * 0.07f;
+            var minDim = Mathf.Min(w, h);
+            var size = minDim * 0.07f;
+            var angleStep = Mathf.PI * 2f / BlobColors.Length;
             for (var i = 0; i < BlobColors.Length; i++)
             {
-                var angle = time * 1.15f + i * (Mathf.PI * 2f / BlobColors.Length);
-                var orbit = Mathf.Min(w, h) * (0.14f + 0.012f * Mathf.Sin(time * 2f + i));
+                var angle = time * 1.15f + i * angleStep;
+                var orbit = minDim * (0.14f + 0.012f * Mathf.Sin(time * 2f + i));
                 var bounce = Mathf.Abs(Mathf.Sin(time * 3.2f + i * 0.9f)) * size * 0.9f;
-                var cx = w / 2f + Mathf.Cos(angle) * orbit;
+                var cx = w * 0.5f + Mathf.Cos(angle) * orbit;
                 var cy = h * 0.40f + Mathf.Sin(angle) * orbit * 0.55f - bounce;
                 var squash = 1f + 0.18f * Mathf.Sin(time * 6.4f + i);
                 var c = BlobColors[i]; c.a = alpha;
                 GUI.color = c;
-                GUI.DrawTexture(new Rect(cx - size * squash / 2f, cy - size / squash / 2f, size * squash, size / squash), _blob);
+                var sw = size * squash;
+                var sh = size / squash;
+                GUI.DrawTexture(new Rect(cx - sw * 0.5f, cy - sh * 0.5f, sw, sh), _blob);
             }
             var dotIndex = (int)(time * 2.5f) % 3;
             if (dotIndex < 0) dotIndex = 0;

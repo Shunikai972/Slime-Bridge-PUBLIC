@@ -13,11 +13,12 @@ content (see ``bridge.content.content_manifest``) to see the imported species an
 from __future__ import annotations
 
 import datetime as _dt
-import hashlib
 import json
 import os
 import uuid
 from pathlib import Path
+
+from apps.launcher.fsutil import is_reparse as _reparse, sha256_file as _sha
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DLL = 'SRMP.dll'
@@ -43,19 +44,6 @@ def source_candidates(repo_root=None):
 
 def find_source(repo_root=None):
     return next((p for p in source_candidates(repo_root) if p.is_file()), None)
-
-
-def _sha(path):
-    digest = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for chunk in iter(lambda: stream.read(1 << 20), b''):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _reparse(path):
-    path = Path(path)
-    return path.is_symlink() or (hasattr(path, 'is_junction') and path.is_junction())
 
 
 def paths(game_root):

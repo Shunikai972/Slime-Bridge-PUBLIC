@@ -16,10 +16,14 @@ namespace SlimeBridge.SR1
     public sealed class BridgeEntry : ModEntryPoint
     {
         // Must stay a plain X.Y[.Z] integer string: SRML's ModVersion.Parse rejects suffixes like "-dev".
-        internal const string PluginVersion = "0.2.15";
+        internal const string PluginVersion = "0.2.16";
+        internal static readonly SRML.Console.Console.ConsoleInstance Console = new SRML.Console.Console.ConsoleInstance("SlimeBridge");
         private static readonly int Pid = Process.GetCurrentProcess().Id;
 
-        private DateTime _nextHeartbeat = DateTime.MinValue;
+        private float _nextHeartbeatAt = -1f;
+        private string? _heartbeatUrl;
+        private string? _heartbeatToken;
+        private bool _heartbeatEnvChecked;
         private int _sending;
         private int _acknowledged;
         private volatile bool _unloaded;
@@ -415,12 +419,17 @@ namespace SlimeBridge.SR1
                     _inventoryErrorLogged = true;
                 }
             }
-            if (_unloaded || DateTime.UtcNow < _nextHeartbeat || Interlocked.Exchange(ref _sending, 1) != 0)
+            var now = UnityEngine.Time.realtimeSinceStartup;
+            if (_unloaded || now < _nextHeartbeatAt || Interlocked.Exchange(ref _sending, 1) != 0)
                 return;
-            _nextHeartbeat = DateTime.UtcNow.AddSeconds(5);
-            var url = Environment.GetEnvironmentVariable("SLIMEBRIDGE_URL");
-            var token = Environment.GetEnvironmentVariable("SLIMEBRIDGE_TOKEN");
-            if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(token))
+            _nextHeartbeatAt = now + 5f;
+            if (!_heartbeatEnvChecked)
+            {
+                _heartbeatEnvChecked = true;
+                _heartbeatUrl = Environment.GetEnvironmentVariable("SLIMEBRIDGE_URL");
+                _heartbeatToken = Environment.GetEnvironmentVariable("SLIMEBRIDGE_TOKEN");
+            }
+            if (string.IsNullOrEmpty(_heartbeatUrl) || string.IsNullOrEmpty(_heartbeatToken))
             {
                 Interlocked.Exchange(ref _sending, 0);
                 return;
@@ -428,7 +437,9 @@ namespace SlimeBridge.SR1
             try
             {
                 var body = BuildPayload();
-                Task.Run(() => Send(url!, token!, body));
+                var url = _heartbeatUrl!;
+                var token = _heartbeatToken!;
+                Task.Run(() => Send(url, token, body));
             }
             catch (Exception)
             {

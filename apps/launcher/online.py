@@ -11,7 +11,6 @@ Network use: two HTTPS downloads from github.com, only when a component is missi
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import shutil
@@ -21,6 +20,7 @@ import uuid
 from pathlib import Path
 
 from apps.launcher import srmp
+from apps.launcher.fsutil import is_reparse as _reparse, sha256_file as _sha
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CACHE = REPO_ROOT / 'Lab' / 'Cache' / 'online'
@@ -41,19 +41,6 @@ class OnlineError(RuntimeError):
     def __init__(self, code, detail=''):
         super().__init__(f'{code}: {detail}' if detail else code)
         self.code, self.detail = code, detail
-
-
-def _sha(path):
-    digest = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for chunk in iter(lambda: stream.read(1 << 20), b''):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _reparse(path):
-    path = Path(path)
-    return path.is_symlink() or (hasattr(path, 'is_junction') and path.is_junction())
 
 
 def cached(component, cache=CACHE, download=True, opener=urllib.request.urlopen):

@@ -199,9 +199,9 @@ namespace SlimeBridge.SR2
                         {
                             var group = groups[g];
                             if (group == null) { dietErrors.Add("null food group on " + entry.NativeRef); continue; }
-                            string name;
+                            string? name;
                             try { name = group.ReferenceId; } catch (Exception) { name = null; }
-                            name = !string.IsNullOrEmpty(name) ? name : (group.name ?? "");
+                            name = !string.IsNullOrEmpty(name) ? name! : (group.name ?? "");
                             entry.MajorFoodGroups.Add(name);
                             var members = new DietEntry.GroupMembers { Group = name };
                             try
@@ -270,7 +270,7 @@ namespace SlimeBridge.SR2
                 };
                 try
                 {
-                    Il2Cpp.SlimeAppearance appearance = null;
+                    Il2Cpp.SlimeAppearance? appearance = null;
                     try { appearance = def.GetAppearanceForSet(Il2Cpp.SlimeAppearance.AppearanceSaveSet.CLASSIC); }
                     catch (Exception) { }
                     if (appearance == null)

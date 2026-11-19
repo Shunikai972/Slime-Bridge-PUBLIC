@@ -51,7 +51,7 @@ namespace SlimeBridge.Shared
             string? mainModule = null;
             try { mainModule = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName; }
             catch (Exception) { }
-            if (!string.IsNullOrEmpty(mainModule)) yield return mainModule;
+            if (!string.IsNullOrEmpty(mainModule)) yield return mainModule!;
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             if (!string.IsNullOrEmpty(baseDir)) yield return baseDir;
             var cwd = Environment.CurrentDirectory;

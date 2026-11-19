@@ -63,7 +63,7 @@ class Win32Windows:
         def callback(hwnd, _lparam):
             owner = wt.DWORD()
             self._user32.GetWindowThreadProcessId(hwnd, ct.byref(owner))
-            if owner.value == pid and self._user32.IsWindowVisible(hwnd) or (owner.value == pid and self._user32.IsIconic(hwnd)):
+            if owner.value == pid and (self._user32.IsWindowVisible(hwnd) or self._user32.IsIconic(hwnd)):
                 if not self._user32.GetWindow(hwnd, 4):                # GW_OWNER: top-level app windows only
                     found.append(hwnd)
             return True
@@ -79,13 +79,13 @@ class Win32Windows:
             raise WindowError('the game has no visible window')
         return windows
 
+    def _is_unity_window(self, hwnd):
+        kind = self._ct.create_unicode_buffer(256)
+        return bool(self._user32.GetClassNameW(hwnd, kind, len(kind)) and kind.value == 'UnityWndClass')
+
     def _game_windows(self, pid):
         # MelonLoader has a top-level console in the same PID. It is not the playable Unity window.
-        found = []
-        for hwnd in self._checked(pid):
-            kind = self._ct.create_unicode_buffer(256)
-            if self._user32.GetClassNameW(hwnd, kind, len(kind)) and kind.value == 'UnityWndClass':
-                found.append(hwnd)
+        found = [hwnd for hwnd in self._checked(pid) if self._is_unity_window(hwnd)]
         if not found:
             raise WindowError('the game has no Unity player window yet')
         return found
@@ -171,10 +171,12 @@ class Win32Windows:
         owner = self._wt.DWORD()
         if not hwnd or not self._user32.GetWindowThreadProcessId(hwnd, self._ct.byref(owner)) or not self._verify(owner.value):
             return None
-        try:
-            return owner.value if hwnd in self._game_windows(owner.value) else None
-        except WindowError:
+        # O(1) check directly on the foreground HWND (avoids full-desktop EnumWindows 20x/s in the audio watcher).
+        if self._user32.GetWindow(hwnd, 4):                # GW_OWNER: top-level app windows only
             return None
+        if not (self._user32.IsWindowVisible(hwnd) or self._user32.IsIconic(hwnd)):
+            return None
+        return owner.value if self._is_unity_window(hwnd) else None
 
 
 class NullWindows:

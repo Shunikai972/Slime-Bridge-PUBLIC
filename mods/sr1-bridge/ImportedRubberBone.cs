@@ -25,7 +25,7 @@ namespace SlimeBridge.SR1
             if (instance == null || visual == null) { problem = "no instance/visual"; return false; }
             if (visual.GetComponent<RubberBoneEffect>() != null) return true;
 
-            RubberBoneEffect template = null;
+            RubberBoneEffect? template = null;
             foreach (var effect in instance.GetComponentsInChildren<RubberBoneEffect>(true))
             {
                 if (effect == null || effect.transform.IsChildOf(visual.transform)) continue;
@@ -43,7 +43,7 @@ namespace SlimeBridge.SR1
             }
             if (entries.Count == 0) { problem = "imported rig has none of the native jiggle bones"; return false; }
 
-            SkinnedMeshRenderer body = null;
+            SkinnedMeshRenderer? body = null;
             foreach (var skinned in visual.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 if (skinned == null) continue;
@@ -72,7 +72,7 @@ namespace SlimeBridge.SR1
             return true;
         }
 
-        private static Transform FindByName(Transform root, string name)
+        private static Transform? FindByName(Transform root, string name)
         {
             if (root == null || string.IsNullOrEmpty(name)) return null;
             var stack = new Stack<Transform>();

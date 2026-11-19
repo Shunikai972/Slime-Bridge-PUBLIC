@@ -7,6 +7,7 @@ player asks for: the game executables found by discovery, their own BridgeHost, 
 
 import json
 import os
+import re
 import sqlite3
 import sys
 import threading
@@ -57,6 +58,11 @@ TRAVEL_TICK = 0.05                                             # seconds between
 TRAVEL_IDLE_TICK = 0.25                                        # no active crossing: avoid busy-polling the host
 GUI = 'edgechromium' if sys.platform == 'win32' else 'gtk'      # pywebview backend per platform
 
+def _defaults_copy() -> dict:
+    return {key: (dict(value) if isinstance(value, dict) else list(value) if isinstance(value, list) else value)
+            for key, value in CONFIG_DEFAULTS.items()}
+
+
 class LauncherAPI:
     def __init__(self, config_path: Path = CONFIG, known_paths: tuple[Path, ...] = (KNOWN_MANUAL_SR1, KNOWN_MANUAL_SR2),
                  lab_games: Path = LAB_GAMES, *, popen=None, host_popen=None, opener=None, news_opener=None):
@@ -102,12 +108,12 @@ class LauncherAPI:
     # ---- configuration (installations.json: game folders, legal notice, preferences) -----------------------------
     def _load(self) -> dict:
         if not self._config_path.exists():
-            return json.loads(json.dumps(CONFIG_DEFAULTS))
+            return _defaults_copy()
         data = json.loads(self._config_path.read_text(encoding='utf-8'))
         if not isinstance(data, dict) or not isinstance(data.get('manual_paths'), list) or not all(
                 isinstance(path, str) for path in data['manual_paths']):
             raise ValueError('Invalid launcher configuration; original file preserved')
-        merged = json.loads(json.dumps(CONFIG_DEFAULTS))
+        merged = _defaults_copy()
         merged.update({key: value for key, value in data.items() if key in CONFIG_DEFAULTS or key == 'legal_understood'})
         return merged
 
@@ -177,9 +183,9 @@ class LauncherAPI:
                 'loader': loader, 'bridge_plugin': bridge, 'plugin_state': plugins.status(item.game, root)['state'],
                 'version': 'Not fingerprinted', 'role': role}
 
-    def _perf_env(self) -> dict:
+    def _perf_env(self, data=None) -> dict:
         """The player's performance profile (Settings): passed to the plugin, which only touches quality knobs when it is not 'off'."""
-        mode = self._load().get('performance')
+        mode = (data if data is not None else self._load()).get('performance')
         return {'SLIMEBRIDGE_PERF': mode} if mode in ('balanced', 'fast') else {}
 
     def _lab_installations(self) -> list[dict]:
@@ -196,8 +202,8 @@ class LauncherAPI:
                 result.append(self._installation_info(item, role='lab'))
         return result
 
-    def _installations(self) -> list[dict]:
-        data = self._load()
+    def _installations(self, data=None) -> list[dict]:
+        data = data if data is not None else self._load()
         paths = [*(Path(p) for p in data['manual_paths']), *(Path(p) for p in data['detected_paths']), *(p for p in self._known_paths if p)]
         lab_root = self._lab_games.resolve()
         installations = [item for item in available_installations(paths)
@@ -206,7 +212,7 @@ class LauncherAPI:
 
     def get_overview(self) -> dict:
         data = self._load()
-        return {'installations': self._installations(),
+        return {'installations': self._installations(data=data),
                 'legal_understood': bool(data.get('legal_understood', False)),
                 'lab_isolation': 'Not configured — game launch disabled',
                 'phase': 'Foundation: both lab plugins reached one BridgeHost; no portal or transfer yet'}
@@ -380,7 +386,7 @@ class LauncherAPI:
         from apps.launcher import console
         if getattr(self, '_console', None) is None:
             self._console = console.Console()
-        sr2 = (self._primary('SR2') or {}).get('root')
+        sr2 = self._primary_root_fast('SR2')
         transitions = [self._travel.public(t) for t in self._travel.transitions]
         return {'ok': True, 'lines': self._console.poll(sr2, transitions)}
 
@@ -464,24 +470,58 @@ class LauncherAPI:
             data['backup_ack'] = True              # the welcome card says to keep copies of the saves: no second reminder on Play
         return {'understood': True}
 
-    def _primary(self, realm: str):
-        rows = [r for r in self._installations() if r['game'] == realm]
-        data = self._load()
+    @staticmethod
+    def _select_primary(realm: str, rows: list[dict], data: dict):
+        realm_rows = [r for r in rows if r['game'] == realm]
         selected_root = str(data['selected'].get(realm) or '').casefold()
-        chosen = [r for r in rows if str(r['root']).casefold() == selected_root] if selected_root else []
+        chosen = [r for r in realm_rows if str(r['root']).casefold() == selected_root] if selected_root else []
         wanted_role = 'lab' if data['prefer_lab'] else 'source'
         manual_roots = {str(Path(p).resolve()).casefold() for p in data['manual_paths']}
-        role_rows = [r for r in rows if r['role'] == wanted_role] or rows
+        role_rows = [r for r in realm_rows if r['role'] == wanted_role] or realm_rows
         # with several copies and no choice made: the newest game first (an old SR2 0.6 copy never wins over 1.x)
         role_rows = sorted(role_rows, key=lambda r: (_negated(_unity_version(r['root'])), 0 if str(r['root']).casefold() in manual_roots else 1))
         return next(iter(chosen or role_rows), None)
+
+    def _primary(self, realm: str):
+        data = self._load()
+        return self._select_primary(realm, self._installations(data=data), data)
+
+    def _resolve_primary(self, realm: str, rows=None, data=None):
+        """Reuse already-scanned installation rows when possible, while honoring monkeypatched ``_primary`` in tests."""
+        if '_primary' in self.__dict__:
+            return self._primary(realm)
+        data = data if data is not None else self._load()
+        rows = rows if rows is not None else self._installations(data=data)
+        return self._select_primary(realm, rows, data)
+
+    def _primary_root_fast(self, realm: str) -> str | None:
+        """Resolve the primary root of ``realm`` without integrity/loader/DLL-hash checks (for 1 Hz console polling)."""
+        if '_primary' in self.__dict__:
+            primary = self._primary(realm)
+            return primary['root'] if primary else None
+        data = self._load()
+        paths = [*(Path(p) for p in data['manual_paths']), *(Path(p) for p in data['detected_paths']), *(p for p in self._known_paths if p)]
+        lab_root = self._lab_games.resolve()
+        candidates = [{'game': item.game, 'root': str(item.root), 'role': 'source'}
+                      for item in available_installations(paths)
+                      if item.game == realm and item.root != lab_root and lab_root not in item.root.parents]
+        exe = self._lab_games / realm / EXECUTABLES[realm]
+        try:
+            validate_lab_destination(exe, self._lab_games)
+        except ValueError:
+            pass
+        else:
+            item = discover_manual(self._lab_games / realm, store='lab')
+            if item is not None and item.game == realm:
+                candidates.append({'game': item.game, 'root': str(item.root), 'role': 'lab'})
+        chosen = self._select_primary(realm, candidates, data)
+        return chosen['root'] if chosen else None
 
     def choose_install(self, realm: str, root: str) -> dict:
         matched = next((r['root'] for r in self._installations()
                         if r['game'] == realm and str(r['root']).casefold() == str(root).casefold()), None)
         if realm not in EXECUTABLES or matched is None:
             raise ValueError('unknown installation')
-        data = self._load()
         with self._edit_config() as data:
             data['selected'][realm] = matched
         return {'ok': True}
@@ -489,11 +529,11 @@ class LauncherAPI:
     # ---- the page's whole state -----------------------------------------------------------------------------------
     def get_state(self) -> dict:
         data = self._load()
-        rows = self._installations()
+        rows = self._installations(data=data)
         games = {}
         process = self.game_process_state()
         for realm in EXECUTABLES:
-            primary = self._primary(realm)
+            primary = self._resolve_primary(realm, rows=rows, data=data)
             games[realm] = {'primary': primary, 'all': [r for r in rows if r['game'] == realm],
                             **process[realm], 'store_page': STORE_PAGES[realm]}
         return {'version': VERSION, 'installations': rows, 'games': games, 'legal_understood': bool(data['legal_understood']),
@@ -545,11 +585,12 @@ class LauncherAPI:
         if target.startswith('BOTH'):
             target = 'BOTH'
         other = 'SR2' if front == 'SR1' else 'SR1'
+        data = self._load()
         previous = self._session.get()                     # the game played last, before this launch changes it
         pair = self._session_pair()
         # Continue of one game with a linked partner starts both (the partner waits behind its portal).
         if (resume and resume_partner and target != 'BOTH' and not background and pair.get(other)
-                and pair.get(front) and self._primary(other) is not None and not self._launcher.running(other)):
+                and pair.get(front) and self._resolve_primary(other, data=data) is not None and not self._launcher.running(other)):
             target = 'BOTH'
         # Play (not Continue) with both games: the chosen game opens on its menu and the player picks a save; the other one
         # starts once that save is open, on its linked save, or as a new game when the player started a new one.
@@ -580,7 +621,6 @@ class LauncherAPI:
                 # No partner yet for the save being played: a new one is made for it (linked at the first crossing).
                 name = travel.NEW_NAME.sub('', f"SlimeBridge {pair[partner_realm]}"[:48]).strip() or 'SlimeBridge'
                 envs[waiting] = {'SLIMEBRIDGE_TRAVEL_MODE': 'DESTINATION', 'SLIMEBRIDGE_TRAVEL_NEW': name}
-        data = self._load()
         if not data['backup_ack'] and not confirmed:
             return {'ok': False, 'needs_confirmation': True}
         if confirmed:
@@ -602,8 +642,14 @@ class LauncherAPI:
             self._ensure_travel_loop()
         except RuntimeErrorWithCode as exc:
             warnings.append(f'BridgeHost not started ({exc.code}): the games will start without the bridge link')
+        rows = None if '_primary' in self.__dict__ else self._installations(data=data)
+        primaries = {r: self._resolve_primary(r, rows=rows, data=data) for r in ('SR1', 'SR2')}
+        installs = {r: (primaries[r] or {}).get('root') for r in ('SR1', 'SR2')}
+        bridge_settings = self._settings()[1]['bridge']
+        perf_env = self._perf_env(data)
+        models_dir = self._models_dir(data)
         for realm in realms:
-            primary = self._primary(realm)
+            primary = primaries[realm]
             if primary is None:
                 errors.append({'realm': realm, 'error': 'GAME_NOT_FOUND'})
                 continue
@@ -613,8 +659,7 @@ class LauncherAPI:
             lab_env = {}
             lab = pack.is_lab_copy(realm, primary['root'])
             if lab or plugins.status(realm, primary['root']).get('state') in ('current', 'outdated'):
-                installs = {r: (self._primary(r) or {}).get('root') for r in ('SR1', 'SR2')}
-                prepared = pack.prepare(realm, primary['root'], installs=installs, models_dir=self._models_dir())
+                prepared = pack.prepare(realm, primary['root'], installs=installs, models_dir=models_dir)
                 warnings += [f'{realm}: {w}' for w in prepared['warnings']]
                 if lab:
                     lab_env = pack.lab_env(realm, primary['root'])
@@ -623,7 +668,7 @@ class LauncherAPI:
                 if realm == waiting and not resume_env:
                     resume_env['SLIMEBRIDGE_BACKGROUND_START'] = '1'  # the waiting game can start at its main menu
                 name_env = {'SLIMEBRIDGE_ONLINE_NAME': data['mp_name']} if realm == 'SR1' and data.get('mp_name') else {}
-                started_proc = self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(self._settings()[1]['bridge'], realm), **self._perf_env(), **lab_env, **resume_env, **name_env})
+                started_proc = self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(bridge_settings, realm), **perf_env, **lab_env, **resume_env, **name_env})
                 launched.append(started_proc)
                 if realm == front and not background:
                     self._session.set(realm, resume_env.get('SLIMEBRIDGE_TRAVEL_SAVE') if resume_env.get('SLIMEBRIDGE_TRAVEL_MODE') == 'RESUME' else None)
@@ -807,10 +852,12 @@ class LauncherAPI:
             return
         def watch():
             try:
-                while not self._audio_stop.wait(.05):
+                delay = 0.05
+                while not self._audio_stop.wait(delay):
                     # Retain one watcher until launcher shutdown. An idle child gap is
                     # not retirement: a new launch can appear before a late audio session.
                     if any(self._launcher.running(r) for r in EXECUTABLES):
+                        delay = 0.05
                         try:
                             self._sync_game_audio(follow_foreground=True)
                         except Exception as exc:
@@ -818,6 +865,7 @@ class LauncherAPI:
                             if self._audio_stop.wait(.25):
                                 break
                     else:
+                        delay = 0.5
                         self._audio.sync()  # discard dead session keys; no endpoint enumeration when empty
             finally:
                 self._audio.restore()
@@ -1065,8 +1113,9 @@ class LauncherAPI:
         engine = options.get('engine', 'builtin')
         if engine not in extract.ENGINES:
             return {'ok': False, 'error': 'BAD_OPTIONS', 'detail': f'engine must be one of {extract.ENGINES}'}
-        installs = {realm: (self._primary(realm) or {}).get('root') for realm in EXECUTABLES}
         data = self._load()
+        rows = None if '_primary' in self.__dict__ else self._installations(data=data)
+        installs = {realm: (self._resolve_primary(realm, rows=rows, data=data) or {}).get('root') for realm in EXECUTABLES}
         if engine == 'builtin':
             output = self._cache_dir(data)           # the species caches the SR1 plugin reads
             if options.get('ram_gb') is None:        # the memory limit slider (Extract page); a fixed default when never moved
@@ -1253,10 +1302,12 @@ class LauncherAPI:
             content = content_manifest.hello_content()          # what this install would present when joining (imported species + Largos)
         except (OSError, ValueError, KeyError):
             content = {}
+        data = self._load()
+        rows = None if '_primary' in self.__dict__ else self._installations(data=data)
         from apps.launcher import online
         states = {}
         for realm in ('SR1', 'SR2'):
-            primary = self._primary(realm)
+            primary = self._resolve_primary(realm, rows=rows, data=data)
             if primary is None:
                 states[realm] = {'state': 'no_game', 'loader': False}
                 continue
@@ -1266,7 +1317,7 @@ class LauncherAPI:
                 states[realm] = {'state': 'error', 'loader': False, 'error': str(exc)}
         with self._travel._lock:
             session = self._travel.online.state()
-        return {'ok': True, 'servers': settings['servers'], 'host': self._load()['mp_host'], 'content': content,
+        return {'ok': True, 'servers': settings['servers'], 'host': data['mp_host'], 'content': content,
                 'online': states, 'network_adapter': any(s.get('state') == 'current' for s in states.values()),
                 'session': session}
 
@@ -1395,7 +1446,6 @@ class LauncherAPI:
             return {'ok': False, 'error': 'port must be a number'}
         if mode not in ('HYBRID', 'SR1_ONLY', 'SR2_ONLY') or not 1024 <= port <= 65535:
             return {'ok': False, 'error': 'mode or port out of range'}
-        data = self._load()
         with self._edit_config() as data:
             data['mp_host'] = {'name': name, 'port': port, 'mode': mode}
         return {'ok': True, 'host': data['mp_host']}
@@ -1533,7 +1583,7 @@ class LauncherAPI:
     def open_folder(self, which: str) -> dict:
         data = self._load()
         if which in EXECUTABLES:
-            primary = self._primary(which)
+            primary = self._resolve_primary(which, data=data)
             target = Path(primary['root']) if primary else None
         else:
             target = {'models': self._models_dir(data), 'output': self._output_dir(data), 'cache': self._cache_dir(data),
@@ -1586,6 +1636,7 @@ def _choices(section, key):
 
 _INSTANCE_MUTEX = None
 _VERSION_CACHE: dict = {}
+_UNITY_VERSION_RE = re.compile(rb'(\d{4})\.(\d+)\.(\d+)[abfp]\d+')
 
 
 def _unity_version(root) -> tuple:
@@ -1596,9 +1647,9 @@ def _unity_version(root) -> tuple:
         try:
             data_dir = next(Path(root).glob('*_Data'), None)
             if data_dir is not None:
-                head = (data_dir / 'globalgamemanagers').open('rb').read(256)
-                import re as _re
-                match = _re.search(rb'(\d{4})\.(\d+)\.(\d+)[abfp]\d+', head)
+                with (data_dir / 'globalgamemanagers').open('rb') as stream:
+                    head = stream.read(256)
+                match = _UNITY_VERSION_RE.search(head)
                 if match:
                     found = tuple(int(x) for x in match.groups())
         except OSError:

@@ -56,7 +56,7 @@ namespace SlimeBridge.SR1
             foreach (var trackedRoot in ImportedSpawner.TrackedImportRoots)
             {
                 if (trackedRoot == null) continue;
-                Identifiable trackedIdentifiable = null;
+                Identifiable? trackedIdentifiable = null;
                 var trackedStack = new Stack<Transform>();
                 trackedStack.Push(trackedRoot.transform);
                 var trackedVisited = 0;
@@ -347,7 +347,7 @@ namespace SlimeBridge.SR1
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         /// <summary>Bounded breadth-first search for a named transform (imported visual root).</summary>
-        private static Transform FindByName(Transform root, string name, int budget)
+        private static Transform? FindByName(Transform root, string name, int budget)
         {
             var stack = new Stack<Transform>();
             stack.Push(root);
@@ -423,11 +423,11 @@ namespace SlimeBridge.SR1
             sb.Append("\n  }");
         }
 
-        private static Type _helperType;
+        private static Type? _helperType;
         private static bool _helperTypeResolved;
 
         /// <summary>Resolve the private nested RecalculateBoundsHelper type once.</summary>
-        private static Type ResolveHelperType()
+        private static Type? ResolveHelperType()
         {
             if (_helperTypeResolved) return _helperType;
             _helperTypeResolved = true;

@@ -882,8 +882,8 @@ namespace SlimeBridge.SR1
                 {
                     var identifiable = applicator != null ? applicator.GetComponentInParent<Identifiable>() : null;
                     if (identifiable == null) continue;
-                    var canonical = ImportedSpawner.ResolveImportedCanonical(applicator);
-                    Renderer face = null;
+                    var canonical = ImportedSpawner.ResolveImportedCanonical(applicator!);
+                    Renderer? face = null;
                     var all = new Bounds(identifiable.transform.position, Vector3.zero);
                     var first = true;
                     foreach (var renderer in identifiable.GetComponentsInChildren<Renderer>(false))
@@ -1007,14 +1007,14 @@ namespace SlimeBridge.SR1
         public override bool Execute(string[] args)
         {
             var host = SanctuaryHost.Instance;
-            if (host == null) { SRML.Console.Console.LogError("[SlimeBridge] the sanctuary is not installed (no layout)."); return false; }
+            if (host == null) { BridgeEntry.Console.LogError("[SlimeBridge] the sanctuary is not installed (no layout)."); return false; }
             if (args == null || args.Length == 0 || args[0].Equals("status", StringComparison.OrdinalIgnoreCase))
             {
-                SRML.Console.Console.Log("[SlimeBridge] " + host.Status());
+                BridgeEntry.Console.Log("[SlimeBridge] " + host.Status());
                 return true;
             }
             var message = host.DevCommand(args);
-            SRML.Console.Console.Log("[SlimeBridge] " + message);
+            BridgeEntry.Console.Log("[SlimeBridge] " + message);
             return true;
         }
     }

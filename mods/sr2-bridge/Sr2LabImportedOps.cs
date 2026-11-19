@@ -172,7 +172,7 @@ namespace SlimeBridge.SR2
                 for (var i = 0; i < renderers.Length; i++) renderers[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 cam.targetTexture = captureRt;
                 var previous = UnityEngine.RenderTexture.active;
-                void Grab(string name)
+                void Grab(string? name)
                 {
                     cam.Render();
                     UnityEngine.RenderTexture.active = captureRt;

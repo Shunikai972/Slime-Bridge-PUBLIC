@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using SRML.Console;
-using BridgeConsole = SRML.Console.Console;
 
 namespace SlimeBridge.SR1
 {
@@ -33,41 +32,41 @@ namespace SlimeBridge.SR1
             var registrar = _registrar();
             if (registrar == null)
             {
-                BridgeConsole.LogError("[SlimeBridge] no LAB import session is armed; run the authorized species-import oracle first.");
+                BridgeEntry.Console.LogError("[SlimeBridge] no LAB import session is armed; run the authorized species-import oracle first.");
                 return false;
             }
             if (args == null || args.Length == 0 || args[0].Equals("help", StringComparison.OrdinalIgnoreCase))
             {
-                BridgeConsole.Log("[SlimeBridge] usage: " + Usage);
+                BridgeEntry.Console.Log("[SlimeBridge] usage: " + Usage);
                 return true;
             }
             if (args[0].Equals("list", StringComparison.OrdinalIgnoreCase))
             {
                 var ids = registrar.RegisteredCanonicalIds.ToList();
-                BridgeConsole.Log("[SlimeBridge] registered imported species (" + ids.Count + "): " + string.Join(", ", ids));
+                BridgeEntry.Console.Log("[SlimeBridge] registered imported species (" + ids.Count + "): " + string.Join(", ", ids));
                 return true;
             }
             if (args[0].Equals("largos", StringComparison.OrdinalIgnoreCase))
             {
                 var largos = Identifiable.LARGO_CLASS.Select(id => id.ToString()).OrderBy(n => n, StringComparer.Ordinal).ToList();
                 var text = "[SlimeBridge] largos (" + largos.Count + "), spawn with: slimebridge spawn <ID> [count]\n  " + string.Join(", ", largos);
-                BridgeConsole.Log(text);
+                BridgeEntry.Console.Log(text);
                 UnityEngine.Debug.Log(text);
                 return true;
             }
             if (args[0].Equals("spawn", StringComparison.OrdinalIgnoreCase))
             {
-                if (args.Length < 2) { BridgeConsole.LogError("[SlimeBridge] usage: " + Usage); return false; }
+                if (args.Length < 2) { BridgeEntry.Console.LogError("[SlimeBridge] usage: " + Usage); return false; }
                 if (!_worldReady())
                 {
-                    BridgeConsole.LogError("[SlimeBridge] the world is not ready yet (loading or no player); try again in a moment.");
+                    BridgeEntry.Console.LogError("[SlimeBridge] the world is not ready yet (loading or no player); try again in a moment.");
                     return false;
                 }
                 var game = GameContext.Instance;
                 var scene = SceneContext.Instance;
                 if (game == null || scene == null || scene.Player == null)
                 {
-                    BridgeConsole.LogError("[SlimeBridge] no active game session.");
+                    BridgeEntry.Console.LogError("[SlimeBridge] no active game session.");
                     return false;
                 }
                 var count = 1;
@@ -80,8 +79,8 @@ namespace SlimeBridge.SR1
                     var made = 0;
                     for (var i = 0; i < count; i++)
                         if (ImportedSpawner.SpawnNative(game, scene, nativeId, i, nativeProblems) != null) made++;
-                    if (made == 0) { BridgeConsole.LogError("[SlimeBridge] spawn failed: " + string.Join("; ", nativeProblems)); return false; }
-                    BridgeConsole.LogSuccess("[SlimeBridge] spawned " + made + " x " + nativeId + " in front of the player.");
+                    if (made == 0) { BridgeEntry.Console.LogError("[SlimeBridge] spawn failed: " + string.Join("; ", nativeProblems)); return false; }
+                    BridgeEntry.Console.LogSuccess("[SlimeBridge] spawned " + made + " x " + nativeId + " in front of the player.");
                     return true;
                 }
                 var target = args[1].ToLowerInvariant();
@@ -101,10 +100,10 @@ namespace SlimeBridge.SR1
                     }
                     if (made == 0)
                     {
-                        BridgeConsole.LogError("[SlimeBridge] plort spawn failed: " + string.Join("; ", plortProblems));
+                        BridgeEntry.Console.LogError("[SlimeBridge] plort spawn failed: " + string.Join("; ", plortProblems));
                         return false;
                     }
-                    BridgeConsole.LogSuccess("[SlimeBridge] spawned " + made + " x " + target + " in front of the player.");
+                    BridgeEntry.Console.LogSuccess("[SlimeBridge] spawned " + made + " x " + target + " in front of the player.");
                     return true;
                 }
                 var details = new List<string>();
@@ -125,38 +124,38 @@ namespace SlimeBridge.SR1
                 }
                 if (spawned == 0)
                 {
-                    BridgeConsole.LogError("[SlimeBridge] spawn failed: " + string.Join("; ", problems));
+                    BridgeEntry.Console.LogError("[SlimeBridge] spawn failed: " + string.Join("; ", problems));
                     return false;
                 }
-                BridgeConsole.LogSuccess("[SlimeBridge] spawned " + spawned + " x " + target + " at the player (native actor path).");
+                BridgeEntry.Console.LogSuccess("[SlimeBridge] spawned " + spawned + " x " + target + " at the player (native actor path).");
                 return true;
             }
             if (args[0].Equals("diag", StringComparison.OrdinalIgnoreCase))
             {
-                if (args.Length < 2) { BridgeConsole.LogError("[SlimeBridge] usage: " + Usage); return false; }
+                if (args.Length < 2) { BridgeEntry.Console.LogError("[SlimeBridge] usage: " + Usage); return false; }
                 if (!_worldReady())
                 {
-                    BridgeConsole.LogError("[SlimeBridge] the world is not ready yet; try again in a moment.");
+                    BridgeEntry.Console.LogError("[SlimeBridge] the world is not ready yet; try again in a moment.");
                     return false;
                 }
                 var game = GameContext.Instance;
                 var scene = SceneContext.Instance;
                 if (game == null || scene == null)
                 {
-                    BridgeConsole.LogError("[SlimeBridge] no active game session.");
+                    BridgeEntry.Console.LogError("[SlimeBridge] no active game session.");
                     return false;
                 }
                 var problems = new List<string>();
                 var written = BridgeDiagnostics.Write(registrar.OutDir, args[1], game, scene, registrar, problems);
                 if (!written)
                 {
-                    BridgeConsole.LogError("[SlimeBridge] diagnostics failed: " + string.Join("; ", problems));
+                    BridgeEntry.Console.LogError("[SlimeBridge] diagnostics failed: " + string.Join("; ", problems));
                     return false;
                 }
-                BridgeConsole.LogSuccess("[SlimeBridge] visual diagnostics written to the session output directory for " + args[1] + ".");
+                BridgeEntry.Console.LogSuccess("[SlimeBridge] visual diagnostics written to the session output directory for " + args[1] + ".");
                 return true;
             }
-            BridgeConsole.LogError("[SlimeBridge] unknown subcommand; usage: " + Usage);
+            BridgeEntry.Console.LogError("[SlimeBridge] unknown subcommand; usage: " + Usage);
             return false;
         }
 

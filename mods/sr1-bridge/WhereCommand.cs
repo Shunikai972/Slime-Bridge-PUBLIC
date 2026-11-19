@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-using BridgeConsole = SRML.Console.Console;
 
 namespace SlimeBridge.SR1
 {
@@ -23,7 +22,7 @@ namespace SlimeBridge.SR1
             try
             {
                 var scene = SceneContext.Instance;
-                if (scene == null || scene.Player == null) { BridgeConsole.LogError("[SlimeBridge] no active game session."); return false; }
+                if (scene == null || scene.Player == null) { BridgeEntry.Console.LogError("[SlimeBridge] no active game session."); return false; }
                 float radius = 12f;
                 if (args != null && args.Length > 0) float.TryParse(args[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out radius);
                 radius = Mathf.Clamp(radius, 2f, 40f);
@@ -33,16 +32,10 @@ namespace SlimeBridge.SR1
                 var cam = Camera.main;
                 var look = cam != null ? cam.transform.forward : player.forward;
                 var inv = System.Globalization.CultureInfo.InvariantCulture;
-                string region = "?";
-                try
-                {
-                    var registry = UnityEngine.Object.FindObjectOfType<MonomiPark.SlimeRancher.Regions.RegionRegistry>();
-                    if (registry != null) region = registry.GetCurrentRegionSetId().ToString();
-                }
-                catch (Exception) { }
+                string region = ImportedSpawner.ResolveRegionSetId(scene).ToString();
                 var head = string.Format(inv, "[SlimeBridge] where: pos=({0:F1}, {1:F1}, {2:F1}) yaw={3:F0} look=({4:F2}, {5:F2}, {6:F2}) region={7}",
                     p.x, p.y, p.z, player.eulerAngles.y, look.x, look.y, look.z, region);
-                BridgeConsole.Log(head);
+                BridgeEntry.Console.Log(head);
                 UnityEngine.Debug.Log(head);
 
                 var seen = new Dictionary<string, float>();
@@ -65,12 +58,12 @@ namespace SlimeBridge.SR1
                 var sb = new StringBuilder("[SlimeBridge] where: " + seen.Count + " objects within " + radius.ToString("F0", inv) + " m (nearest " + lines.Count + "):");
                 foreach (var kv in lines) sb.Append("\n  ").Append(kv.Value.ToString("F1", inv)).Append(" m  ").Append(kv.Key);
                 UnityEngine.Debug.Log(sb.ToString());
-                BridgeConsole.Log("[SlimeBridge] " + seen.Count + " nearby objects written to Player.log.");
+                BridgeEntry.Console.Log("[SlimeBridge] " + seen.Count + " nearby objects written to Player.log.");
                 return true;
             }
             catch (Exception ex)
             {
-                BridgeConsole.LogError("[SlimeBridge] where failed: " + ex.GetType().Name + ": " + ex.Message);
+                BridgeEntry.Console.LogError("[SlimeBridge] where failed: " + ex.GetType().Name + ": " + ex.Message);
                 return false;
             }
         }

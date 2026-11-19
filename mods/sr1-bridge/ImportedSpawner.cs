@@ -56,6 +56,18 @@ namespace SlimeBridge.SR1
             }
         }
 
+        internal static RegionRegistry.RegionSetId ResolveRegionSetId(SceneContext? scene)
+        {
+            try
+            {
+                var registry = scene != null ? scene.RegionRegistry : null;
+                if (registry == null) registry = UnityEngine.Object.FindObjectOfType<RegionRegistry>();
+                if (registry != null) return registry.GetCurrentRegionSetId();
+            }
+            catch (Exception) { /* HOME fallback */ }
+            return RegionRegistry.RegionSetId.HOME;
+        }
+
         /// <summary>Dev convenience: spawn an imported species' plort (its own look) in front of the player.</summary>
         internal static GameObject? SpawnPlort(GameContext game, SceneContext scene, SpeciesRegistrar registrar,
             string plortCanonical, List<string> problems)
@@ -66,14 +78,7 @@ namespace SlimeBridge.SR1
             var player = scene.Player.transform;
             var instance = UnityEngine.Object.Instantiate(prefab, player.position + player.forward * 2.0f + Vector3.up * 1.0f, Quaternion.identity);
             instance.SetActive(true);
-            var regionSetId = RegionRegistry.RegionSetId.HOME;
-            try
-            {
-                var registry = UnityEngine.Object.FindObjectOfType<RegionRegistry>();
-                if (registry != null) regionSetId = registry.GetCurrentRegionSetId();
-            }
-            catch (Exception) { /* HOME fallback */ }
-            scene.GameModel.RegisterStartingActor(instance, regionSetId);
+            scene.GameModel.RegisterStartingActor(instance, ResolveRegionSetId(scene));
             return instance;
         }
 
@@ -86,14 +91,7 @@ namespace SlimeBridge.SR1
             var spread = Quaternion.AngleAxis((index - 1) * 25f, Vector3.up) * player.forward;
             var instance = UnityEngine.Object.Instantiate(prefab, player.position + spread * 3f + Vector3.up * 1.2f, Quaternion.identity);
             instance.SetActive(true);
-            var regionSetId = RegionRegistry.RegionSetId.HOME;
-            try
-            {
-                var registry = UnityEngine.Object.FindObjectOfType<RegionRegistry>();
-                if (registry != null) regionSetId = registry.GetCurrentRegionSetId();
-            }
-            catch (Exception) { /* HOME fallback */ }
-            scene.GameModel.RegisterStartingActor(instance, regionSetId);
+            scene.GameModel.RegisterStartingActor(instance, ResolveRegionSetId(scene));
             return instance;
         }
 
@@ -110,13 +108,7 @@ namespace SlimeBridge.SR1
             if (prefab == null) { problems.Add("no registered prefab"); return null; }
             var player = scene.Player.transform;
             var position = player.position + player.forward * 2.5f + Vector3.up * 1.2f;
-            var regionSetId = RegionRegistry.RegionSetId.HOME;
-            try
-            {
-                var registry = UnityEngine.Object.FindObjectOfType<RegionRegistry>();
-                if (registry != null) regionSetId = registry.GetCurrentRegionSetId();
-            }
-            catch (Exception) { /* Region set stays at the HOME fallback. */ }
+            var regionSetId = ResolveRegionSetId(scene);
             GameObject? instance = null;
             try
             {
@@ -209,8 +201,8 @@ namespace SlimeBridge.SR1
                 // attach the rebuilt source geometry so the actor shows the actual imported species.
                 if (ImportedModelLoader.TryGet(canonical, out var importedModel, out var modelProblem))
                 {
-                    List<Renderer> suppressed = null;
-                    GameObject visual = null;
+                    List<Renderer>? suppressed = null;
+                    GameObject? visual = null;
                     try
                     {
                         if (!ApplyImportedVisualToRoot(instance, canonical, importedModel, out suppressed))
@@ -323,7 +315,7 @@ namespace SlimeBridge.SR1
 
         /// <summary>Locate the attached imported visual on an actor root via its marker component
         /// (name-independent, survives template copies and renames).</summary>
-        internal static GameObject FindImportedVisual(GameObject root)
+        internal static GameObject? FindImportedVisual(GameObject? root)
         {
             try
             {
@@ -339,7 +331,7 @@ namespace SlimeBridge.SR1
         /// survives template copies and renames), so an ancestor walk from any renderer inside the
         /// subtree reaches the marker or the resolved visual root before the actor root. Bounded and
         /// fail-open: any failure reads as "not the visual", keeping the legacy placeholder tint.</summary>
-        private static bool IsInsideVisualSubtree(Renderer renderer, GameObject instance, GameObject visualRoot)
+        private static bool IsInsideVisualSubtree(Renderer renderer, GameObject instance, GameObject? visualRoot)
         {
             if (renderer == null) return false;
             try
@@ -452,7 +444,7 @@ namespace SlimeBridge.SR1
             var visual = FindImportedVisual(instance);
             if (visual == null)
             {
-                SuppressPlaceholders(instance, null, suppressedRenderers);
+                SuppressPlaceholders(instance, null!, suppressedRenderers);
                 visual = UnityEngine.Object.Instantiate(model.Root, instance.transform, false);
                 visual.name = ImportedVisualName;
                 visual.transform.localPosition = model.Root.transform.localPosition;
@@ -583,8 +575,8 @@ namespace SlimeBridge.SR1
             if (instance == null || visual == null) return;
             try
             {
-                Material bodyTemplate = null;
-                Material eyesTemplate = null;
+                Material? bodyTemplate = null;
+                Material? eyesTemplate = null;
                 var stack = new Stack<Transform>();
                 stack.Push(instance.transform);
                 var visited = 0;
@@ -709,10 +701,10 @@ namespace SlimeBridge.SR1
             catch (Exception) { /* keep the converter materials on any failure */ }
         }
 
-        private static Material _plainBody;
+        private static Material? _plainBody;
 
         /// <summary>The native Pink slime's body material (no markings, no special texture): the neutral base for imported Largos.</summary>
-        private static Material PlainBodyTemplate()
+        private static Material? PlainBodyTemplate()
         {
             if (_plainBody != null) return _plainBody;
             try

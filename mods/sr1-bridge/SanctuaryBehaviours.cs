@@ -197,7 +197,7 @@ namespace SlimeBridge.SR1
     {
         internal readonly System.Collections.Generic.List<SanctuaryRevealItem> Items = new System.Collections.Generic.List<SanctuaryRevealItem>();
         internal bool Playing { get; private set; }
-        internal Action? Finished;
+        internal Action? Finished { get; set; }
         private float _elapsed;
 
         internal void Add(Transform t, string phase, string id, float distance, int ordinal)

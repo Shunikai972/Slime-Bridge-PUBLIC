@@ -43,7 +43,7 @@ namespace SlimeBridge.SR1
             return "{\"actor_alive\":true,\"pink_in_live_all_eats\":" + Bool(hasDrive) +
                 ",\"eater_enabled\":" + Bool(_eater.enabled) + ",\"food_edible\":" + Bool(_food != null && Identifiable.IsEdible(_food)) +
                 ",\"food_distance\":" + distance.ToString("R", CultureInfo.InvariantCulture) +
-                ",\"min_drive\":" + (hasDrive ? map[Identifiable.Id.PINK_PLORT].minDrive : -1f).ToString("R", CultureInfo.InvariantCulture) +
+                ",\"min_drive\":" + (hasDrive ? map![Identifiable.Id.PINK_PLORT].minDrive : -1f).ToString("R", CultureInfo.InvariantCulture) +
                 ",\"projectile_delivered\":" + Bool(_projectileDelivered) +
                 ",\"can_chomp\":" + Bool(chomper != null && chomper.CanChomp()) + ",\"is_chomping\":" + Bool(chomper != null && chomper.IsChomping()) +
                 ",\"fixed_time\":" + Time.fixedTime.ToString("R", CultureInfo.InvariantCulture) +

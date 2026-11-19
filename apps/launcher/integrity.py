@@ -71,6 +71,21 @@ def short_home(game, root):
     return Path(Path(root).resolve().anchor) / 'Jeux' / name
 
 
+def _count_bundles(folder: Path, limit: int) -> int:
+    """Count ``*.bundle`` files up to ``limit`` (early-exits instead of scanning all 800+ SR2 bundles)."""
+    count = 0
+    try:
+        with os.scandir(folder) as it:
+            for entry in it:
+                if entry.name.lower().endswith('.bundle'):
+                    count += 1
+                    if count >= limit:
+                        return count
+    except OSError:
+        return 0
+    return count
+
+
 def check(game, root):
     """{'complete', 'missing' (first ones), 'missing_count', 'hint'} for an install folder."""
     root = Path(root)
@@ -81,7 +96,7 @@ def check(game, root):
             missing.append(options[0])
     if game == 'SR2':
         bundles = root / SR2_BUNDLES
-        count = sum(1 for p in bundles.glob('*.bundle')) if bundles.is_dir() else 0
+        count = _count_bundles(bundles, MIN_SR2_BUNDLES) if bundles.is_dir() else 0
         if count < MIN_SR2_BUNDLES:
             missing.append(f'{SR2_BUNDLES}/*.bundle (found {count})')
     hint, code, part = '', '', None
@@ -92,10 +107,11 @@ def check(game, root):
                 'extract ALL the parts into the same folder, then select it again.'.format(part) if part else
                 'Some game files are missing: re-extract the game (all archive parts, into a short path such as C:\\Games) '
                 'or verify the game files in its store.')
-    too_long = game == 'SR2' and not long_paths_enabled() and deepest_path(root) > MAX_PATH
+    deepest = deepest_path(root) if (game == 'SR2' and not long_paths_enabled()) else 0
+    too_long = deepest > MAX_PATH
     if too_long and not missing:
         code = 'too_long'
-        hint = (f'The game folder is too deep for Windows ({deepest_path(root)} characters, limit 260): the game and '
+        hint = (f'The game folder is too deep for Windows ({deepest} characters, limit 260): the game and '
                 f'SlimeBridge cannot open some of its files. Move it to a short folder such as {short_home(game, root)}.')
     return {'complete': not missing and not too_long, 'missing': missing[:6], 'missing_count': len(missing), 'hint': hint,
             'hint_code': code, 'part': part, 'too_long': too_long, 'move_to': str(short_home(game, root)) if too_long else None}

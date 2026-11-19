@@ -19,7 +19,7 @@ namespace SlimeBridge.SR2
     /// </summary>
     public sealed class BridgeMod : MelonMod
     {
-        public const string PluginVersion = "0.2.15";
+        public const string PluginVersion = "0.2.16";
         private static readonly int Pid = Environment.ProcessId;
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { UseProxy = false })
         {
@@ -204,9 +204,9 @@ namespace SlimeBridge.SR2
                 var reason = game == null ? "no game context" : director == null ? "no autosave director"
                     : inGame ? "already in game" : director.GameLoaded() ? "game already loaded"
                     : !menuSettled ? "main menu scene group not settled (group '" + groupName + "', busy=" + (sceneLoader != null && sceneLoader.IsSceneLoadInProgress) + ")"
-                    : wanted != null && (director.Storage() == null || !director.Storage().IsInitialized())
+                    : wanted != null && (director.Storage() == null || !director.Storage()!.IsInitialized())
                         ? "native storage not initialized"
-                    : (wanted != null || TravelNewGame) && (director.Storage() == null || !director.Storage().IsInitialized() || !director.ProfileLoaded())
+                    : (wanted != null || TravelNewGame) && (director.Storage() == null || !director.Storage()!.IsInitialized() || !director.ProfileLoaded())
                         ? "native storage not initialized"
                     : wanted == null && !TravelNewGame && !director.HasContinue() ? "no continue save" : null;
                 if (reason != null)
@@ -502,19 +502,20 @@ namespace SlimeBridge.SR2
         }
 
         private Action<string>? _perfLog;
+        private Action<string> LogMsg => _perfLog ??= text => LoggerInstance.Msg(text);
 
         /// <summary>The optional performance profile (launcher setting): applied once the game has settled, again when the quality level changes.</summary>
         public override void OnLateUpdate()
         {
             // Keep imported species appearances, groups and save persistence bound whenever a gameplay world loads.
-            _speciesRegistrar?.TickWorldSync(_perfLog ??= text => LoggerInstance.Msg(text));
+            _speciesRegistrar?.TickWorldSync(LogMsg);
             // Developer mode only (SLIMEBRIDGE_DEV=1): F7 / F9 pick an imported species or Largo, F8 spawns it.
             if (_devSpawner == null && !_devSpawnerChecked) { _devSpawnerChecked = true; _devSpawner = Sr2DevSpawner.TryCreate(_speciesRegistrar); }
             _devSpawner?.Tick();
             if (!_consoleRegistered && UnityEngine.Time.frameCount % 120 == 0) _consoleRegistered = Sr2Console.TryRegister(() => _speciesRegistrar);
             if (_travel?.Quiescing == true) return;
             Sr2LabVacuumTrace.LateTick();
-            SlimeBridge.Shared.PerformanceTuner.Tick(UnityEngine.Time.realtimeSinceStartup, _perfLog ??= text => LoggerInstance.Msg(text));
+            SlimeBridge.Shared.PerformanceTuner.Tick(UnityEngine.Time.realtimeSinceStartup, LogMsg);
         }
 
         public override void OnUpdate()
@@ -524,7 +525,7 @@ namespace SlimeBridge.SR2
             _travel?.Tick();
             // Keep the heartbeat alive but don't run inventory or any other mod gameplay writers after close preparation.
             if (_travel?.Quiescing == true) { PublishSnapshot(); return; }
-            _worldProbe?.Tick(text => LoggerInstance.Msg(text));
+            _worldProbe?.Tick(LogMsg);
             _returnPortal?.Tick();
             MaybeEndNewGameIntro();
             // Imported-species registration runs BEFORE any save autoload: saved imported ids must
@@ -533,7 +534,7 @@ namespace SlimeBridge.SR2
             {
                 if (_speciesRegistrar != null)
                 {
-                    _speciesRegistrar.Tick(text => LoggerInstance.Msg(text));
+                    _speciesRegistrar.Tick(LogMsg);
                     if (!_speciesRegistrar.Done)
                     {
                         try { MaybeSkipStartScreen(); }
@@ -555,7 +556,7 @@ namespace SlimeBridge.SR2
                     if (!_speciesOps.Done)
                     {
                         MaybeAutoload();
-                        _speciesOps.Tick(text => LoggerInstance.Msg(text));
+                        _speciesOps.Tick(LogMsg);
                         return;
                     }
                 }
@@ -579,7 +580,7 @@ namespace SlimeBridge.SR2
                 {
                     try { MaybeSkipStartScreen(); }
                     catch (Exception) { /* Capture still waits for real native registry readiness. */ }
-                    _registryCollector.Tick(text => LoggerInstance.Msg(text));
+                    _registryCollector.Tick(LogMsg);
                 }
                 return;
             }

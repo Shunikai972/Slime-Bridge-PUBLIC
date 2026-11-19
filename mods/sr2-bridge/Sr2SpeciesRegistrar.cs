@@ -96,9 +96,19 @@ namespace SlimeBridge.SR2
 
         internal bool Done => _done;
 
-        public bool TryResolveType(string canonicalId, out Il2Cpp.IdentifiableType type) => _types.TryGetValue(canonicalId, out type);
+        public bool TryResolveType(string canonicalId, out Il2Cpp.IdentifiableType type)
+        {
+            if (_types.TryGetValue(canonicalId, out var found)) { type = found; return true; }
+            type = null!;
+            return false;
+        }
 
-        public bool TryResolveDefinition(string canonicalId, out Il2Cpp.SlimeDefinition def) => _defs.TryGetValue(canonicalId, out def);
+        public bool TryResolveDefinition(string canonicalId, out Il2Cpp.SlimeDefinition def)
+        {
+            if (_defs.TryGetValue(canonicalId, out var found)) { def = found; return true; }
+            def = null!;
+            return false;
+        }
 
         /// <summary>Canonical ids registered in this session (dev tools).</summary>
         internal IEnumerable<string> Canonicals => _defs.Keys;
@@ -108,7 +118,7 @@ namespace SlimeBridge.SR2
 
         public bool TryResolvePrefab(string canonicalId, out UnityEngine.GameObject prefab)
         {
-            if (_prefabs.TryGetValue(canonicalId, out prefab) && prefab != null) return true;
+            if (_prefabs.TryGetValue(canonicalId, out var cachedPrefab) && cachedPrefab != null) { prefab = cachedPrefab; return true; }
             if (_types.TryGetValue(canonicalId, out var type) && type?.prefab != null)
             {
                 prefab = type.prefab;
@@ -755,7 +765,7 @@ namespace SlimeBridge.SR2
                 var parents = new List<Il2Cpp.SlimeDefinition>();
                 if (isLargo)
                 {
-                    foreach (var slug in entry.largo!.parents)
+                    foreach (var slug in entry.largo!.parents!)
                     {
                         Il2Cpp.SlimeDefinition? parent = null;
                         if (_defs.TryGetValue("slime." + slug, out var imported)) parent = imported;
@@ -1319,10 +1329,10 @@ namespace SlimeBridge.SR2
                     {
                         var group = groups[g];
                         if (group == null) continue;
-                        string name;
+                        string? name;
                         try { name = group.ReferenceId; } catch (Exception) { name = null; }
                         if (string.IsNullOrEmpty(name)) name = group.name ?? "";
-                        if (!string.IsNullOrEmpty(name) && !_groupsByRef.ContainsKey(name)) _groupsByRef[name] = group;
+                        if (!string.IsNullOrEmpty(name) && !_groupsByRef.ContainsKey(name!)) _groupsByRef[name!] = group;
                         _allGroups.Add(group);
                         var members = group.ImmediateMemberTypes;
                         if (members == null) continue;

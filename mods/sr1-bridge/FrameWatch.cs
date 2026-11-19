@@ -1,6 +1,5 @@
 using System;
 using System.Globalization;
-using System.Linq;
 using UnityEngine;
 
 namespace SlimeBridge.SR1
@@ -76,10 +75,21 @@ namespace SlimeBridge.SR1
             if (!Always && (!slowWindow || now < _nextLog)) return;
             _nextLog = now + 60f;
             var actors = UnityEngine.Object.FindObjectsOfType<Identifiable>();
-            var imported = actors.Count(a => a != null && ImportedIdentityPatch.IsImportedId((int)a.id));
-            var renderers = UnityEngine.Object.FindObjectsOfType<Renderer>().Count(r => r != null && r.enabled && r.gameObject.activeInHierarchy);
-            var lights = UnityEngine.Object.FindObjectsOfType<Light>().Count(l => l != null && l.enabled && l.gameObject.activeInHierarchy);
-            var bodies = UnityEngine.Object.FindObjectsOfType<Rigidbody>().Count(b => b != null && !b.IsSleeping());
+            var imported = 0;
+            for (var i = 0; i < actors.Length; i++)
+                if (actors[i] != null && ImportedIdentityPatch.IsImportedId((int)actors[i].id)) imported++;
+            var allRenderers = UnityEngine.Object.FindObjectsOfType<Renderer>();
+            var renderers = 0;
+            for (var i = 0; i < allRenderers.Length; i++)
+                if (allRenderers[i] != null && allRenderers[i].enabled && allRenderers[i].gameObject.activeInHierarchy) renderers++;
+            var allLights = UnityEngine.Object.FindObjectsOfType<Light>();
+            var lights = 0;
+            for (var i = 0; i < allLights.Length; i++)
+                if (allLights[i] != null && allLights[i].enabled && allLights[i].gameObject.activeInHierarchy) lights++;
+            var allBodies = UnityEngine.Object.FindObjectsOfType<Rigidbody>();
+            var bodies = 0;
+            for (var i = 0; i < allBodies.Length; i++)
+                if (allBodies[i] != null && !allBodies[i].IsSleeping()) bodies++;
             Debug.Log(string.Format(CultureInfo.InvariantCulture,
                 "[SlimeBridge] frame watch: {0} frames in {1:F0}s avg {2:F1} ms ({3:F0} fps) p95<={4:F0} ms worst {5:F0} ms, {6:P0} of frames >= 33 ms | actors {7} (imported {8}) renderers {9} lights {10} awake rigidbodies {11} | managed {12:F0} MB{13}",
                 _frames, WindowSeconds, avg, 1000f / avg, p95, _max, slowShare, actors.Length, imported, renderers, lights, bodies,

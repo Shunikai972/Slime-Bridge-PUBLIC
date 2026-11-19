@@ -7,12 +7,29 @@ using UnityEngine;
 
 namespace SlimeBridge.SR1
 {
+    /// <summary>Caches <see cref="Camera.main"/> across billboards so Unity 2019 does not run FindGameObjectsWithTag every frame per statue.</summary>
+    internal static class CachedMainCamera
+    {
+        private static Camera? _cached;
+        private static int _lastLookupFrame = -1;
+
+        internal static Camera? Get()
+        {
+            if (_cached != null && _cached.isActiveAndEnabled) return _cached;
+            var frame = Time.frameCount;
+            if (_lastLookupFrame == frame) return _cached;
+            _lastLookupFrame = frame;
+            _cached = Camera.main;
+            return _cached;
+        }
+    }
+
     /// <summary>Keeps a floating name turned towards the player (yaw only), readable from any side of the island.</summary>
     internal sealed class FaceCamera : MonoBehaviour
     {
         public void LateUpdate()
         {
-            var cam = Camera.main;
+            var cam = CachedMainCamera.Get();
             if (cam == null) return;
             var away = transform.position - cam.transform.position;
             away.y = 0f;
@@ -49,6 +66,8 @@ namespace SlimeBridge.SR1
 
         public void LateUpdate()
         {
+            // RegisterBundlesListener handles immediate language switches; poll occasionally as a safety net.
+            if ((Time.frameCount & 31) != 0) return;
             var game = GameContext.Instance;
             var dir = game != null ? game.MessageDirector : null;
             if (dir == null) return;
@@ -567,11 +586,11 @@ namespace SlimeBridge.SR1
                 {
                     var actorBundle = dir.GetBundle("actor");
                     var actorName = actorBundle != null ? actorBundle.GetResourceString("l." + lower + "_slime", false) : null;
-                    if (!string.IsNullOrEmpty(actorName) && !actorName.StartsWith("l.", StringComparison.Ordinal)) return actorName;
+                    if (!string.IsNullOrEmpty(actorName) && !actorName!.StartsWith("l.", StringComparison.Ordinal)) return actorName;
 
                     var pediaBundle = dir.GetBundle("pedia");
                     var pediaName = pediaBundle != null ? pediaBundle.GetResourceString("t." + lower + "_slime", false) : null;
-                    if (!string.IsNullOrEmpty(pediaName) && !pediaName.StartsWith("t.", StringComparison.Ordinal)) return pediaName;
+                    if (!string.IsNullOrEmpty(pediaName) && !pediaName!.StartsWith("t.", StringComparison.Ordinal)) return pediaName;
                 }
                 if (Enum.TryParse<Identifiable.Id>(slime.ToUpperInvariant() + "_SLIME", out var id))
                 {

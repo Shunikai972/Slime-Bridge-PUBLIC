@@ -21,6 +21,8 @@ import uuid
 import zipfile
 from pathlib import Path
 
+from apps.launcher.fsutil import sha256_file as _sha
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CACHE = REPO_ROOT / 'Lab' / 'Cache' / 'loaders'
 
@@ -55,15 +57,6 @@ def present(realm, game_root):
 
 def describe(realm, game_root):
     return LOADERS[realm]['name'] if present(realm, game_root) else 'Not configured'
-
-
-def _sha(path):
-    import hashlib
-    digest = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for chunk in iter(lambda: stream.read(1 << 20), b''):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def cached(realm, cache=CACHE, opener=urllib.request.urlopen):

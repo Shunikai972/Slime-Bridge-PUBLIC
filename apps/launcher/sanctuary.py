@@ -6,7 +6,6 @@ transforms, parameters) written under ``Lab/`` and the *layout* places them. Ins
 """
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import json
 import os
@@ -16,6 +15,8 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+
+from apps.launcher.fsutil import is_reparse as _reparse, sha256_file as _sha
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 KIT_ROOT = REPO_ROOT / 'Lab' / 'AssetCache'
@@ -32,14 +33,6 @@ KEEP = 3                                                      # newest kits / la
 def dependencies():
     missing = [pip for module, pip in DEPENDENCIES.items() if importlib.util.find_spec(module) is None]
     return {'ok': not missing, 'missing': missing, 'hint': ('pip install ' + ' '.join(missing)) if missing else None}
-
-
-def _sha(path):
-    digest = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for chunk in iter(lambda: stream.read(1 << 20), b''):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _newest(root, prefix, marker):
@@ -129,11 +122,6 @@ def _prune(root, prefix, keep=KEEP, current=None):
         if current is not None and old.resolve() == current:
             continue
         shutil.rmtree(old, ignore_errors=True)
-
-
-def _reparse(path):
-    path = Path(path)
-    return path.is_symlink() or bool(getattr(path.lstat(), 'st_file_attributes', 0) & 0x400)
 
 
 def install_dir(game_root):

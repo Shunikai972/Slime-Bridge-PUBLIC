@@ -75,7 +75,7 @@ namespace SlimeBridge.SR1
             return string.Equals(Path.GetFileName(value), value, StringComparison.Ordinal);
         }
 
-        private static string CacheDirectory(string canonicalId)
+        private static string? CacheDirectory(string canonicalId)
         {
             var repoRoot = LabSpecPathGuard.FindRepoRoot();
             if (repoRoot == null) return null;
@@ -247,23 +247,23 @@ namespace SlimeBridge.SR1
                 lightingRows.Count > 0 && lightingRows[0] is Dictionary<string, object> lightingMaterial &&
                 !ImportedBodyLighting.TryRead(lightingMaterial, out bodyLighting, out problem))
             { problem = "renderer " + path + ": " + problem; return false; }
-            Transform parent;
+            Transform? parent;
             if (staticRow)
             {
                 // Static rows carry an authored source bone parent: every container must already
                 // exist (skeleton or authored hierarchy) and parent_bone must agree with the
                 // path. Creating a missing container silently (the legacy EnsurePath behavior)
                 // would leave the part visibly present but detached from the bone it follows.
-                if (!TryResolveStaticParent(root, renderer, path, out parent, out var parentProblem))
+                if (!TryResolveStaticParent(root, renderer, path!, out parent, out var parentProblem))
                 { problem = "renderer " + path + ": " + parentProblem; return false; }
             }
             else
             {
-                parent = EnsurePath(root, path, ref builtNodes, maxNodesTotal);
+                parent = EnsurePath(root, path!, ref builtNodes, maxNodesTotal);
                 if (parent == null) { problem = "model hierarchy exceeds the node budget at " + path; return false; }
             }
             if (++builtNodes > maxNodesTotal) { problem = "model hierarchy exceeds the node budget"; return false; }
-            var gameObject = new GameObject(SanitizeName(path));
+            var gameObject = new GameObject(SanitizeName(path!));
             gameObject.transform.SetParent(parent, false);
             ApplyLocalTransform(gameObject.transform, renderer);
             var mesh = BuildMesh(renderer, out vertices);
@@ -297,7 +297,7 @@ namespace SlimeBridge.SR1
                 if (renderer.TryGetValue("root_bone", out var rootBoneValue))
                 {
                     var rootBoneName = rootBoneValue as string;
-                    skinned.rootBone = string.IsNullOrEmpty(rootBoneName) ? null : FindChildByName(root, rootBoneName);
+                    skinned.rootBone = string.IsNullOrEmpty(rootBoneName) ? null : FindChildByName(root, rootBoneName!);
                     if (skinned.rootBone == null)
                     { problem = "source root bone is unresolved"; UnityEngine.Object.Destroy(gameObject); return false; }
                 }
@@ -318,11 +318,11 @@ namespace SlimeBridge.SR1
             partData.SourceFace = sourceOwned.Count > 0;
             // Row provenance seeds the spawn rebind policy and the LAB read-back before the
             // source-face early-out: face rows report their role and shader too.
-            partData.SourceRole = renderer.TryGetValue("role", out var roleValue) ? roleValue as string : null;
+            partData.SourceRole = (renderer.TryGetValue("role", out var roleValue) ? roleValue as string : null) ?? "";
             if (renderer.TryGetValue("materials", out var shaderRowsValue) && shaderRowsValue is List<object> shaderRows &&
                 shaderRows.Count > 0 && shaderRows[0] is Dictionary<string, object> shaderRow &&
                 shaderRow.TryGetValue("shader", out var shaderValue))
-                partData.SourceShader = shaderValue as string;
+                partData.SourceShader = (shaderValue as string) ?? "";
             if (partData.SourceFace)
             {
                 // Every pass already has its original palette and atlas. Do not collapse
@@ -358,9 +358,9 @@ namespace SlimeBridge.SR1
                         if (!(textureRowObject is Dictionary<string, object> textureRow)) continue;
                         var textureProperty = textureRow.TryGetValue("property", out var propValue) ? propValue as string : null;
                         var textureFile = textureRow.TryGetValue("file", out var fileValue) ? fileValue as string : null;
-                        if (string.IsNullOrEmpty(textureProperty) || string.IsNullOrEmpty(textureFile) || !IsSafeFileName(textureFile)) continue;
-                        if (!verifiedFiles.Contains(textureFile)) continue;
-                        var patternPath = Path.Combine(directory, textureFile);
+                        if (string.IsNullOrEmpty(textureProperty) || string.IsNullOrEmpty(textureFile) || !IsSafeFileName(textureFile!)) continue;
+                        if (!verifiedFiles.Contains(textureFile!)) continue;
+                        var patternPath = Path.Combine(directory, textureFile!);
                         if (!LabSpecPathGuard.IsAllowedFile(directory, patternPath, out _)) continue;
                         if (string.Equals(textureProperty, "_StripeTextureBaked", StringComparison.Ordinal))
                             partData.Pattern = LoadTexture(patternPath) ?? partData.Pattern;
@@ -382,7 +382,7 @@ namespace SlimeBridge.SR1
             return true;
         }
 
-        private static Transform EnsurePath(Transform root, string path, ref int builtNodes, int maxNodesTotal)
+        private static Transform? EnsurePath(Transform root, string path, ref int builtNodes, int maxNodesTotal)
         {
             var parts = path.Split('/');
             var current = root;
@@ -410,7 +410,7 @@ namespace SlimeBridge.SR1
         /// mismatch refuses the row (fail closed) instead of silently detaching the part from the
         /// bone it follows. Legacy rows without parent_bone keep the strict path contract only.</summary>
         private static bool TryResolveStaticParent(Transform root, Dictionary<string, object> renderer, string path,
-            out Transform parent, out string problem)
+            out Transform? parent, out string problem)
         {
             parent = null;
             problem = "";
@@ -432,7 +432,7 @@ namespace SlimeBridge.SR1
             }
             if (!string.IsNullOrEmpty(parentBone))
             {
-                var declared = FindChildByName(root, parentBone);
+                var declared = FindChildByName(root, parentBone!);
                 if (declared == null) { problem = "static row parent bone is unresolved: " + parentBone; return false; }
                 if (!ReferenceEquals(declared, current))
                 { problem = "static row parent_bone disagrees with its path"; return false; }
@@ -450,7 +450,7 @@ namespace SlimeBridge.SR1
             else transform.localScale = Vector3.one;
         }
 
-        private static Mesh BuildMesh(Dictionary<string, object> renderer, out int vertexCount)
+        private static Mesh? BuildMesh(Dictionary<string, object> renderer, out int vertexCount)
         {
             vertexCount = 0;
             if (!TryVector3List(renderer, "vertices", out var vertices) || vertices.Count == 0) return null;
@@ -495,7 +495,7 @@ namespace SlimeBridge.SR1
         private static bool TryBuildMaterials(string directory, Dictionary<string, object> renderer,
             HashSet<string> verifiedFiles, out Material[] materials, out List<UnityEngine.Object> sourceOwned, out string problem)
         {
-            materials = null;
+            materials = Array.Empty<Material>();
             sourceOwned = new List<UnityEngine.Object>();
             problem = "";
             var rows = renderer.TryGetValue("materials", out var m) ? m as List<object> : null;
@@ -523,7 +523,7 @@ namespace SlimeBridge.SR1
                 {
                     if (!(row is Dictionary<string, object> materialRow))
                     { problem = "materials array contains a malformed row"; return false; }
-                    if (!TryBuildMaterialEntry(directory, materialRow, verifiedFiles, out var material, out var entryProblem))
+                    if (!TryBuildMaterialEntry(directory, materialRow, verifiedFiles, out var material, out var entryProblem) || material == null)
                     { problem = entryProblem; return false; }
                     built.Add(material);
                 }
@@ -562,14 +562,14 @@ namespace SlimeBridge.SR1
         }
 
         private static bool TryBuildMaterialEntry(string directory, Dictionary<string, object> entry,
-            HashSet<string> verifiedFiles, out Material material, out string problem)
+            HashSet<string> verifiedFiles, out Material? material, out string problem)
         {
             material = null;
             problem = "";
             var result = new Material(Shader.Find("Standard"));
-            Texture2D displayTexture = null;
+            Texture2D? displayTexture = null;
             var propertyTextures = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
-            List<object> textures = null;
+            List<object>? textures = null;
             if (entry.TryGetValue("textures", out var texRows))
             {
                 textures = texRows as List<object>;
@@ -591,11 +591,11 @@ namespace SlimeBridge.SR1
                         return false;
                     }
                     var file = textureRow.TryGetValue("file", out var f) ? f as string : null;
-                    if (string.IsNullOrEmpty(file) || !IsSafeFileName(file))
+                    if (string.IsNullOrEmpty(file) || !IsSafeFileName(file!))
                     { problem = "texture reference is unsafe"; UnityEngine.Object.Destroy(result); return false; }
-                    if (!verifiedFiles.Contains(file))
+                    if (!verifiedFiles.Contains(file!))
                     { problem = "texture is not covered by the verified manifest: " + file; UnityEngine.Object.Destroy(result); return false; }
-                    var texturePath = Path.Combine(directory, file);
+                    var texturePath = Path.Combine(directory, file!);
                     if (!LabSpecPathGuard.IsAllowedFile(directory, texturePath, out var fileReason))
                     { problem = "texture refused: " + fileReason; UnityEngine.Object.Destroy(result); return false; }
                     var loaded = LoadTexture(texturePath);
@@ -603,8 +603,8 @@ namespace SlimeBridge.SR1
                     { problem = "texture failed to decode: " + file; UnityEngine.Object.Destroy(result); return false; }
                     var property = textureRow.TryGetValue("property", out var prop) ? prop as string : "_MainTex";
                     if (string.IsNullOrEmpty(property)) continue;
-                    propertyTextures[property] = loaded;
-                    result.SetTexture(property, loaded);
+                    propertyTextures[property!] = loaded;
+                    result.SetTexture(property!, loaded);
                 }
             }
             foreach (var property in MainTexturePreference)
@@ -673,7 +673,7 @@ namespace SlimeBridge.SR1
             return true;
         }
 
-        private static Texture2D LoadTexture(string path)
+        private static Texture2D? LoadTexture(string path)
         {
             Texture2D? texture = null;
             var complete = false;
@@ -781,7 +781,7 @@ namespace SlimeBridge.SR1
         private static bool TryBindSkin(Dictionary<string, object> renderer, Mesh mesh, Transform root,
             out Transform[] bones)
         {
-            bones = null;
+            bones = Array.Empty<Transform>();
             var names = renderer.TryGetValue("skin_bones", out var n) ? n as List<object> : null;
             var poses = renderer.TryGetValue("bind_poses", out var p) ? p as List<object> : null;
             var weights = renderer.TryGetValue("bone_weights", out var w) ? w as List<object> : null;
@@ -792,8 +792,9 @@ namespace SlimeBridge.SR1
             {
                 var boneName = names[i] as string;
                 if (string.IsNullOrEmpty(boneName)) return false;
-                boneList[i] = FindChildByName(root, boneName);
-                if (boneList[i] == null) return false;
+                var found = FindChildByName(root, boneName!);
+                if (found == null) return false;
+                boneList[i] = found;
             }
             var poseArray = new Matrix4x4[poses.Count];
             for (var i = 0; i < poses.Count; i++)
@@ -834,7 +835,7 @@ namespace SlimeBridge.SR1
         }
 
         /// <summary>Bounded breadth-first search for a named transform under the model root.</summary>
-        private static Transform FindChildByName(Transform root, string name)
+        private static Transform? FindChildByName(Transform root, string name)
         {
             if (root == null) return null;
             const int budget = 4096;
@@ -870,7 +871,7 @@ namespace SlimeBridge.SR1
                 var name = bone.TryGetValue("name", out var n) ? n as string : null;
                 var go = new GameObject(string.IsNullOrEmpty(name) ? "bone" : name);
                 var boneTransform = go.transform;
-                var parentIndex = TryInt(bone.TryGetValue("parent", out var p) ? p : null, out var parsedParent) ? parsedParent : -1;
+                var parentIndex = bone.TryGetValue("parent", out var p) && p != null && TryInt(p, out var parsedParent) ? parsedParent : -1;
                 if (parentIndex >= i || parentIndex < -1 || (parentIndex >= 0 && transforms[parentIndex] == null))
                 {
                     problem = "skeleton bone " + i + " has an unresolved parent index";

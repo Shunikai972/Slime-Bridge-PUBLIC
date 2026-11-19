@@ -96,9 +96,11 @@ namespace SlimeBridge.SR1
                 if (manifest != null && manifest.TryGetValue("icon", out var value))
                 {
                     if (!(value is Dictionary<string, object> icon)) throw new InvalidDataException("source icon descriptor malformed");
+                    var encoding = Text(icon, "pixel_encoding");
+                    var composed = encoding == "composed-square-icon";
                     if (Text(icon, "schema") != "bridge-source-sprite" || Number(icon, "schema_version") != 1 ||
                         !icon.TryGetValue("mandatory", out var required) || !(required is bool) ||
-                        (mandatory && !(bool)required)) throw new InvalidDataException("source icon schema/mandatory flag invalid");
+                        (mandatory && !composed && !(bool)required)) throw new InvalidDataException("source icon schema/mandatory flag invalid");
                     var file = Text(icon, "file") ?? "";
                     if (string.IsNullOrEmpty(file) || file.Contains("..") || file.IndexOfAny(new[] { '/', '\\', ':' }) >= 0 ||
                         Path.IsPathRooted(file) || Path.GetFileName(file) != file) throw new InvalidDataException("unsafe source icon file");
@@ -112,11 +114,23 @@ namespace SlimeBridge.SR1
                     if (rect[0] != 0 || rect[1] != 0 || rect[2] != 1024 || rect[3] != 1024 ||
                         size[0] != 1024 || size[1] != 1024 || pivot[0] != .5f || pivot[1] != .5f || ppu != 100 ||
                         Number(icon, "source_settings_raw") != 64 || Number(icon, "packing_rotation") != 0 ||
-                        (Text(icon, "pixel_encoding") != "source-texture-rgba-unresampled" &&
-                         Text(icon, "pixel_encoding") != "composed-square-icon")) throw new InvalidDataException("source icon framing/packing unsupported");
-                    if (mandatory && (Text(icon, "source_sprite_name") != "iconSlimeRingtail" ||
-                        Number(icon, "source_sprite_path_id") != 3052 || Number(icon, "source_appearance_path_id") != 31303 ||
-                        Number(icon, "source_texture_path_id") != 1324)) throw new InvalidDataException("Ringtail source icon identity invalid");
+                        (encoding != "source-texture-rgba-unresampled" && !composed)) throw new InvalidDataException("source icon framing/packing unsupported");
+                    if (mandatory)
+                    {
+                        var spriteName = Text(icon, "source_sprite_name") ?? "";
+                        if (composed)
+                        {
+                            // SR2 1.x packs/ships full-art icons (e.g. iconSlimeRingtail_small) with build-dependent path IDs.
+                            if (!spriteName.StartsWith("iconSlimeRingtail", StringComparison.Ordinal))
+                                throw new InvalidDataException("Ringtail source icon identity invalid");
+                        }
+                        else if (spriteName != "iconSlimeRingtail" ||
+                            Number(icon, "source_sprite_path_id") != 3052 || Number(icon, "source_appearance_path_id") != 31303 ||
+                            Number(icon, "source_texture_path_id") != 1324)
+                        {
+                            throw new InvalidDataException("Ringtail source icon identity invalid");
+                        }
+                    }
                     var crop = Array(icon, "source_texture_rect", 4); var offset = Array(icon, "source_texture_rect_offset", 2);
                     if (crop[0] < 0 || crop[1] < 0 || crop[2] <= 0 || crop[3] <= 0 ||
                         crop[0] + crop[2] > 1024.01f || crop[1] + crop[3] > 1024.01f ||

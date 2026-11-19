@@ -130,6 +130,7 @@ namespace SlimeBridge.SR1
                 var table = ByCanonical();
                 foreach (var item in offered)
                 {
+                    if (item.Value <= 0) continue;
                     if (!table.TryGetValue(CarryNames.Canonical(item.Key), out var id)) continue;
                     var remaining = item.Value;
                     for (var pass = 0; pass < 2 && remaining > 0; pass++)
@@ -139,10 +140,27 @@ namespace SlimeBridge.SR1
                             var match = name == id;
                             if (pass == 0 ? !match : name != Identifiable.Id.NONE) continue;
                             if (!ammo.CouldAddToSlot(id, i, false)) continue;
-                            var room = ammo.GetSlotMaxCount(id, i) - ammo.GetSlotCount(i);
+                            var beforeCount = ammo.GetSlotCount(i);
+                            var room = ammo.GetSlotMaxCount(id, i) - beforeCount;
                             var put = Math.Min(room, remaining);
-                            if (put <= 0 || !ammo.MaybeAddToSpecificSlot(id, null, i, put, false)) continue;
-                            remaining -= put;
+                            if (put <= 0) continue;
+                            try
+                            {
+                                if (!ammo.MaybeAddToSpecificSlot(id, null, i, put, false)) continue;
+                                var actual = Math.Max(0, ammo.GetSlotCount(i) - beforeCount);
+                                remaining -= Math.Min(actual, remaining);
+                            }
+                            catch (Exception slotEx)
+                            {
+                                // Roll back any partial slot mutation so a HUD/UI exception never duplicates or corrupts the vacpack.
+                                try
+                                {
+                                    var afterCount = ammo.GetSlotCount(i);
+                                    if (afterCount > beforeCount) ammo.Decrement(i, afterCount - beforeCount);
+                                }
+                                catch (Exception) { }
+                                Debug.Log("[SlimeBridge] carry receive slot " + i + " (" + item.Key + ") failed: " + slotEx.GetType().Name + ": " + slotEx.Message);
+                            }
                         }
                     var added = item.Value - remaining;
                     if (added > 0) accepted[item.Key] = added;

@@ -623,9 +623,17 @@ class LauncherAPI:
                 if realm == waiting and not resume_env:
                     resume_env['SLIMEBRIDGE_BACKGROUND_START'] = '1'  # the waiting game can start at its main menu
                 name_env = {'SLIMEBRIDGE_ONLINE_NAME': data['mp_name']} if realm == 'SR1' and data.get('mp_name') else {}
-                launched.append(self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(self._settings()[1]['bridge'], realm), **self._perf_env(), **lab_env, **resume_env, **name_env}))
+                started_proc = self._launcher.launch(primary, extra_env={**self._host.realm_env(realm), **travel.bridge_env(self._settings()[1]['bridge'], realm), **self._perf_env(), **lab_env, **resume_env, **name_env})
+                launched.append(started_proc)
                 if realm == front and not background:
                     self._session.set(realm, resume_env.get('SLIMEBRIDGE_TRAVEL_SAVE') if resume_env.get('SLIMEBRIDGE_TRAVEL_MODE') == 'RESUME' else None)
+                    try:
+                        # Grant the newly started foreground game permission to take focus while the launcher still holds it.
+                        pid = started_proc.get('pid') if isinstance(started_proc, dict) else None
+                        if isinstance(pid, int) and pid > 0:
+                            getattr(self._window_control(), 'allow_foreground', lambda _p: False)(pid)
+                    except (windows.WindowError, OSError):
+                        pass
             except RuntimeErrorWithCode as exc:
                 errors.append({'realm': realm, 'error': exc.code, 'detail': exc.detail})
         if follow and launched:
@@ -636,6 +644,7 @@ class LauncherAPI:
             with self._audio_policy_lock:
                 if launch_epoch == self._audio_startup_epoch:
                     self._audio_startup_deadline = 0.0
+            self._bring_to_front(front, launch_epoch)
         elif target == 'BOTH' and len(launched) == 2:
             self._keep_in_front(front, launch_epoch)
             # One session: closing the game the player is in saves and closes the waiting one too.
@@ -650,6 +659,8 @@ class LauncherAPI:
             with self._audio_policy_lock:
                 if launch_epoch == self._audio_startup_epoch:
                     self._audio_startup_deadline = 0.0
+            if not background and launched and not errors:
+                self._bring_to_front(front, launch_epoch)
         return {'ok': bool(launched) and not errors, 'launched': launched, 'errors': errors, 'warnings': warnings,
                 'host': self._host.state(), 'front': front if target == 'BOTH' else None}
 
@@ -666,6 +677,40 @@ class LauncherAPI:
         status = plugins.status(realm, root)
         return {'ok': status['state'] == 'current' and bool(status['loader']),
                 'error': None if status['state'] == 'current' else 'PLUGIN_NOT_CURRENT'}
+
+    def _bring_to_front(self, front, epoch):
+        """A single foreground game was started (Play, or Play with both games before the follower starts):
+        bring its Unity window to the front as soon as it appears so it never opens behind the launcher."""
+        control = self._window_control()
+        game_windows = getattr(control, '_game_windows', None)
+        if game_windows is None:
+            return
+
+        def _focus_once():
+            front_pid = self._launcher._children.get(front)
+            if front_pid is None:
+                return
+            deadline = time.monotonic() + 35
+            while time.monotonic() < deadline and epoch == self._audio_startup_epoch:
+                time.sleep(0.4)
+                try:
+                    if self._launcher._children.get(front) is not front_pid or front_pid.poll() is not None:
+                        return
+                    with self._travel._lock, self._audio_policy_lock:
+                        if (epoch != self._audio_startup_epoch or
+                                any(t['state'] in travel.ACTIVE for t in self._travel.transitions) or
+                                self._travel.session_closing(front) or self._launcher.closing(front)):
+                            return
+                        if not game_windows(front_pid.pid):
+                            continue
+                        if control.focus_startup(front_pid.pid):
+                            return
+                except (windows.WindowError, OSError):
+                    pass
+
+        with self._audio_policy_lock:
+            if epoch == self._audio_startup_epoch:
+                threading.Thread(target=_focus_once, name='slimebridge-bring-front', daemon=True).start()
 
     def _keep_in_front(self, front, epoch):
         """Both games were started: the chosen one stays in front, the other is minimized as soon as its window shows."""
@@ -953,6 +998,7 @@ class LauncherAPI:
 
     def shutdown(self) -> None:
         """Called when the window closes: stop the child processes this launcher started (never the games)."""
+        from apps.launcher.runtime import restore_display_settings
         self._travel_stop.set()
         self._audio_stop.set()
         if self._audio_thread is not None:
@@ -964,7 +1010,12 @@ class LauncherAPI:
             try:
                 self._audio.restore()
             finally:
-                self._host.stop()
+                try:
+                    for realm in EXECUTABLES:
+                        if not self._launcher.running(realm):
+                            restore_display_settings(realm)
+                finally:
+                    self._host.stop()
 
     # ---- asset extraction ------------------------------------------------------------------------------------------
     def _tool(self, data=None) -> dict:

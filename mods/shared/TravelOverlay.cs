@@ -26,12 +26,23 @@ namespace SlimeBridge.Shared
         private float _t, _duration = 1f;
         private Action? _onDone;
         private string _title = "", _subtitle = "";
+        private readonly string[] _titleDots = { ".", "..", "..." };
         private GUIStyle? _titleStyle, _subStyle;
         private float _lastTime;
 
         private string _hint = "";
         private float _hintUntil;
         private GUIStyle? _hintStyle;
+
+        private void SetTitle(string title, string subtitle)
+        {
+            _subtitle = subtitle;
+            if (string.Equals(_title, title, StringComparison.Ordinal)) return;
+            _title = title;
+            _titleDots[0] = title + ".";
+            _titleDots[1] = title + "..";
+            _titleDots[2] = title + "...";
+        }
 
         /// <summary>A short message at the top of the screen (fades after <paramref name="seconds"/>).</summary>
         internal void ShowHint(string text, float seconds)
@@ -56,12 +67,14 @@ namespace SlimeBridge.Shared
 
         private void DrawHint()
         {
-            if (_hint.Length == 0 || Time.realtimeSinceStartup > _hintUntil) return;
+            if (_hint.Length == 0) return;
+            var now = Time.realtimeSinceStartup;
+            if (now > _hintUntil) { _hint = ""; return; }
             if (Event.current != null && Event.current.type != EventType.Repaint) return;
             if (_hintStyle == null) _hintStyle = LabelStyle(FontStyle.Bold);
             var w = (float)Screen.width; var h = (float)Screen.height;
             _hintStyle.fontSize = Mathf.Max(15, (int)(h * 0.028f));
-            var alpha = Mathf.Clamp01((_hintUntil - Time.realtimeSinceStartup) / 0.6f);
+            var alpha = Mathf.Clamp01((_hintUntil - now) / 0.6f);
             var previousColor = GUI.color; var previousDepth = GUI.depth;
             GUI.depth = -9000;
             var box = new Rect(w * 0.2f, h * 0.07f, w * 0.6f, h * 0.075f);
@@ -79,7 +92,7 @@ namespace SlimeBridge.Shared
         /// <summary>The iris closes (the player enters the portal); <paramref name="onCovered"/> runs when the screen is fully covered.</summary>
         internal void Close(string title, string subtitle, float seconds, Action? onCovered)
         {
-            _title = title; _subtitle = subtitle;
+            SetTitle(title, subtitle);
             if (_phase == Phase.Covered) { onCovered?.Invoke(); return; }
             Begin(Phase.Closing, seconds, onCovered);
         }
@@ -87,7 +100,7 @@ namespace SlimeBridge.Shared
         /// <summary>Cover instantly (a freshly started destination game waits behind the card until the player arrives).</summary>
         internal void CoverNow(string title, string subtitle)
         {
-            _title = title; _subtitle = subtitle; _onDone = null;
+            SetTitle(title, subtitle); _onDone = null;
             _phase = Phase.Covered; _t = 0f; _lastTime = Time.realtimeSinceStartup;
         }
 
@@ -230,11 +243,12 @@ namespace SlimeBridge.Shared
                 GUI.color = c;
                 GUI.DrawTexture(new Rect(cx - size * squash / 2f, cy - size / squash / 2f, size * squash, size / squash), _blob);
             }
-            var dots = new string('.', 1 + (int)(time * 2.5f) % 3);
+            var dotIndex = (int)(time * 2.5f) % 3;
+            if (dotIndex < 0) dotIndex = 0;
             _titleStyle.fontSize = Mathf.Max(18, (int)(h * 0.045f));
             _subStyle!.fontSize = Mathf.Max(13, (int)(h * 0.026f));
             GUI.color = new Color(1f, 1f, 1f, alpha);
-            GUI.Label(new Rect(w * 0.1f, h * 0.55f, w * 0.8f, h * 0.08f), _title + dots, _titleStyle);
+            GUI.Label(new Rect(w * 0.1f, h * 0.55f, w * 0.8f, h * 0.08f), _titleDots[dotIndex], _titleStyle);
             GUI.color = new Color(0.86f, 0.8f, 1f, alpha * 0.9f);
             GUI.Label(new Rect(w * 0.15f, h * 0.63f, w * 0.7f, h * 0.06f), _subtitle, _subStyle);
         }

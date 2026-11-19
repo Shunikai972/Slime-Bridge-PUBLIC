@@ -51,8 +51,12 @@ namespace SlimeBridge.SR2
                     if (group == null || !definition!.IsAllowed(sibling) || definition.IsAllowed(type)) continue;
                     var members = group.ImmediateMemberTypes;
                     if (members != null && !members.Contains(type)) members.Add(type);
-                    var runtime = group._runtimeObject?._memberTypes;
+                    var runtimeObj = group._runtimeObject;
+                    var runtime = runtimeObj?._memberTypes;
                     if (runtime != null && !runtime.Contains(type)) runtime.Add(type);
+                    var indices = runtimeObj?._memberIndices;
+                    if (indices != null && !indices.ContainsKey(type))
+                        indices[type] = runtime != null ? runtime.Count - 1 : indices.Count;
                     admitted |= definition.IsAllowed(type);
                 }
                 MelonLoader.MelonLogger.Msg("carry: " + (type.ReferenceId ?? "?") + (admitted ? " admitted in the vac slots of " : " still refused by the vac slots of ") + siblingRef);
@@ -90,24 +94,64 @@ namespace SlimeBridge.SR2
             {
                 var ammo = Vac();
                 if (ammo == null) return accepted;
+                // Ensure imported appearances, vac groups, and save persistence are live BEFORE mutating any slot,
+                // so HUD updates (AmmoSlotViewHolder.UpdateAmmoDisplay) and the follow-up save never throw.
+                Sr2SpeciesRegistrar.Active?.EnsureWorldBindings();
                 var table = ByCanonical();
                 foreach (var item in offered)
                 {
+                    if (item.Value <= 0) continue;
                     if (!table.TryGetValue(CarryNames.Canonical(item.Key), out var type)) continue;
                     if (!ammo.CouldAdd(type) && (!AllowInVac(ammo, type) || !ammo.CouldAdd(type))) continue;
                     var remaining = item.Value;
                     var slots = ammo.Slots;
-                    for (var pass = 0; pass < 2 && remaining > 0; pass++)
-                        for (var i = 0; i < slots.Length && remaining > 0; i++)
+                    var itemFailed = false;
+                    for (var pass = 0; pass < 2 && remaining > 0 && !itemFailed; pass++)
+                        for (var i = 0; i < slots.Length && remaining > 0 && !itemFailed; i++)
                         {
                             var slot = slots[i];
                             if (slot == null || !slot.IsUnlocked) continue;
                             var match = slot.Id != null && slot.Id.Pointer == type.Pointer && slot.Count > 0;
                             var empty = slot.Id == null || slot.Count <= 0;
                             if (pass == 0 ? !match : !empty) continue;
-                            // The native add refuses what does not fit: try the whole remainder, then smaller amounts.
-                            for (var attempt = remaining; attempt > 0; attempt /= 2)
-                                if (ammo.AddToSlot(type, i, attempt)) { remaining -= attempt; break; }
+                            var beforeCount = match ? slot.Count : 0;
+                            int cap;
+                            try
+                            {
+                                var left = match ? ammo.GetSlotSpaceLeft(i) : ammo.GetSlotMaxCount(i);
+                                cap = left > 0 ? Math.Min(remaining, left) : remaining;
+                            }
+                            catch (Exception) { cap = remaining; }
+                            // Exact-fit first; if native refuses (e.g. smaller effective cap), step down cleanly.
+                            for (var attempt = cap; attempt > 0; attempt = attempt > 1 ? attempt / 2 : 0)
+                            {
+                                try
+                                {
+                                    if (ammo.AddToSlot(type, i, attempt))
+                                    {
+                                        var delta = slot.Id != null && slot.Id.Pointer == type.Pointer ? Math.Max(0, slot.Count - beforeCount) : attempt;
+                                        remaining -= Math.Min(remaining, delta > 0 ? delta : attempt);
+                                        break;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    MelonLoader.MelonLogger.Msg("carry receive failed for " + item.Key + " (slot " + i + "): " + ex.GetType().Name + ": " + ex.Message);
+                                    // Atomicity: if native mutated the slot before throwing (e.g. in HUD UpdateAmmoDisplay),
+                                    // roll back the partial mutation so the item is never duplicated or corrupted.
+                                    try
+                                    {
+                                        if (slot.Id != null && slot.Id.Pointer == type.Pointer && slot.Count > beforeCount)
+                                        {
+                                            if (beforeCount == 0) ammo.Clear(i);
+                                            else ammo.Decrement(i, slot.Count - beforeCount);
+                                        }
+                                    }
+                                    catch (Exception rex) { MelonLoader.MelonLogger.Msg("carry receive rollback failed: " + rex.GetType().Name); }
+                                    itemFailed = true;
+                                    break;
+                                }
+                            }
                         }
                     var added = item.Value - remaining;
                     if (added > 0) accepted[item.Key] = added;

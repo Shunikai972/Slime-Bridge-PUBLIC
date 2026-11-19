@@ -197,6 +197,8 @@ namespace SlimeBridge.SR2
         }
 
         // ----- placement: flat, free ground near the player the first time; remembered afterwards
+        private static readonly Vector3[] CardinalEdges = new[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right };
+
         /// <summary>Looks for room for the pad around <paramref name="around"/>: strict (flat, free air), then relaxed, then simply the ground in front of the player.</summary>
         private bool FindSpot(Vector3 around, out Vector3 spot, out float yaw)
         {
@@ -225,9 +227,9 @@ namespace SlimeBridge.SR2
                         // The pad and the column of light need free air above the ground, and the ground must be flat all across the pad.
                         if (Physics.CheckCapsule(hit.point + Vector3.up * level.Low, hit.point + Vector3.up * level.High, level.Clear, mask, QueryTriggerInteraction.Ignore)) { blocked++; continue; }
                         var flat = true;
-                        foreach (var edge in new[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right })
+                        for (var e = 0; e < CardinalEdges.Length; e++)
                         {
-                            var at = hit.point + edge * 3.4f;
+                            var at = hit.point + CardinalEdges[e] * 3.4f;
                             if (!Physics.Raycast(at + Vector3.up * 1.5f, Vector3.down, out var h2, 5f, mask, QueryTriggerInteraction.Ignore) || Mathf.Abs(h2.point.y - hit.point.y) > level.Flat) { flat = false; break; }
                         }
                         if (!flat) { uneven++; continue; }
@@ -452,6 +454,12 @@ namespace SlimeBridge.SR2
                 _lastCross = Time.realtimeSinceStartup;
                 // the player came through this portal: it is open for this save (never stranded behind the newbucks price)
                 if (!_paid) { _paid = true; SaveState(); }
+                // Build the 3D portal immediately before the overlay opens so the first frame after crossing
+                // never shows empty ground even when SR2 booted in the background at low graphics.
+                if (_root == null)
+                {
+                    try { Build(); } catch (Exception ex) { Note("arrival portal build deferred: " + ex.GetType().Name); }
+                }
                 Note("player emerged from the portal");
                 return true;
             }

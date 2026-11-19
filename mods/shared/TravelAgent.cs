@@ -114,6 +114,8 @@ namespace SlimeBridge.Shared
         internal void Tick(double now)
         {
             if (_hasResult && _current != null) Finish(now);
+            if (_transport is HttpTravelTransport http)
+                http.Slow = _current == null && !_realm.Held && !http.InFastWindow(now);
             var message = _transport.Next(now);
             if (now - _transport.LastContact > HeldWithoutHostSeconds)
             {
@@ -199,14 +201,15 @@ namespace SlimeBridge.Shared
     /// <summary>BridgeHost mailbox over plain HTTP (works under Mono/net472 and Il2Cpp/net6 alike). Polling never touches the main thread.</summary>
     internal sealed class HttpTravelTransport : ITravelTransport
     {
-        private readonly string _base, _token, _realm;
+        private readonly string _base, _token, _realm, _pollPath, _authHeader;
         private int _inFlight;
         private double _nextPoll;
+        private double _fastUntil;
         private TravelMessage? _latest;
         private string? _savedAck;
         private double _lastContact;
         private readonly Func<double> _clock;
-        internal double PollSeconds = 0.05, SlowPollSeconds = 0.5;
+        internal double PollSeconds = 0.05, SlowPollSeconds = 0.25;
         /// <summary>Called (from a worker thread) when a crossing request could not reach BridgeHost.</summary>
         internal Action? CrossingFailed = null;
         internal bool Slow { get; set; }
@@ -214,7 +217,13 @@ namespace SlimeBridge.Shared
         internal HttpTravelTransport(string baseUrl, string token, string realm, Func<double> clock)
         {
             _base = baseUrl.TrimEnd('/'); _token = token; _realm = realm; _clock = clock; _lastContact = clock();
+            _pollPath = "/v1/travel/next?realm=" + _realm;
+            _authHeader = "Bearer " + _token;
+            _fastUntil = _lastContact + 15.0;
         }
+
+        internal bool InFastWindow(double now) => now < Volatile.Read(ref _fastUntil);
+        private void BumpFastWindow() => Volatile.Write(ref _fastUntil, _clock() + 30.0);
 
         public double LastContact => Volatile.Read(ref _lastContact);
         internal bool SavedAcknowledged(string id) => string.Equals(Volatile.Read(ref _savedAck), id, StringComparison.Ordinal);
@@ -233,12 +242,18 @@ namespace SlimeBridge.Shared
         {
             try
             {
-                var request = Create("/v1/travel/next?realm=" + _realm, "GET", 2000);
+                var request = Create(_pollPath, "GET", 2000);
                 using (var response = (HttpWebResponse)request.GetResponse())
                 using (var reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
                 {
-                    Volatile.Write(ref _latest, TravelMessage.Parse(reader.ReadToEnd()));
-                    Volatile.Write(ref _lastContact, _clock());
+                    var text = reader.ReadToEnd();
+                    var empty = text.IndexOf("\"message\":null", StringComparison.Ordinal) >= 0 ||
+                                text.IndexOf("\"message\": null", StringComparison.Ordinal) >= 0;
+                    var parsed = empty ? null : TravelMessage.Parse(text);
+                    Volatile.Write(ref _latest, parsed);
+                    var now = _clock();
+                    Volatile.Write(ref _lastContact, now);
+                    if (parsed != null) Volatile.Write(ref _fastUntil, now + 30.0);
                 }
             }
             catch (Exception) { Volatile.Write(ref _latest, null); }
@@ -248,6 +263,7 @@ namespace SlimeBridge.Shared
         /// <summary>A portal in this game asks the launcher to take the player to the other game (the launcher decides and drives it).</summary>
         internal void RequestCrossing(string portalId, string saveId)
         {
+            BumpFastWindow();
             var body = "{\"protocol_version\":1,\"message_type\":\"portal_cross\",\"realm\":\"" + _realm + "\",\"portal_id\":\"" + Esc(portalId) +
                        "\",\"save_id\":\"" + Esc(saveId) + "\",\"request_id\":\"" + Guid.NewGuid().ToString("N") + "\"}";
             Task.Run(() =>
@@ -267,6 +283,7 @@ namespace SlimeBridge.Shared
 
         public void Report(string transitionId, string eventName, string ackId, string detail, Dictionary<string, int>? carry)
         {
+            BumpFastWindow();
             var body = "{\"protocol_version\":1,\"message_type\":\"travel_event\",\"realm\":\"" + _realm + "\",\"transition_id\":\"" + Esc(transitionId) +
                        "\",\"event\":\"" + Esc(eventName) + "\"" + (ackId.Length > 0 && !ackId.StartsWith("local", StringComparison.Ordinal) ? ",\"ack_id\":\"" + Esc(ackId) + "\"" : "") +
                        (detail.Length > 0 ? ",\"detail\":\"" + Esc(detail.Length > 190 ? detail.Substring(0, 190) : detail) + "\"" : "") + CarryJson(carry) + "}";
@@ -300,7 +317,7 @@ namespace SlimeBridge.Shared
             var request = (HttpWebRequest)WebRequest.Create(_base + path);
 #pragma warning restore SYSLIB0014
             request.Method = method;
-            request.Headers[HttpRequestHeader.Authorization] = "Bearer " + _token;
+            request.Headers[HttpRequestHeader.Authorization] = _authHeader;
             request.Proxy = null; request.Timeout = timeoutMs; request.ReadWriteTimeout = timeoutMs;
             // These are tiny authenticated loopback messages. Waiting for a 100-Continue
             // response or coalescing TCP writes adds latency to every handshake step.

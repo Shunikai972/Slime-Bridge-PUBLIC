@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import winreg
 
-KEYS = {'SR1': r'Software\Monomi Park\Slime Rancher', 'SR2': r'Software\Monomi Park\Slime Rancher 2'}
+KEYS = {'SR1': r'Software\Monomi Park\Slime Rancher', 'SR2': r'Software\MonomiPark\SlimeRancher2'}
 
 
 def snapshot(realms=('SR1', 'SR2')):

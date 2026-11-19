@@ -54,6 +54,7 @@ namespace SlimeBridge.SR2
             {
                 var director = Il2Cpp.GameContext.Instance?.AutoSaveDirector;
                 if (director == null || !WorldReady()) return false;
+                Sr2SpeciesRegistrar.Active?.EnsurePersistence(director);
                 var ok = director.SaveAllNow();
                 MelonLoader.MelonLogger.Msg("travel: save (" + why + ") " + (ok ? "native call accepted (not verified on disk)" : "refused by the game"));
                 return ok;
@@ -265,6 +266,7 @@ namespace SlimeBridge.SR2
             try
             {
                 if (!CounterpartCreator.TryReadWorld(out var world) || world == null || !message.Targets(OwnPid, world.Name)) return false;
+                Sr2SpeciesRegistrar.Active?.EnsurePersistence(world.Director);
                 var proof = new Sr2InventoryPersistence(world.Game, world.Scene, world.Name).SaveForClose();
                 if (!proof.Verified) MelonLoader.MelonLogger.Warning("travel: close cancelled: native save could not be verified");
                 return proof.Verified;
@@ -286,6 +288,7 @@ namespace SlimeBridge.SR2
 
         internal void Unload()
         {
+            Sr2SpeciesRegistrar.ClearActive();
             _quitRequest = null;
             Sr2Online.CancelHost();
             try { _throttle.Restore(); } catch (Exception) { }

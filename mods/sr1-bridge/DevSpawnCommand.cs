@@ -70,12 +70,12 @@ namespace SlimeBridge.SR1
                     BridgeConsole.LogError("[SlimeBridge] no active game session.");
                     return false;
                 }
+                var count = 1;
+                if (args.Length > 2 && int.TryParse(args[2], out var parsedCount)) count = parsedCount;
+                count = Math.Max(1, Math.Min(count, 12));
                 // a native identifiable id (PINK_ROCK_LARGO, GOLD_SLIME, ...) with an optional count
                 if (!args[1].Contains(".") && Enum.TryParse<Identifiable.Id>(args[1].ToUpperInvariant(), out var nativeId) && nativeId != Identifiable.Id.NONE)
                 {
-                    var count = 1;
-                    if (args.Length > 2) int.TryParse(args[2], out count);
-                    count = Math.Max(1, Math.Min(count, 12));
                     var nativeProblems = new List<string>();
                     var made = 0;
                     for (var i = 0; i < count; i++)
@@ -84,26 +84,51 @@ namespace SlimeBridge.SR1
                     BridgeConsole.LogSuccess("[SlimeBridge] spawned " + made + " x " + nativeId + " in front of the player.");
                     return true;
                 }
-                if (args[1].StartsWith("plort.", StringComparison.Ordinal))
+                var target = args[1].ToLowerInvariant();
+                if (target.StartsWith("plort.", StringComparison.Ordinal))
                 {
                     var plortProblems = new List<string>();
-                    if (ImportedSpawner.SpawnPlort(game, scene, registrar, args[1], plortProblems) == null)
+                    var made = 0;
+                    for (var i = 0; i < count; i++)
+                    {
+                        var inst = ImportedSpawner.SpawnPlort(game, scene, registrar, target, plortProblems);
+                        if (inst != null)
+                        {
+                            if (count > 1 && i > 0)
+                                inst.transform.position += UnityEngine.Quaternion.AngleAxis((i - (count - 1) * 0.5f) * 16f, UnityEngine.Vector3.up) * scene.Player.transform.right * 0.6f;
+                            made++;
+                        }
+                    }
+                    if (made == 0)
                     {
                         BridgeConsole.LogError("[SlimeBridge] plort spawn failed: " + string.Join("; ", plortProblems));
                         return false;
                     }
-                    BridgeConsole.LogSuccess("[SlimeBridge] spawned " + args[1] + " in front of the player.");
+                    BridgeConsole.LogSuccess("[SlimeBridge] spawned " + made + " x " + target + " in front of the player.");
                     return true;
                 }
                 var details = new List<string>();
                 var problems = new List<string>();
-                var instance = ImportedSpawner.Spawn(game, scene, registrar, args[1], details, problems);
-                if (instance == null)
+                var spawned = 0;
+                for (var i = 0; i < count; i++)
+                {
+                    var instance = ImportedSpawner.Spawn(game, scene, registrar, target, details, problems);
+                    if (instance != null)
+                    {
+                        if (count > 1)
+                        {
+                            var offset = UnityEngine.Quaternion.AngleAxis((i - (count - 1) * 0.5f) * 20f, UnityEngine.Vector3.up) * scene.Player.transform.forward;
+                            instance.transform.position = scene.Player.transform.position + offset * 2.8f + UnityEngine.Vector3.up * 1.2f;
+                        }
+                        spawned++;
+                    }
+                }
+                if (spawned == 0)
                 {
                     BridgeConsole.LogError("[SlimeBridge] spawn failed: " + string.Join("; ", problems));
                     return false;
                 }
-                BridgeConsole.LogSuccess("[SlimeBridge] spawned " + args[1] + " at the player (native actor path).");
+                BridgeConsole.LogSuccess("[SlimeBridge] spawned " + spawned + " x " + target + " at the player (native actor path).");
                 return true;
             }
             if (args[0].Equals("diag", StringComparison.OrdinalIgnoreCase))

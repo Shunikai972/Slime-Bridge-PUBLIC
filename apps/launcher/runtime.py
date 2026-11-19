@@ -7,6 +7,7 @@
   never injects anything and never bypasses a store: the game starts exactly as if the player double-clicked it.
 """
 
+import atexit
 import http.client
 import json
 import os
@@ -218,7 +219,7 @@ class GameLauncher:
             raise RuntimeErrorWithCode('EXECUTABLE_MISSING', str(exe))
         if self.running(realm):
             return {'realm': realm, 'pid': self._children[realm].pid, 'already_running': True, 'exe': str(exe)}
-        env = dict(os.environ)
+        env = {k: v for k, v in os.environ.items() if k not in _STRIP_LAUNCH_ENV}
         env.update(extra_env or {})
         options = extra_env or {}
         background = options.get('SLIMEBRIDGE_TRAVEL_MODE') == 'DESTINATION' or options.get('SLIMEBRIDGE_BACKGROUND_START') == '1'
@@ -232,9 +233,14 @@ class GameLauncher:
                 # arrival when the player had fullscreen.
                 kept = _keep_display_settings(realm) if self._popen is subprocess.Popen else {}
                 if kept.get('fullscreen'):
-                    kwargs.setdefault('env', dict(os.environ))
                     kwargs['env']['SLIMEBRIDGE_FULLSCREEN_ON_ARRIVAL'] = '1'
-                command.extend(('-screen-fullscreen', '0'))
+                    if kept.get('width'):
+                        kwargs['env']['SLIMEBRIDGE_RESTORE_WIDTH'] = str(kept['width'])
+                    if kept.get('height'):
+                        kwargs['env']['SLIMEBRIDGE_RESTORE_HEIGHT'] = str(kept['height'])
+                    if kept.get('fullscreen_mode') is not None:
+                        kwargs['env']['SLIMEBRIDGE_RESTORE_FSMODE'] = str(kept['fullscreen_mode'])
+                command.extend(('-screen-fullscreen', '0', '-screen-width', '640', '-screen-height', '360'))
                 startup = subprocess.STARTUPINFO()
                 startup.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                 startup.wShowWindow = 7  # SW_SHOWMINNOACTIVE: the first window must not activate
@@ -242,6 +248,8 @@ class GameLauncher:
         try:
             child = self._popen(command, **kwargs)
         except OSError as exc:
+            if background:
+                _PENDING_DISPLAY.pop(realm, None)
             raise RuntimeErrorWithCode('LAUNCH_FAILED', str(exc)) from exc
         self._children[realm] = child
         self._executables[realm] = exe.resolve()
@@ -271,6 +279,26 @@ class GameLauncher:
     def status(self):
         return {realm: self.running(realm) for realm in EXECUTABLES}
 
+_STRIP_LAUNCH_ENV = (
+    'SLIMEBRIDGE_TRAVEL_MODE',
+    'SLIMEBRIDGE_TRAVEL_SAVE',
+    'SLIMEBRIDGE_TRAVEL_NEW',
+    'SLIMEBRIDGE_BACKGROUND_START',
+    'SLIMEBRIDGE_FULLSCREEN_ON_ARRIVAL',
+    'SLIMEBRIDGE_RESTORE_WIDTH',
+    'SLIMEBRIDGE_RESTORE_HEIGHT',
+    'SLIMEBRIDGE_RESTORE_FSMODE',
+)
+
+
+def _reg_int(value):
+    if isinstance(value, (bytes, bytearray)):
+        return int.from_bytes(bytes(value), 'little')
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return None
+
+
 def _keep_display_settings(realm):
     """Snapshot the game's Unity display settings now and restore them once its process is gone (watcher thread)."""
     if os.name != 'nt' or realm not in ('SR1', 'SR2'):
@@ -281,11 +309,23 @@ def _keep_display_settings(realm):
     except Exception:                                          # noqa: BLE001 - display settings are a comfort, never a blocker
         return {}
     values = saved.get(realm) or {}
-    fullscreen = any(name.startswith('Screenmanager Fullscreen mode') and int.from_bytes(bytes(value), 'little') != 3
-                     if isinstance(value, (bytes, bytearray)) else name.startswith('Screenmanager Fullscreen mode') and value != 3
-                     for name, (value, _kind) in values.items())
+    fs_mode = width = height = None
+    legacy_fs = None
+    for name, (value, _kind) in values.items():
+        num = _reg_int(value)
+        if num is None or ' Default_' in name:
+            continue
+        if name.startswith('Screenmanager Fullscreen mode_'):
+            fs_mode = num
+        elif name.startswith('Screenmanager Is Fullscreen mode_'):
+            legacy_fs = num != 0
+        elif name.startswith('Screenmanager Resolution Width_'):
+            width = num
+        elif name.startswith('Screenmanager Resolution Height_'):
+            height = num
+    fullscreen = (fs_mode != 3) if fs_mode is not None else bool(legacy_fs)
     _PENDING_DISPLAY[realm] = saved
-    return {'fullscreen': fullscreen}
+    return {'fullscreen': fullscreen, 'fullscreen_mode': fs_mode, 'width': width, 'height': height}
 
 
 _PENDING_DISPLAY = {}
@@ -302,3 +342,12 @@ def restore_display_settings(realm):
         return True
     except Exception:                                          # noqa: BLE001
         return False
+
+
+def restore_all_display_settings():
+    """Best-effort restore of any pending display snapshots at launcher exit."""
+    for realm in tuple(_PENDING_DISPLAY):
+        restore_display_settings(realm)
+
+
+atexit.register(restore_all_display_settings)

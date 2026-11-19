@@ -17,10 +17,12 @@ namespace SlimeBridge.SR2
                 _root.SetActive(false);
                 UnityEngine.Object.DontDestroyOnLoad(_root);
             }
-            // Parenting during Instantiate prevents Awake/OnEnable. Disabling a clone
-            // afterwards is too late: native callbacks may already enter ActorRegistry.
+            // Parenting during Instantiate prevents Awake/OnEnable because _root is inactive.
+            // Keep prefab-asset semantics (activeSelf=true under the inactive container) so every
+            // native caller (WeaponVacuum shooting, plort production, InstantiationHelpers.InstantiateActor,
+            // and GameModel save reload) produces an ACTIVE live actor whose Awake/OnEnable run normally.
             var clone = UnityEngine.Object.Instantiate(template, _root.transform, false);
-            clone.SetActive(false);
+            if (!clone.activeSelf) clone.SetActive(true);
             return clone;
         }
     }

@@ -346,29 +346,11 @@
     play: async (a, el) => {
       const tg = target(), realms = isBoth(tg) ? ['SR1', 'SR2'] : [tg];
       if (realms.some(r => !S.games[r].primary)) { toast(dockStatus().text, 'warn'); return go('games'); }
-      return A.launch(tg, el);
+      return runLaunch(tg, el, false);
     },
-    resume: (a, el) => A.launch(a, el, true),
-    launch: async (a, el, resume) => {
-      menu = null; renderDock();
-      if (busy.has(a)) return; busy.add(a);
-      let screen = null;
-      try {
-        const remember = true;                       // the welcome card already said to keep copies: Play is one click
-        const game = isBoth(a) ? t('launch.both') : NAMES[a];
-        screen = SB.loading.open({ compact: true, title: t('launch.t', { game }), sub: t('launch.sub'), steps: [t('launch.s1')] });
-        SB.net.hydrate(screen.el); screen.progress(12, t('launch.s1'));
-        const steps = [setTimeout(() => screen.progress(40, a === 'SR1' || a === 'SR2' ? t('launch.s3', { game }) : t('launch.s2')), 600), setTimeout(() => screen.progress(68, t('launch.s3', { game })), 1400)];
-        const r = await safe(() => api.launch(a, true, remember, !!resume)); steps.forEach(clearTimeout);
-        const close = () => screen.actions(`<button class="btn btn--ghost" data-close>${t('launch.close')}</button>`).onclick = () => screen.close();
-        if (!r) { screen.fail(t('launch.fail')); close(); return; }
-        const errs = (r.errors || []).map(e => `${NAMES[e.realm] || e.realm}: ${t('err.' + e.error) !== 'err.' + e.error ? t('err.' + e.error) : e.error}`);
-        (r.warnings || []).forEach(w => toast(w, 'warn'));
-        if ((r.launched || []).length) { screen.done(t('launch.ok')); setTimeout(() => confetti(screen.el.querySelector('.ld-bar'), 26), 200); errs.forEach(e => toast(e, 'bad')); screen.close(2600); }
-        else { screen.fail(errs[0] || t('launch.fail')); close(); }
-        await refresh();
-      } finally { busy.delete(a); }
-    },
+    resume: (a, el) => runLaunch(a, el, true),
+    // Never read the 3rd arg of data-act click handlers as `resume`: the click dispatcher passes the DOM Event there.
+    launch: (a, el) => runLaunch(a, el, false),
     'game-stop': async a => {
       if (busy.has('game-stop')) return;
       const game = a === 'BOTH' ? t('dock.two') : NAMES[a];
@@ -476,6 +458,27 @@
     'opt-bool': async (a, el) => { const [s, k] = a.split('.'); const r = await safe(() => api.set_setting(s, k, el.getAttribute('aria-checked') !== 'true')); if (r && !r.ok) toast(r.error, 'bad'); L.settings = await api.get_settings(); renderView(true); },
     'opt-choice': async (a, el) => { const [s, k] = a.split('.'); const r = await safe(() => api.set_setting(s, k, el.dataset.v)); if (r && !r.ok) toast(r.error, 'bad'); L.settings = await api.get_settings(); renderView(true); },
   };
+
+  async function runLaunch(a, el, resume) {
+    menu = null; renderDock();
+    if (busy.has(a)) return; busy.add(a);
+    let screen = null;
+    try {
+      const remember = true;                         // the welcome card already said to keep copies: Play is one click
+      const game = isBoth(a) ? t('launch.both') : NAMES[a];
+      screen = SB.loading.open({ compact: true, title: t('launch.t', { game }), sub: t('launch.sub'), steps: [t('launch.s1')] });
+      SB.net.hydrate(screen.el); screen.progress(12, t('launch.s1'));
+      const steps = [setTimeout(() => screen.progress(40, a === 'SR1' || a === 'SR2' ? t('launch.s3', { game }) : t('launch.s2')), 600), setTimeout(() => screen.progress(68, t('launch.s3', { game })), 1400)];
+      const r = await safe(() => api.launch(a, true, remember, resume === true)); steps.forEach(clearTimeout);
+      const close = () => screen.actions(`<button class="btn btn--ghost" data-close>${t('launch.close')}</button>`).onclick = () => screen.close();
+      if (!r) { screen.fail(t('launch.fail')); close(); return; }
+      const errs = (r.errors || []).map(e => `${NAMES[e.realm] || e.realm}: ${t('err.' + e.error) !== 'err.' + e.error ? t('err.' + e.error) : e.error}`);
+      (r.warnings || []).forEach(w => toast(w, 'warn'));
+      if ((r.launched || []).length) { screen.done(t('launch.ok')); setTimeout(() => confetti(screen.el.querySelector('.ld-bar'), 200), 200); errs.forEach(e => toast(e, 'bad')); screen.close(900); }
+      else { screen.fail(errs[0] || t('launch.fail')); close(); }
+      await refresh();
+    } finally { busy.delete(a); }
+  }
 
   async function submitOnline(call) {
     const current = L.mpSession || (L.mp && L.mp.session);

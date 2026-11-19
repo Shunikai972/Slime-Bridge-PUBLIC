@@ -58,6 +58,7 @@ namespace SlimeBridge.SR1
         internal Material Material = null!;
         internal Color Tint;
         internal float DegreesPerSecond, PulseAmount, PulseSpeed, BaseScale;
+        internal bool PropsChecked, HasTintColor, HasColor;
     }
 
     /// <summary>
@@ -118,7 +119,10 @@ namespace SlimeBridge.SR1
             Apply(flash);
         }
 
+        private static readonly int TintColorId = Shader.PropertyToID("_TintColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
         private bool _dormantApplied;
+        private bool _ringSettled;
 
         private void Apply(float flash)
         {
@@ -134,29 +138,41 @@ namespace SlimeBridge.SR1
                 Lamp.enabled = visible;
                 Lamp.intensity = 3.0f * _open * (0.85f + 0.15f * Mathf.Sin(Time.time * 2.4f)) + 9f * flash;
             }
-            // light running around the ring while the portal wakes up
-            for (var i = 0; i < RingBlocks.Length; i++)
+            // light running around the ring while the portal wakes up (skip per-frame writes once steady-state)
+            var animatingRing = (_open > 0f && _open < 1f) || flash > 0f;
+            if (animatingRing || !_ringSettled)
             {
-                if (RingBlocks[i] == null) continue;
-                var bump = 0f;
-                if (_open > 0f && _open < 1f)
+                for (var i = 0; i < RingBlocks.Length; i++)
                 {
-                    var front = _open * 1.25f;
-                    bump = Mathf.Max(0f, 1f - Mathf.Abs(i / (float)RingBlocks.Length - front) * 8f);
+                    if (RingBlocks[i] == null) continue;
+                    var bump = 0f;
+                    if (_open > 0f && _open < 1f)
+                    {
+                        var front = _open * 1.25f;
+                        bump = Mathf.Max(0f, 1f - Mathf.Abs(i / (float)RingBlocks.Length - front) * 8f);
+                    }
+                    RingBlocks[i].localScale = RingScales[i] * (1f + 0.3f * bump + 0.12f * flash);
                 }
-                RingBlocks[i].localScale = RingScales[i] * (1f + 0.3f * bump + 0.12f * flash);
+                _ringSettled = !animatingRing;
             }
             if (!visible) return;
             var level = Mathf.Clamp01(_open + flash);
-            foreach (var layer in Layers)
+            for (var i = 0; i < Layers.Count; i++)
             {
+                var layer = Layers[i];
                 var speed = layer.DegreesPerSecond * (0.4f + 0.6f * _open) * (1f + flash * 3f);
                 layer.Spinner.Rotate(0f, 0f, speed * Time.unscaledDeltaTime, Space.Self);
                 var scale = layer.BaseScale * (1f + layer.PulseAmount * Mathf.Sin(Time.time * layer.PulseSpeed));
                 layer.Spinner.localScale = new Vector3(scale, scale, scale);
                 var c = layer.Tint; c.a = Mathf.Clamp01(c.a * level);
-                if (layer.Material.HasProperty("_TintColor")) layer.Material.SetColor("_TintColor", c);
-                if (layer.Material.HasProperty("_Color")) layer.Material.SetColor("_Color", c);
+                if (!layer.PropsChecked)
+                {
+                    layer.HasTintColor = layer.Material.HasProperty(TintColorId);
+                    layer.HasColor = layer.Material.HasProperty(ColorId);
+                    layer.PropsChecked = true;
+                }
+                if (layer.HasTintColor) layer.Material.SetColor(TintColorId, c);
+                if (layer.HasColor) layer.Material.SetColor(ColorId, c);
             }
         }
     }

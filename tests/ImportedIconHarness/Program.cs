@@ -57,6 +57,17 @@ try {
     Sprite.Throw=true; Run(false); Check(UObj.Live==live,"native create exception leaked texture"); Sprite.Throw=false;
     UObj.ThrowClone=true; Run(false); Check(UObj.Live==live,"native clone exception leaked icon"); UObj.ThrowClone=false;
     manifest.Remove("icon"); Publish(); Run(false); Check(UObj.Live==live,"mandatory source silently replaced by Tabby");
+    // SR2 1.x full-art/atlas composed Ringtail icon (mandatory=false, iconSlimeRingtail_small, build-dependent path IDs).
+    manifest["icon"] = new Dictionary<string,object> {
+        ["schema"]="bridge-source-sprite",["schema_version"]=1,["mandatory"]=false,["file"]=file,
+        ["texture_size"]=new[]{1024,1024},["rect"]=new[]{0,0,1024,1024},["pivot"]=new[]{.5,.5},["pixels_per_unit"]=100,
+        ["vertices"]=new[]{new[]{-5.12,-5.12},new[]{5.12,-5.12},new[]{5.12,5.12},new[]{-5.12,5.12}},["triangles"]=new[]{0,1,2,0,2,3},
+        ["source_sprite_name"]="iconSlimeRingtail_small",["source_sprite_path_id"]=5639,["source_appearance_path_id"]=37810,
+        ["source_texture_path_id"]=0,["source_texture_rect"]=new[]{0,0,1024,1024},["source_texture_rect_offset"]=new[]{0,0},
+        ["source_settings_raw"]=64,["packing_rotation"]=0,["pixel_encoding"]="composed-square-icon"};
+    Publish();
+    var sr2_1x = Run(true)!; ((IDisposable)sr2_1x).Dispose(); Check(UObj.Live==live,"SR2 1.x Ringtail icon leaked");
+    ((Dictionary<string,object>)manifest["icon"])["source_sprite_name"]="iconSlimeTabby_small"; Publish(); Run(false);
     manifest["icon"]=icon; Publish();
     var alias=Path.Combine(lab,"icon-cache-junction");
     if(OperatingSystem.IsWindows()) {

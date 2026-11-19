@@ -45,19 +45,24 @@ namespace SlimeBridge.SR1
             {
                 var harmony = new Harmony("slimebridge.sr1.sanctuary-journal");
                 harmony.Patch(AccessTools.Method(typeof(JournalUI), "SetJournalKey"),
-                    postfix: new HarmonyMethod(typeof(SanctuaryJournal), nameof(SetJournalKeyPostfix)));
+                    prefix: new HarmonyMethod(typeof(SanctuaryJournal), nameof(SetJournalKeyPrefix)));
                 _harmony = harmony;
             }
             catch (Exception ex) { UnityEngine.Debug.LogError("[SlimeBridge] sanctuary journal patch failed: " + ex.GetType().Name); }
         }
 
-        private static void SetJournalKeyPostfix(JournalUI __instance, string journalKey)
+        private static bool SetJournalKeyPrefix(JournalUI __instance, string journalKey)
         {
             try
             {
-                if (journalKey == EntryKey && __instance.journalText != null) __instance.journalText.text = _text;
+                if (journalKey == EntryKey && __instance.journalText != null)
+                {
+                    __instance.journalText.text = _text;
+                    return false; // skips native MessageBundle("mail") lookup, preventing missing-key warnings
+                }
             }
-            catch (Exception) { /* leaves the game's own (empty) text */ }
+            catch (Exception) { /* falls back to native lookup */ }
+            return true;
         }
 
         /// <summary>Clones a native journal device to <paramref name="position"/>; null when none exists in this build/scene.</summary>

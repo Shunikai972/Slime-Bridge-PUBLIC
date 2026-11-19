@@ -11,6 +11,8 @@ namespace SlimeBridge.Shared
     internal sealed class TravelThrottle
     {
         internal const int FrozenFps = 4, SlowFps = 10;
+        private static int _activeThrottleCount;
+        internal static bool AnyThrottled => _activeThrottleCount > 0;
         private bool _active, _audioCaptured, _freeze;
         private int _fps, _vsync, _quality;
         private float _timeScale, _volume;
@@ -49,6 +51,7 @@ namespace SlimeBridge.Shared
             MuteAudio();
             _freeze = freeze;
             _active = true;
+            _activeThrottleCount++;
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = freeze ? FrozenFps : SlowFps;
             QualitySettings.SetQualityLevel(0, false);
@@ -79,6 +82,7 @@ namespace SlimeBridge.Shared
             if (_active)
             {
                 _active = false;
+                if (_activeThrottleCount > 0) _activeThrottleCount--;
                 foreach (var camera in _disabled) { try { if (camera != null) camera.enabled = true; } catch (Exception) { } }
                 _disabled.Clear();
                 // Restore independently: a quality failure must not retain mute or the FPS cap.

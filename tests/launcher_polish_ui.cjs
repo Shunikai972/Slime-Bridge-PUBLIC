@@ -34,4 +34,17 @@ check('Tutorial is a real FR/EN-keyed renderer with actionable setup sections',(
 check('Extract next actions have a dedicated wrapping flow container',()=>{
  const html=SB.pages.assets.render(S);assert(html.includes('extract-next-actions'));
 });
+check('Play/launch actions never treat DOM Event 3rd arg as resume=true',()=>{
+ const appSrc=fs.readFileSync(root+'app.js','utf8');
+ assert(appSrc.includes('launch: (a, el) => runLaunch(a, el, false)'), 'launch handler must pass explicit resume=false');
+ assert(appSrc.includes('resume: (a, el) => runLaunch(a, el, true)'), 'resume handler must pass explicit resume=true');
+ assert(appSrc.includes('return runLaunch(tg, el, false);'), 'play handler must pass explicit resume=false');
+ assert(appSrc.includes('api.launch(a, true, remember, resume === true)'), 'runLaunch must check resume === true strictly');
+ const idle=JSON.parse(JSON.stringify(S));
+ idle.games.SR1.running=false; idle.games.SR2.running=false;
+ idle.last_session={realm:'SR1',save:'Ranch1'};
+ const home=SB.pages.home.render(idle);
+ assert(home.includes('data-act="launch"'), 'idle Home must offer launch (Play)');
+ assert(home.includes('data-act="resume"'), 'idle Home with last_session must offer resume (Continue)');
+});
 console.log(`UI_POLISH_CHECKS=${passed+fails} PASSED=${passed} FAILED=${fails}`);process.exitCode=fails?1:0;

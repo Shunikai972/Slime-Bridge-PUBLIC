@@ -21,7 +21,7 @@ namespace SlimeBridge.SR1
     /// </summary>
     internal static class ImportedFaceExpressions
     {
-        private const string AtlasProperty = "_FaceAtlas";
+        private static readonly int AtlasPropertyId = Shader.PropertyToID("_FaceAtlas");
 
         internal sealed class Part
         {
@@ -35,6 +35,8 @@ namespace SlimeBridge.SR1
         }
 
         private static readonly Dictionary<string, Set?> Loaded = new Dictionary<string, Set?>(StringComparer.Ordinal);
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<SlimeAppearanceApplicator, ImportedFaceState> States =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<SlimeAppearanceApplicator, ImportedFaceState>();
         private static Harmony? _harmony;
 
         internal static void EnsurePatched()
@@ -74,10 +76,15 @@ namespace SlimeBridge.SR1
             {
                 var canonical = ImportedSpawner.ResolveImportedCanonical(__instance);
                 if (string.IsNullOrEmpty(canonical)) return;
-                var identifiable = __instance.GetComponentInParent<Identifiable>();
-                var visual = identifiable != null ? ImportedSpawner.FindImportedVisual(identifiable.gameObject) : null;
-                if (visual == null) return;
-                var state = visual.GetComponent<ImportedFaceState>() ?? visual.AddComponent<ImportedFaceState>();
+                if (!States.TryGetValue(__instance, out var state) || state == null)
+                {
+                    var identifiable = __instance.GetComponentInParent<Identifiable>();
+                    var visual = identifiable != null ? ImportedSpawner.FindImportedVisual(identifiable.gameObject) : null;
+                    if (visual == null) return;
+                    state = visual.GetComponent<ImportedFaceState>() ?? visual.AddComponent<ImportedFaceState>();
+                    States.Remove(__instance);
+                    States.Add(__instance, state);
+                }
                 state.Apply(canonical, (int)slimeExpression);
             }
             catch (Exception) { /* a face that does not change is better than an exception per frame */ }
@@ -175,36 +182,41 @@ namespace SlimeBridge.SR1
 
         internal static void SetAtlas(Material material, Part? part)
         {
-            if (material == null || !material.HasProperty(AtlasProperty)) return;
+            if (material == null || !material.HasProperty(AtlasPropertyId)) return;
             // An expression without this role (a blink has no mouth) leaves it as it is, exactly like SlimeAppearanceApplicator.SetExpression
             // (`if (expressionFace.Mouth != null) ...`). Writing an empty atlas here made the mouth shader paint its whole area: the
             // enormous dark-red mouth that flashed on every blink and chew.
             if (part == null || part.Atlas == null) return;
-            material.SetTexture(AtlasProperty, part.Atlas);
-            material.SetTextureScale(AtlasProperty, part.Scale);
-            material.SetTextureOffset(AtlasProperty, part.Offset);
+            material.SetTexture(AtlasPropertyId, part.Atlas);
+            material.SetTextureScale(AtlasPropertyId, part.Scale);
+            material.SetTextureOffset(AtlasPropertyId, part.Offset);
         }
     }
 
     /// <summary>Per imported visual: remembers its face renderer and the last expression applied to it.</summary>
     internal sealed class ImportedFaceState : MonoBehaviour
     {
+        private static readonly bool FaceLogEnabled = Environment.GetEnvironmentVariable("SLIMEBRIDGE_FACELOG") == "1";
         private static int LogBudget = 200;
         private Renderer? _face;
         private int _last = -1;
         private bool _searched, _cloned;
         private readonly List<Material> _owned = new List<Material>();
+        private readonly List<Material> _eyes = new List<Material>();
+        private readonly List<Material> _mouth = new List<Material>();
 
         private void OnDestroy()
         {
             foreach (var material in _owned) if (material != null) UnityEngine.Object.Destroy(material);
             _owned.Clear();
+            _eyes.Clear();
+            _mouth.Clear();
         }
 
         internal void Apply(string canonical, int expression)
         {
             if (expression == _last) return;
-            if (LogBudget > 0 && Environment.GetEnvironmentVariable("SLIMEBRIDGE_FACELOG") == "1") { LogBudget--; UnityEngine.Debug.Log("[SlimeBridge] face expression " + canonical + " -> " + expression + " t=" + UnityEngine.Time.time.ToString("F2")); }
+            if (FaceLogEnabled && LogBudget > 0) { LogBudget--; UnityEngine.Debug.Log("[SlimeBridge] face expression " + canonical + " -> " + expression + " t=" + UnityEngine.Time.time.ToString("F2")); }
             var set = ImportedFaceExpressions.Get(canonical);
             if (set == null || !set.ByExpression.TryGetValue(expression, out var parts)) return;
             if (!_searched)
@@ -214,30 +226,30 @@ namespace SlimeBridge.SR1
                     if (colors != null && colors.SourceFace) { _face = colors.GetComponent<Renderer>(); break; }
             }
             if (_face == null) return;
-            var materials = _face.sharedMaterials;
             if (!_cloned)
             {
                 // the face materials are built once per species model and shared by every actor: give this actor its own
                 // copies, or one slime's fear would be every slime's fear
+                var materials = _face.sharedMaterials;
                 for (var i = 0; i < materials.Length; i++)
                 {
                     var source = materials[i];
                     if (source == null || source.name == null || !source.name.StartsWith("SlimeBridgeSourceFace_", StringComparison.Ordinal)) continue;
-                    if (!source.name.StartsWith("SlimeBridgeSourceFace_eyes", StringComparison.Ordinal) && !source.name.StartsWith("SlimeBridgeSourceFace_mouth", StringComparison.Ordinal)) continue;
+                    var isEyes = source.name.StartsWith("SlimeBridgeSourceFace_eyes", StringComparison.Ordinal);
+                    var isMouth = !isEyes && source.name.StartsWith("SlimeBridgeSourceFace_mouth", StringComparison.Ordinal);
+                    if (!isEyes && !isMouth) continue;
                     var copy = new Material(source) { name = source.name };
                     materials[i] = copy;
                     _owned.Add(copy);
+                    if (isEyes) _eyes.Add(copy);
+                    else _mouth.Add(copy);
                 }
                 _face.sharedMaterials = materials;
                 _cloned = true;
             }
             var changed = false;
-            foreach (var material in materials)
-            {
-                if (material == null || material.name == null) continue;
-                if (material.name.StartsWith("SlimeBridgeSourceFace_eyes", StringComparison.Ordinal)) { ImportedFaceExpressions.SetAtlas(material, parts[0]); changed = true; }
-                else if (material.name.StartsWith("SlimeBridgeSourceFace_mouth", StringComparison.Ordinal)) { ImportedFaceExpressions.SetAtlas(material, parts[1]); changed = true; }
-            }
+            for (var i = 0; i < _eyes.Count; i++) { ImportedFaceExpressions.SetAtlas(_eyes[i], parts[0]); changed = true; }
+            for (var i = 0; i < _mouth.Count; i++) { ImportedFaceExpressions.SetAtlas(_mouth[i], parts[1]); changed = true; }
             if (changed) _last = expression;
         }
     }

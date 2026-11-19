@@ -66,6 +66,14 @@
       <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/Unity.InputSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Unity.Localization">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/Unity.Localization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Addressables">
+      <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/Unity.Addressables.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Il2CppDOTween">
       <HintPath>$(SR2LabPath)/MelonLoader/Il2CppAssemblies/Il2CppDOTween.dll</HintPath>
       <Private>false</Private>

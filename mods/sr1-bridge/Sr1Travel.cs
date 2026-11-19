@@ -155,12 +155,6 @@ namespace SlimeBridge.SR1
             // portal brings them back (resuming here would show a world without its vac).
         }
 
-        private void ReturnByHand()
-        {
-            Debug.Log("[SlimeBridge] travel: the player returned to this window by hand; resuming");
-            Resume(null, null);
-        }
-
         private void LockInput(bool lockIt)
         {
             try

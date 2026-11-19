@@ -31,11 +31,19 @@ namespace SlimeBridge.SR2
         private readonly Dictionary<string, Il2Cpp.IdentifiableType> _types = new Dictionary<string, Il2Cpp.IdentifiableType>(StringComparer.Ordinal);
         private readonly Dictionary<string, UnityEngine.GameObject> _prefabs = new Dictionary<string, UnityEngine.GameObject>(StringComparer.Ordinal);
         private readonly Dictionary<string, List<Il2Cpp.IdentifiableTypeGroup>> _defMirrorGroups = new Dictionary<string, List<Il2Cpp.IdentifiableTypeGroup>>(StringComparer.Ordinal);
-        private readonly Dictionary<string, (Il2Cpp.IdentifiableType Type, List<Il2Cpp.IdentifiableTypeGroup> Groups)> _plortMirrorGroups = new Dictionary<string, (Il2Cpp.IdentifiableType, List<Il2Cpp.IdentifiableTypeGroup>)>(StringComparer.Ordinal);
+        private readonly Dictionary<string, List<Il2Cpp.IdentifiableTypeGroup>> _defAncestorGroups = new Dictionary<string, List<Il2Cpp.IdentifiableTypeGroup>>(StringComparer.Ordinal);
+        private readonly Dictionary<string, (Il2Cpp.IdentifiableType Type, List<Il2Cpp.IdentifiableTypeGroup> Groups, List<Il2Cpp.IdentifiableTypeGroup> Ancestors)> _plortMirrorGroups =
+            new Dictionary<string, (Il2Cpp.IdentifiableType, List<Il2Cpp.IdentifiableTypeGroup>, List<Il2Cpp.IdentifiableTypeGroup>)>(StringComparer.Ordinal);
         private readonly Dictionary<string, Il2Cpp.SlimeDefinition> _templates = new Dictionary<string, Il2Cpp.SlimeDefinition>(StringComparer.Ordinal);
+        private readonly Dictionary<string, Il2Cpp.SlimeAppearance> _ownedAppearances = new Dictionary<string, Il2Cpp.SlimeAppearance>(StringComparer.Ordinal);
+        private IntPtr _syncedScenePtr;
         private bool _done;
         private float _readySince = -1f;
         private int _lastCount = -1;
+
+        internal static Sr2SpeciesRegistrar? Active { get; private set; }
+
+        internal static void ClearActive() { Active = null; }
 
         private Sr2SpeciesRegistrar(string specPath, string outDir, string runId)
         {
@@ -95,17 +103,70 @@ namespace SlimeBridge.SR2
         /// <summary>Canonical ids registered in this session (dev tools).</summary>
         internal IEnumerable<string> Canonicals => _defs.Keys;
 
-        public bool TryResolvePrefab(string canonicalId, out UnityEngine.GameObject prefab) => _prefabs.TryGetValue(canonicalId, out prefab);
+        /// <summary>All registered canonical ids including imported plorts.</summary>
+        internal IEnumerable<string> AllCanonicals => _types.Keys;
+
+        public bool TryResolvePrefab(string canonicalId, out UnityEngine.GameObject prefab)
+        {
+            if (_prefabs.TryGetValue(canonicalId, out prefab) && prefab != null) return true;
+            if (_types.TryGetValue(canonicalId, out var type) && type?.prefab != null)
+            {
+                prefab = type.prefab;
+                return true;
+            }
+            prefab = null!;
+            return false;
+        }
+
+        private static bool AddTypeToGroup(Il2Cpp.IdentifiableTypeGroup group, Il2Cpp.IdentifiableType type, bool addImmediate)
+        {
+            var added = false;
+            try
+            {
+                if (addImmediate)
+                {
+                    var members = group.ImmediateMemberTypes;
+                    if (members != null && !members.Contains(type)) { members.Add(type); added = true; }
+                }
+                var runtime = group._runtimeObject;
+                var runtimeMembers = runtime?._memberTypes;
+                if (runtime != null && runtimeMembers != null)
+                {
+                    if (!runtimeMembers.Contains(type)) { runtimeMembers.Add(type); added = true; }
+                    var indices = runtime._memberIndices;
+                    if (indices != null && !indices.ContainsKey(type))
+                        indices[type] = runtimeMembers.Count - 1;
+                }
+            }
+            catch (Exception) { }
+            return added;
+        }
+
+        private static void RemoveTypeFromGroup(Il2Cpp.IdentifiableTypeGroup group, Il2Cpp.IdentifiableType type, bool removeImmediate)
+        {
+            try
+            {
+                if (removeImmediate && group.ImmediateMemberTypes != null && group.ImmediateMemberTypes.Contains(type))
+                    group.ImmediateMemberTypes.Remove(type);
+                var runtime = group._runtimeObject;
+                if (runtime?._memberTypes != null && runtime._memberTypes.Contains(type))
+                    runtime._memberTypes.Remove(type);
+                if (runtime?._memberIndices != null && runtime._memberIndices.ContainsKey(type))
+                    runtime._memberIndices.Remove(type);
+            }
+            catch (Exception) { }
+        }
 
         /// <summary>
-        /// Re-assert imported membership in every live runtime group cache. Runtime caches are
-        /// created lazily (some only after the world loads) and may be rebuilt from serialized
-        /// data; world-time callers invoke this before imported-species operations. Idempotent.
+        /// Re-assert imported membership in every live runtime group cache (leaf and ancestor groups, plus
+        /// AutoSaveDirector._configuration.IdentifiableTypes). Idempotent.
         /// </summary>
         internal int EnsureRuntimeMembership()
         {
             var added = 0;
-            var refDict = Il2Cpp.GameContext.Instance?.LookupDirector?._identifiableTypeByRefId;
+            var context = Il2Cpp.GameContext.Instance;
+            var refDict = context?.LookupDirector?._identifiableTypeByRefId;
+            var configGroup = context?.AutoSaveDirector?._configuration?.IdentifiableTypes;
             foreach (var pair in _defs)
             {
                 try
@@ -115,48 +176,36 @@ namespace SlimeBridge.SR2
                     { refDict[pair.Value.referenceId] = pair.Value; added++; }
                 }
                 catch (Exception) { }
-                if (!_defMirrorGroups.TryGetValue(pair.Key, out var groups)) continue;
-                foreach (var group in groups)
-                {
-                    try
-                    {
-                        var members = group.ImmediateMemberTypes;
-                        if (members != null && !members.Contains(pair.Value)) members.Add(pair.Value);
-                        var runtimeMembers = group._runtimeObject?._memberTypes;
-                        if (runtimeMembers != null && !runtimeMembers.Contains(pair.Value)) { runtimeMembers.Add(pair.Value); added++; }
-                    }
-                    catch (Exception) { }
-                }
+                if (configGroup != null && AddTypeToGroup(configGroup, pair.Value, false)) added++;
+                if (_defMirrorGroups.TryGetValue(pair.Key, out var groups))
+                    foreach (var group in groups)
+                        if (AddTypeToGroup(group, pair.Value, true)) added++;
+                if (_defAncestorGroups.TryGetValue(pair.Key, out var ancestors))
+                    foreach (var group in ancestors)
+                        if (AddTypeToGroup(group, pair.Value, false)) added++;
             }
             foreach (var pair in _plortMirrorGroups)
             {
+                var plort = pair.Value.Type;
                 try
                 {
-                    if (refDict != null && !string.IsNullOrEmpty(pair.Value.Type.referenceId) &&
-                        (!refDict.TryGetValue(pair.Value.Type.referenceId, out var existingPlort) || existingPlort == null || existingPlort.Pointer != pair.Value.Type.Pointer))
-                    { refDict[pair.Value.Type.referenceId] = pair.Value.Type; added++; }
+                    if (refDict != null && !string.IsNullOrEmpty(plort.referenceId) &&
+                        (!refDict.TryGetValue(plort.referenceId, out var existingPlort) || existingPlort == null || existingPlort.Pointer != plort.Pointer))
+                    { refDict[plort.referenceId] = plort; added++; }
                 }
                 catch (Exception) { }
+                if (configGroup != null && AddTypeToGroup(configGroup, plort, false)) added++;
                 foreach (var group in pair.Value.Groups)
-                {
-                    try
-                    {
-                        var members = group.ImmediateMemberTypes;
-                        if (members != null && !members.Contains(pair.Value.Type)) members.Add(pair.Value.Type);
-                        var runtimeMembers = group._runtimeObject?._memberTypes;
-                        if (runtimeMembers != null && !runtimeMembers.Contains(pair.Value.Type)) { runtimeMembers.Add(pair.Value.Type); added++; }
-                    }
-                    catch (Exception) { }
-                }
+                    if (AddTypeToGroup(group, plort, true)) added++;
+                foreach (var group in pair.Value.Ancestors)
+                    if (AddTypeToGroup(group, plort, false)) added++;
             }
             return added;
         }
 
         /// <summary>
-        /// Give every imported definition the template's placeholder appearances and register
-        /// them with every live SlimeAppearanceDirector (HUD/inventory views). World-time
-        /// callers invoke this before imported-species operations; the SR2 slot HUD resolves a
-        /// chosen appearance per slime and NREs on an imported slime that has none. Idempotent.
+        /// Give every imported definition a valid SlimeAppearance (owned clone with custom icon when available)
+        /// and register it with every live SlimeAppearanceDirector so HUD vacpack slots never NRE. Idempotent.
         /// </summary>
         internal int EnsureAppearances()
         {
@@ -180,25 +229,178 @@ namespace SlimeBridge.SR2
             var applied = 0;
             foreach (var pair in _defs)
             {
-                if (!_templates.TryGetValue(pair.Key, out var template) || template == null) continue;
-                var appearances = template.AppearancesDefault;
-                if (appearances == null || appearances.Length == 0) continue;
-                try { pair.Value.AppearancesDefault = appearances; }
-                catch (Exception) { continue; }
+                Il2Cpp.SlimeAppearance? primary = null;
+                if (_ownedAppearances.TryGetValue(pair.Key, out var owned) && owned != null)
+                {
+                    primary = owned;
+                    try
+                    {
+                        var cur = pair.Value.AppearancesDefault;
+                        if (cur == null || cur.Length == 0 || cur[0] == null || cur[0].Pointer != owned.Pointer)
+                            pair.Value.AppearancesDefault = new Il2CppReferenceArray<Il2Cpp.SlimeAppearance>(new[] { owned });
+                    }
+                    catch (Exception) { continue; }
+                }
+                else
+                {
+                    if (!_templates.TryGetValue(pair.Key, out var template) || template == null) continue;
+                    var appearances = template.AppearancesDefault;
+                    if (appearances == null || appearances.Length == 0 || appearances[0] == null) continue;
+                    primary = appearances[0];
+                    try
+                    {
+                        var cur = pair.Value.AppearancesDefault;
+                        if (cur == null || cur.Length == 0 || cur[0] == null)
+                            pair.Value.AppearancesDefault = appearances;
+                    }
+                    catch (Exception) { continue; }
+                }
+                if (primary == null) continue;
                 foreach (var director in directors)
                 {
                     try
                     {
-                        if (!director.IsAppearanceUnlocked(pair.Value, appearances[0]))
-                            director.UnlockAppearance(pair.Value, appearances[0]);
-                        if (director.GetChosenSlimeAppearance(pair.Value) == null)
-                            director.UpdateChosenSlimeAppearance(pair.Value, appearances[0]);
-                        applied++;
+                        if (!director.IsAppearanceUnlocked(pair.Value, primary))
+                            director.UnlockAppearance(pair.Value, primary);
+                        var chosen = director.GetChosenSlimeAppearance(pair.Value);
+                        if (chosen == null || chosen.Pointer != primary.Pointer)
+                        {
+                            director.UpdateChosenSlimeAppearance(pair.Value, primary);
+                            applied++;
+                        }
                     }
                     catch (Exception) { }
                 }
             }
             return applied;
+        }
+
+        /// <summary>
+        /// Guarantees every registered imported slime, largo and plort is present in AutoSaveDirector's
+        /// SaveReferenceTranslation (both lookup for Push/load and reverse persistence-id table for Pull/save).
+        /// Fast O(N_imported) dictionary probe when already synced; rebuilds cleanly while preserving all
+        /// native and third-party modded types whenever any imported type is missing.
+        /// </summary>
+        internal bool EnsurePersistence(Il2CppMonomiPark.SlimeRancher.AutoSaveDirector? director, Action<string>? log = null)
+        {
+            if (_types.Count == 0 || director == null) return false;
+            try
+            {
+                var translation = director._saveReferenceTranslation?.TryCast<Il2CppMonomiPark.SlimeRancher.SaveReferenceTranslation>();
+                if (translation == null) return false;
+                var lookup = translation._identifiableTypeLookup;
+                var reverse = translation._identifiableTypeToPersistenceId?._reverseIndex;
+                var allPresent = lookup != null && reverse != null;
+                if (allPresent)
+                {
+                    foreach (var type in _types.Values)
+                    {
+                        var id = type?.referenceId;
+                        if (string.IsNullOrEmpty(id)) continue;
+                        if (!lookup!.ContainsKey(id) || !reverse!.ContainsKey(id)) { allPresent = false; break; }
+                    }
+                }
+                if (allPresent) return true;
+
+                var combined = new Il2CppSystem.Collections.Generic.List<Il2Cpp.IdentifiableType>();
+                var seenIds = new HashSet<string>(StringComparer.Ordinal);
+                void Include(Il2Cpp.IdentifiableType? t)
+                {
+                    if (t == null) return;
+                    var id = t.ReferenceId;
+                    if (string.IsNullOrEmpty(id) || !seenIds.Add(id)) return;
+                    combined.Add(t);
+                }
+                var group = director._configuration?.IdentifiableTypes;
+                if (group != null)
+                {
+                    var members = group.GetAllMembers().GetEnumerator();
+                    var cursor = members.Cast<Il2CppSystem.Collections.IEnumerator>();
+                    while (cursor.MoveNext()) Include(members.Current);
+                }
+                if (lookup != null)
+                {
+                    foreach (var entry in lookup) Include(entry.Value);
+                }
+                foreach (var imported in _types.Values) Include(imported);
+                translation.OnIdentifiableTypesListChanged(
+                    combined.Cast<Il2CppSystem.Collections.Generic.IEnumerable<Il2Cpp.IdentifiableType>>());
+                log?.Invoke("species registrar: save persistence synced (" + combined.Count + " types, " + _types.Count + " imported)");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                log?.Invoke("species registrar: save persistence sync failed: " + ex.GetType().Name + ": " + ex.Message);
+                return false;
+            }
+        }
+
+        /// <summary>Re-asserts groups, appearances and save persistence for the live world. Idempotent.</summary>
+        internal void EnsureWorldBindings(Action<string>? log = null)
+        {
+            if (!_done || _defs.Count == 0) return;
+            EnsureRuntimeMembership();
+            EnsureAppearances();
+            EnsurePersistence(Il2Cpp.GameContext.Instance?.AutoSaveDirector, log);
+        }
+
+        /// <summary>Zero-allocation per-frame check: syncs once whenever a gameplay SceneContext loads.</summary>
+        internal void TickWorldSync(Action<string>? log = null)
+        {
+            if (!_done || _defs.Count == 0) return;
+            var scene = Il2Cpp.SceneContext.Instance;
+            if (scene == null || scene.PlayerState == null || scene.SlimeAppearanceDirector == null)
+            {
+                _syncedScenePtr = IntPtr.Zero;
+                return;
+            }
+            var ptr = scene.Pointer;
+            if (ptr == _syncedScenePtr) return;
+            _syncedScenePtr = ptr;
+            EnsureWorldBindings(log);
+        }
+
+        private static UnityEngine.Sprite? TryLoadIconSprite(string canonicalId)
+        {
+            try
+            {
+                var folder = Sr2ImportedSpawner.CacheDirFor(canonicalId);
+                if (string.IsNullOrEmpty(folder)) return null;
+                string? file = null;
+                var manifestPath = Path.Combine(folder, "cache-manifest.json");
+                if (File.Exists(manifestPath))
+                {
+                    var root = MiniJson.Parse(File.ReadAllText(manifestPath)) as Dictionary<string, object>;
+                    if (root != null && root.TryGetValue("icon", out var iconObj) && iconObj is Dictionary<string, object> icon &&
+                        icon.TryGetValue("file", out var fileObj) && fileObj is string f && !string.IsNullOrEmpty(f))
+                        file = f;
+                }
+                if (string.IsNullOrEmpty(file))
+                {
+                    var descPath = Path.Combine(folder, "icon-descriptor.json");
+                    if (File.Exists(descPath))
+                    {
+                        var desc = MiniJson.Parse(File.ReadAllText(descPath)) as Dictionary<string, object>;
+                        if (desc != null && desc.TryGetValue("file", out var fileObj) && fileObj is string f && !string.IsNullOrEmpty(f))
+                            file = f;
+                    }
+                }
+                if (string.IsNullOrEmpty(file) && File.Exists(Path.Combine(folder, "icon.png")))
+                    file = "icon.png";
+                if (string.IsNullOrEmpty(file) || Path.GetFileName(file) != file) return null;
+                var pngPath = Path.Combine(folder, file);
+                if (!File.Exists(pngPath)) return null;
+                var bytes = File.ReadAllBytes(pngPath);
+                var texture = Sr2Png.Load(bytes, "SlimeBridgeIconTex_" + canonicalId, false, false);
+                texture.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+                UnityEngine.Object.DontDestroyOnLoad(texture);
+                var sprite = UnityEngine.Sprite.Create(texture, new UnityEngine.Rect(0f, 0f, texture.width, texture.height), new UnityEngine.Vector2(0.5f, 0.5f), 100f);
+                sprite.name = "SlimeBridgeIcon_" + canonicalId;
+                sprite.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+                UnityEngine.Object.DontDestroyOnLoad(sprite);
+                return sprite;
+            }
+            catch (Exception) { return null; }
         }
 
         public void Tick(Action<string> log)
@@ -249,8 +451,11 @@ namespace SlimeBridge.SR2
             internal List<Il2Cpp.SlimeDefinition>? Parents;
             internal Il2Cpp.IdentifiableType? Plort;
             internal UnityEngine.GameObject? Clone;
+            internal Il2Cpp.SlimeAppearance? OwnedAppearance;
             internal readonly List<Il2Cpp.IdentifiableTypeGroup> DefGroupsAdded = new List<Il2Cpp.IdentifiableTypeGroup>();
+            internal readonly List<Il2Cpp.IdentifiableTypeGroup> DefAncestorGroupsAdded = new List<Il2Cpp.IdentifiableTypeGroup>();
             internal readonly List<Il2Cpp.IdentifiableTypeGroup> PlortGroupsAdded = new List<Il2Cpp.IdentifiableTypeGroup>();
+            internal readonly List<Il2Cpp.IdentifiableTypeGroup> PlortAncestorGroupsAdded = new List<Il2Cpp.IdentifiableTypeGroup>();
         }
 
         private void Register(Il2Cpp.GameContext context, Il2Cpp.SlimeDefinitions definitions, Action<string> log)
@@ -451,6 +656,8 @@ namespace SlimeBridge.SR2
                     result.Status = "FAILED";
                     _defs.Remove(result.Entry.canonical_id);
                     _defMirrorGroups.Remove(result.Entry.canonical_id);
+                    _defAncestorGroups.Remove(result.Entry.canonical_id);
+                    _ownedAppearances.Remove(result.Entry.canonical_id);
                     _types.Remove(result.Entry.canonical_id);
                     if (result.Entry.plort != null && !string.IsNullOrEmpty(result.Entry.plort.canonical_id))
                     {
@@ -459,8 +666,22 @@ namespace SlimeBridge.SR2
                         _plortMirrorGroups.Remove(result.Entry.plort.canonical_id);
                     }
                     _prefabs.Remove(result.Entry.canonical_id);
-                    Rollback(definitions, result.Def, result.Plort, result.Clone, result.DefGroupsAdded, result.PlortGroupsAdded, result.Problems);
+                    Rollback(definitions, result.Def, result.Plort, result.Clone, result.OwnedAppearance,
+                        result.DefGroupsAdded, result.DefAncestorGroupsAdded,
+                        result.PlortGroupsAdded, result.PlortAncestorGroupsAdded, result.Problems);
                 }
+            }
+
+            if (_defs.Count > 0)
+            {
+                Active = this;
+                // Synchronize runtime groups, appearances, and save/load persistence lookup tables BEFORE any save loads:
+                // otherwise reloading a save with imported slimes/plorts cannot resolve their referenceIds, and saving throws
+                // KeyNotFoundException in GameModelPullHelpers.PullPlayer / PullActors.
+                try { EnsureRuntimeMembership(); } catch (Exception) { }
+                try { EnsureAppearances(); } catch (Exception) { }
+                EnsurePersistence(context.AutoSaveDirector, log);
+                Sr2PersistencePatch.Install(log);
             }
 
             var rows = results.Select(SerializeRow).ToList();
@@ -474,6 +695,7 @@ namespace SlimeBridge.SR2
             Il2Cpp.SlimeDefinition? def = null;
             Il2Cpp.IdentifiableType? plortType = null;
             UnityEngine.GameObject? clone = null;
+            Il2Cpp.SlimeAppearance? ownedAppearance = null;
             var plortRetargeted = true;
             var mutated = false;
             try
@@ -488,21 +710,20 @@ namespace SlimeBridge.SR2
                 { result.Problems.Add("unknown slime template " + entry.template.slime_native_ref); return result; }
                 result.Template = templateDef;
                 // The imported slime must satisfy the same group predicates the native template
-                // does: mirror every group whose member list directly contains the template
-                // definition (this is what vacpack slot predicates consult), with groupType as
-                // the fallback when the template is in no direct membership list.
+                // does: mirror every leaf group whose ImmediateMemberTypes contains the template,
+                // AND every ancestor/composite group (vacpack slots, silos, AutoSaveDirector) where IsMember(template) is true.
                 var defMirrorGroups = lookup.GroupsContaining(templateDef);
                 if (defMirrorGroups.Count == 0 && templateDef.groupType != null)
                     defMirrorGroups.Add(templateDef.groupType);
                 if (defMirrorGroups.Count == 0)
                 { result.Problems.Add("template slime has no group membership to mirror"); return result; }
+                var defAncestorGroups = lookup.AncestorGroupsContaining(templateDef, defMirrorGroups);
                 var hasPlort = !string.IsNullOrEmpty(entry.plort.canonical_id);
                 Il2Cpp.IdentifiableType? templatePlort = null;
                 if (hasPlort && (!lookup.TryTypeTemplate(entry.plort.template_native_ref, out templatePlort) || templatePlort == null))
                 { result.Problems.Add("unknown plort template " + entry.plort.template_native_ref); return result; }
-                // The imported plort must satisfy the same group predicates the native plort does:
-                // mirror every group whose member list directly contains the template plort.
                 var plortMirrorGroups = new List<Il2Cpp.IdentifiableTypeGroup>();
+                var plortAncestorGroups = new List<Il2Cpp.IdentifiableTypeGroup>();
                 if (hasPlort)
                 {
                     plortMirrorGroups = lookup.GroupsContaining(templatePlort!);
@@ -510,6 +731,7 @@ namespace SlimeBridge.SR2
                         plortMirrorGroups.Add(templatePlort.groupType);
                     if (plortMirrorGroups.Count == 0)
                     { result.Problems.Add("template plort has no group membership to mirror"); return result; }
+                    plortAncestorGroups = lookup.AncestorGroupsContaining(templatePlort!, plortMirrorGroups);
                 }
 
                 // A Largo takes its two parents (an imported species registered earlier in this run, else a native SR2 slime) and
@@ -564,16 +786,66 @@ namespace SlimeBridge.SR2
                     .TryCast<Il2Cpp.SlimeDefinition>();
                 if (def == null) { result.Problems.Add("SlimeDefinition allocation failed"); return result; }
                 def.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+                UnityEngine.Object.DontDestroyOnLoad(def);
                 def.name = entry.display_name;
+                def.Name = entry.display_name;
                 def.referenceId = entry.native_ref_id ?? "";
                 def.stableHashedId = entry.native_id;
                 def.initializedHashId = true;
                 def.IsLargo = isLargo;
                 def.CanLargofy = !isLargo && entry.flags.can_largofy;
                 def.PrefabScale = templateDef.PrefabScale;
+                def.Sounds = templateDef.Sounds;
+                def.BaseModule = templateDef.BaseModule;
+                def.localizedName = templateDef.localizedName;
+                def.color = templateDef.color;
+                def.amountAcquiredPerVac = templateDef.amountAcquiredPerVac > 0 ? templateDef.amountAcquiredPerVac : 1;
+                def.needsInstantiation = templateDef.needsInstantiation;
+                def.IsAnimal = templateDef.IsAnimal;
+                def.properties = templateDef.properties;
+                def.defaultPropertyValues = templateDef.defaultPropertyValues;
+                def.debugIcon = templateDef.debugIcon;
+                def._fullArt = templateDef._fullArt;
+                def._requiresFullArt = false;
+                def.RadiantBase = templateDef.RadiantBase;
+                def.RadiantLargo0 = templateDef.RadiantLargo0;
+                def.RadiantLargo1 = templateDef.RadiantLargo1;
                 def.BaseSlimes = isLargo ? new Il2CppReferenceArray<Il2Cpp.SlimeDefinition>(parents.ToArray())
                                          : new Il2CppReferenceArray<Il2Cpp.SlimeDefinition>(0);
-                def.AppearancesDefault = new Il2CppReferenceArray<Il2Cpp.SlimeAppearance>(0);
+                // Populate AppearancesDefault + icon immediately (owned clone, never mutating templateDef's native appearance)
+                // so HUD vacpack slots (AmmoSlotViewHolder.UpdateAmmoDisplay) and SlimeAppearanceDirector never see null.
+                var customIcon = TryLoadIconSprite(entry.canonical_id);
+                var templateApps = templateDef.AppearancesDefault;
+                if (templateApps != null && templateApps.Length > 0 && templateApps[0] != null)
+                {
+                    try
+                    {
+                        var appClone = UnityEngine.Object.Instantiate(templateApps[0]);
+                        if (appClone != null)
+                        {
+                            appClone.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+                            UnityEngine.Object.DontDestroyOnLoad(appClone);
+                            appClone.name = "SlimeBridgeAppearance_" + entry.canonical_id;
+                            if (customIcon != null)
+                            {
+                                appClone._icon = customIcon;
+                                appClone.IconNew = customIcon;
+                            }
+                            ownedAppearance = appClone;
+                            def.AppearancesDefault = new Il2CppReferenceArray<Il2Cpp.SlimeAppearance>(new[] { appClone });
+                        }
+                        else
+                        {
+                            def.AppearancesDefault = templateApps;
+                        }
+                    }
+                    catch (Exception) { def.AppearancesDefault = templateApps; }
+                }
+                else
+                {
+                    def.AppearancesDefault = new Il2CppReferenceArray<Il2Cpp.SlimeAppearance>(0);
+                }
+                def.icon = customIcon ?? ownedAppearance?.Icon ?? templateDef.icon;
                 def.AppearancesDynamic = new Il2CppSystem.Collections.Generic.List<Il2Cpp.SlimeAppearance>();
                 def.FavoriteToyIdents = new Il2CppReferenceArray<Il2Cpp.ToyDefinition>(0);
                 def.SlimeModules = new Il2CppReferenceArray<UnityEngine.GameObject>(0);
@@ -607,6 +879,7 @@ namespace SlimeBridge.SR2
                         .TryCast<Il2Cpp.IdentifiableType>();
                     if (plortType == null) { result.Problems.Add("plort IdentifiableType allocation failed"); return result; }
                     plortType.hideFlags = UnityEngine.HideFlags.HideAndDontSave;
+                    UnityEngine.Object.DontDestroyOnLoad(plortType);
                     plortType.name = entry.plort.display_name;
                     plortType.referenceId = entry.plort.native_ref_id ?? "";
                     plortType.stableHashedId = entry.plort.native_id;
@@ -614,6 +887,16 @@ namespace SlimeBridge.SR2
                     plortType.IsPlort = true;
                     plortType.groupType = templatePlort!.groupType;
                     plortType.Categories = templatePlort.Categories;
+                    plortType.icon = templatePlort.icon;
+                    plortType.debugIcon = templatePlort.debugIcon;
+                    plortType._fullArt = templatePlort._fullArt;
+                    plortType._requiresFullArt = false;
+                    plortType.localizedName = templatePlort.localizedName;
+                    plortType.color = templatePlort.color;
+                    plortType.amountAcquiredPerVac = templatePlort.amountAcquiredPerVac > 0 ? templatePlort.amountAcquiredPerVac : 1;
+                    plortType.needsInstantiation = templatePlort.needsInstantiation;
+                    plortType.properties = templatePlort.properties;
+                    plortType.defaultPropertyValues = templatePlort.defaultPropertyValues;
                     if (templatePlort.prefab == null) { result.Problems.Add("template plort prefab unavailable"); return result; }
                     var plortClone = Sr2PrefabCloner.Clone(templatePlort.prefab);
                     plortClone.name = "SlimeBridgeImport_" + entry.canonical_id + "_plort";
@@ -657,17 +940,19 @@ namespace SlimeBridge.SR2
                 {
                     try
                     {
-                        var members = mirrorGroup.ImmediateMemberTypes;
-                        if (members != null && !members.Contains(def)) members.Add(def);
-                        // IdentifiableTypeGroup.IsMember consults the group's runtime object cache
-                        // (built at game init), not the serialized member list: mirror into both.
-                        var runtime = mirrorGroup._runtimeObject;
-                        var runtimeMembers = runtime?._memberTypes;
-                        if (runtime != null && runtimeMembers != null && !runtimeMembers.Contains(def))
-                            runtimeMembers.Add(def);
+                        AddTypeToGroup(mirrorGroup, def, true);
                         result.DefGroupsAdded.Add(mirrorGroup);
                     }
                     catch (Exception ex) { result.Problems.Add("group mirror failed on " + (mirrorGroup.name ?? "") + ": " + ex.GetType().Name); }
+                }
+                foreach (var ancestorGroup in defAncestorGroups)
+                {
+                    try
+                    {
+                        AddTypeToGroup(ancestorGroup, def, false);
+                        result.DefAncestorGroupsAdded.Add(ancestorGroup);
+                    }
+                    catch (Exception) { }
                 }
                 if (plortType != null)
                 {
@@ -675,15 +960,19 @@ namespace SlimeBridge.SR2
                     {
                         try
                         {
-                            var members = mirrorGroup.ImmediateMemberTypes;
-                            if (members != null && !members.Contains(plortType)) members.Add(plortType);
-                            var runtime = mirrorGroup._runtimeObject;
-                            var runtimeMembers = runtime?._memberTypes;
-                            if (runtime != null && runtimeMembers != null && !runtimeMembers.Contains(plortType))
-                                runtimeMembers.Add(plortType);
+                            AddTypeToGroup(mirrorGroup, plortType, true);
                             result.PlortGroupsAdded.Add(mirrorGroup);
                         }
                         catch (Exception ex) { result.Problems.Add("plort group mirror failed on " + (mirrorGroup.name ?? "") + ": " + ex.GetType().Name); }
+                    }
+                    foreach (var ancestorGroup in plortAncestorGroups)
+                    {
+                        try
+                        {
+                            AddTypeToGroup(ancestorGroup, plortType, false);
+                            result.PlortAncestorGroupsAdded.Add(ancestorGroup);
+                        }
+                        catch (Exception) { }
                     }
                     if (refDict != null && !string.IsNullOrEmpty(plortType.referenceId))
                         refDict[plortType.referenceId] = plortType;
@@ -720,7 +1009,7 @@ namespace SlimeBridge.SR2
                     result.Detail["gate_groups"] = DescribeGroups(defMirrorGroups, def);
                     if (plortType != null) result.Detail["gate_plort_groups"] = DescribeGroups(plortMirrorGroups, plortType);
                     result.Problems.Add("native read-back failed after mutation; rolling back");
-                    Rollback(definitions, def, plortType, clone, result.DefGroupsAdded, result.PlortGroupsAdded, result.Problems);
+                    Rollback(definitions, def, plortType, clone, ownedAppearance, result.DefGroupsAdded, result.DefAncestorGroupsAdded, result.PlortGroupsAdded, result.PlortAncestorGroupsAdded, result.Problems);
                     mutated = false;
                     return result;
                 }
@@ -730,14 +1019,17 @@ namespace SlimeBridge.SR2
                 if (plortType != null && !string.IsNullOrEmpty(entry.plort.canonical_id)) _types[entry.plort.canonical_id] = plortType;
                 _prefabs[entry.canonical_id] = clone;
                 _defMirrorGroups[entry.canonical_id] = defMirrorGroups;
+                _defAncestorGroups[entry.canonical_id] = defAncestorGroups;
                 _templates[entry.canonical_id] = templateDef;
+                if (ownedAppearance != null) _ownedAppearances[entry.canonical_id] = ownedAppearance;
                 if (plortType != null && !string.IsNullOrEmpty(entry.plort.canonical_id))
-                    _plortMirrorGroups[entry.plort.canonical_id] = (plortType, plortMirrorGroups);
+                    _plortMirrorGroups[entry.plort.canonical_id] = (plortType, plortMirrorGroups, plortAncestorGroups);
                 result.Detail["imported_visual_setup"] = Sr2ImportedSpawner.Register(def, entry, clone, templateDef);
                 result.Detail["imported_visual"] = Sr2ImportedSpawner.Proof(clone);
                 result.Def = def;
                 result.Plort = plortType;
                 result.Clone = clone;
+                result.OwnedAppearance = ownedAppearance;
                 result.Status = "REGISTERED";
                 return result;
             }
@@ -746,15 +1038,19 @@ namespace SlimeBridge.SR2
                 result.Problems.Add("registration threw: " + ex.GetType().Name + ": " + ex.Message);
                 if (mutated)
                 {
-                    try { Rollback(definitions, def, plortType, clone, result.DefGroupsAdded, result.PlortGroupsAdded, result.Problems); }
+                    try { Rollback(definitions, def, plortType, clone, ownedAppearance, result.DefGroupsAdded, result.DefAncestorGroupsAdded, result.PlortGroupsAdded, result.PlortAncestorGroupsAdded, result.Problems); }
                     catch (Exception rex) { result.Problems.Add("rollback threw: " + rex.GetType().Name); }
                 }
-                else if (clone != null || (plortType != null && plortType.prefab != null))
+                else if (clone != null || ownedAppearance != null || (plortType != null && plortType.prefab != null))
                 {
                     DestroyQuietly(clone);
+                    if (ownedAppearance != null) { try { UnityEngine.Object.Destroy(ownedAppearance); } catch { } }
                     if (plortType != null) DestroyQuietly(plortType.prefab);
                 }
                 _defs.Remove(entry.canonical_id);
+                _defMirrorGroups.Remove(entry.canonical_id);
+                _defAncestorGroups.Remove(entry.canonical_id);
+                _ownedAppearances.Remove(entry.canonical_id);
                 _types.Remove(entry.canonical_id);
                 _prefabs.Remove(entry.canonical_id);
                 return result;
@@ -860,8 +1156,11 @@ namespace SlimeBridge.SR2
 
         private static void Rollback(Il2Cpp.SlimeDefinitions definitions, Il2Cpp.SlimeDefinition? def,
             Il2Cpp.IdentifiableType? plortType, UnityEngine.GameObject? clone,
+            Il2Cpp.SlimeAppearance? ownedAppearance,
             List<Il2Cpp.IdentifiableTypeGroup> defGroupsAdded,
-            List<Il2Cpp.IdentifiableTypeGroup> plortGroupsAdded, List<string> problems)
+            List<Il2Cpp.IdentifiableTypeGroup> defAncestorGroupsAdded,
+            List<Il2Cpp.IdentifiableTypeGroup> plortGroupsAdded,
+            List<Il2Cpp.IdentifiableTypeGroup> plortAncestorGroupsAdded, List<string> problems)
         {
             if (def == null) return;
             Sr2ImportedSpawner.Unregister(def);
@@ -881,29 +1180,16 @@ namespace SlimeBridge.SR2
                     refDict.TryGetValue(def.referenceId, out var existingRef) && existingRef != null && existingRef.Pointer == def.Pointer)
                     refDict.Remove(def.referenceId);
                 if (def.groupType != null && def.groupType.ImmediateMemberTypes.Contains(def)) def.groupType.ImmediateMemberTypes.Remove(def);
-                foreach (var group in defGroupsAdded)
-                {
-                    try
-                    {
-                        if (group.ImmediateMemberTypes != null && group.ImmediateMemberTypes.Contains(def)) group.ImmediateMemberTypes.Remove(def);
-                        var runtimeMembers = group._runtimeObject?._memberTypes;
-                        if (runtimeMembers != null && runtimeMembers.Contains(def)) runtimeMembers.Remove(def);
-                    }
-                    catch (Exception) { }
-                }
+                foreach (var group in defGroupsAdded) RemoveTypeFromGroup(group, def, true);
+                foreach (var group in defAncestorGroupsAdded) RemoveTypeFromGroup(group, def, false);
             }
             catch (Exception ex) { problems.Add("rollback partial: " + ex.GetType().Name); }
             if (plortType != null)
             {
                 try
                 {
-                    foreach (var mirrorGroup in plortGroupsAdded)
-                    {
-                        if (mirrorGroup.ImmediateMemberTypes != null && mirrorGroup.ImmediateMemberTypes.Contains(plortType))
-                            mirrorGroup.ImmediateMemberTypes.Remove(plortType);
-                        var runtimeMembers = mirrorGroup._runtimeObject?._memberTypes;
-                        if (runtimeMembers != null && runtimeMembers.Contains(plortType)) runtimeMembers.Remove(plortType);
-                    }
+                    foreach (var mirrorGroup in plortGroupsAdded) RemoveTypeFromGroup(mirrorGroup, plortType, true);
+                    foreach (var ancestorGroup in plortAncestorGroupsAdded) RemoveTypeFromGroup(ancestorGroup, plortType, false);
                     var plortRefDict = Il2Cpp.GameContext.Instance?.LookupDirector?._identifiableTypeByRefId;
                     if (plortRefDict != null && !string.IsNullOrEmpty(plortType.referenceId) &&
                         plortRefDict.TryGetValue(plortType.referenceId, out var existingPlortRef) && existingPlortRef != null && existingPlortRef.Pointer == plortType.Pointer)
@@ -911,6 +1197,10 @@ namespace SlimeBridge.SR2
                     DestroyQuietly(plortType.prefab);
                 }
                 catch (Exception ex) { problems.Add("plort rollback partial: " + ex.GetType().Name); }
+            }
+            if (ownedAppearance != null)
+            {
+                try { UnityEngine.Object.Destroy(ownedAppearance); } catch { }
             }
             if (clone != null)
             {
@@ -1030,6 +1320,9 @@ namespace SlimeBridge.SR2
                         }
                     }
                 }
+                var configGroup = _context.AutoSaveDirector?._configuration?.IdentifiableTypes;
+                if (configGroup != null && !_allGroups.Exists(g => g.Pointer == configGroup.Pointer))
+                    _allGroups.Add(configGroup);
             }
 
             private void AddTypes(Il2CppReferenceArray<Il2Cpp.IdentifiableType>? array)
@@ -1059,6 +1352,25 @@ namespace SlimeBridge.SR2
                     }
                 }
                 return groups;
+            }
+
+            /// <summary>Composite/ancestor groups (vacpack slots, silos, AutoSaveDirector) containing the template via child groups.</summary>
+            internal List<Il2Cpp.IdentifiableTypeGroup> AncestorGroupsContaining(Il2Cpp.IdentifiableType member,
+                List<Il2Cpp.IdentifiableTypeGroup> immediate)
+            {
+                var immediatePtrs = new HashSet<IntPtr>();
+                foreach (var g in immediate) immediatePtrs.Add(g.Pointer);
+                var ancestors = new List<Il2Cpp.IdentifiableTypeGroup>();
+                foreach (var group in _allGroups)
+                {
+                    if (immediatePtrs.Contains(group.Pointer)) continue;
+                    try
+                    {
+                        if (group.IsMember(member)) ancestors.Add(group);
+                    }
+                    catch (Exception) { }
+                }
+                return ancestors;
             }
 
             internal bool TrySlimeTemplate(string reference, out Il2Cpp.SlimeDefinition? def)

@@ -18,6 +18,7 @@ namespace SlimeBridge.SR1
         private static readonly int[] Buckets = new int[Bounds.Length + 1];
         private static float _windowStart = -1f, _sum, _max, _nextLog;
         private static int _frames;
+        private static bool _throttledDuringWindow;
         private static readonly bool Always = string.Equals(Environment.GetEnvironmentVariable("SLIMEBRIDGE_FRAMEWATCH"), "1", StringComparison.Ordinal);
 
         internal static void Tick()
@@ -25,6 +26,21 @@ namespace SlimeBridge.SR1
             try
             {
                 var now = Time.realtimeSinceStartup;
+                if (SlimeBridge.Shared.TravelThrottle.AnyThrottled)
+                {
+                    // Intentionally capped at 4-10 FPS while parked in background: reset window cleanly and do not log SLOW.
+                    _throttledDuringWindow = true;
+                    _windowStart = now; _sum = 0f; _max = 0f; _frames = 0;
+                    Array.Clear(Buckets, 0, Buckets.Length);
+                    return;
+                }
+                if (_throttledDuringWindow)
+                {
+                    // First frame right after resuming carries the parked frame's long delta: skip it.
+                    _throttledDuringWindow = false;
+                    _windowStart = now;
+                    return;
+                }
                 if (_windowStart < 0f) _windowStart = now;
                 var ms = Time.unscaledDeltaTime * 1000f;
                 if (ms > 0f && ms < 5000f)

@@ -23,6 +23,7 @@ namespace SlimeBridge.SR2
             if (registrar == null || !registrar.Done) return SendError("SlimeBridge: no imported species registered yet");
             var verb = args.Length > 0 ? args[0].ToLowerInvariant() : "help";
             var all = registrar.Canonicals.OrderBy(c => c, StringComparer.Ordinal).ToList();
+            var allSpawnable = registrar.AllCanonicals.OrderBy(c => c, StringComparer.Ordinal).ToList();
             switch (verb)
             {
                 case "list":
@@ -34,12 +35,12 @@ namespace SlimeBridge.SR2
                     return true;
                 case "spawn":
                     if (args.Length < 2) return SendError("usage: " + Usage);
-                    var id = args[1];
-                    if (!all.Contains(id)) return SendError("unknown id " + id + " (slimebridge list / slimebridge largos)");
+                    var id = allSpawnable.FirstOrDefault(c => c.Equals(args[1], StringComparison.OrdinalIgnoreCase));
+                    if (id == null) return SendError("unknown id " + args[1] + " (slimebridge list / slimebridge largos)");
                     var count = args.Length > 2 && int.TryParse(args[2], out var n) ? Math.Max(1, Math.Min(10, n)) : 1;
                     for (var i = 0; i < count; i++)
                     {
-                        var problem = Sr2DevSpawner.SpawnCanonical(registrar, id);
+                        var problem = Sr2DevSpawner.SpawnCanonical(registrar, id, i);
                         if (problem.Length > 0) return SendError("spawn " + id + ": " + problem);
                     }
                     SendMessage("spawned " + count + " x " + id);

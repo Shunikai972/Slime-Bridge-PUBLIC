@@ -51,6 +51,8 @@ class Win32Windows:
         self._user32.PostMessageW.restype = wintypes.BOOL
         self._user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
         self._user32.AttachThreadInput.restype = wintypes.BOOL
+        self._user32.AllowSetForegroundWindow.argtypes = [wintypes.DWORD]
+        self._user32.AllowSetForegroundWindow.restype = wintypes.BOOL
         self._kernel32.GetCurrentThreadId.argtypes = []
         self._kernel32.GetCurrentThreadId.restype = wintypes.DWORD
 
@@ -112,8 +114,18 @@ class Win32Windows:
                 return True
         return False
 
+    def allow_foreground(self, pid):
+        """Grant a verified owned game PID permission to take foreground when its window appears."""
+        if not self._verify(pid):
+            return False
+        allow = getattr(self._user32, 'AllowSetForegroundWindow', None)
+        if allow is None:
+            return False
+        return bool(allow(pid))
+
     def focus_startup(self, pid):
         """Best effort on a separate input queue; never restore a minimized front game."""
+        allow = getattr(self._user32, 'AllowSetForegroundWindow', None)
         for hwnd in self._game_windows(pid):
             if self._user32.IsIconic(hwnd):
                 continue
@@ -123,6 +135,8 @@ class Win32Windows:
                 continue
             # Startup holds the travel admission lock. Do not wait for a game to
             # restore or attach its input queue: cross-queue activation is asynchronous.
+            if allow is not None:
+                allow(pid)
             if self._user32.GetForegroundWindow() != hwnd:
                 self._user32.SetForegroundWindow(hwnd)
             if self._user32.GetForegroundWindow() == hwnd:
@@ -165,6 +179,12 @@ class Win32Windows:
 
 class NullWindows:
     """No window control (non-Windows, or tests): crossings still run, the player switches windows by hand."""
+
+    def allow_foreground(self, pid):
+        return False
+
+    def focus_startup(self, pid):
+        return False
 
     def focus(self, pid):
         return False

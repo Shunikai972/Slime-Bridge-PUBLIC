@@ -18,6 +18,8 @@ namespace SlimeBridge.SR1
     {
         private static Harmony? _harmony;
         private static FieldInfo? _parentField;
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, SlimeAppearanceApplicator> HelperParents =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<object, SlimeAppearanceApplicator>();
 
         public static void EnsurePatched()
         {
@@ -92,7 +94,12 @@ namespace SlimeBridge.SR1
         {
             try
             {
-                var parent = _parentField != null ? _parentField.GetValue(__instance) as SlimeAppearanceApplicator : null;
+                if (__instance == null || _parentField == null) return true;
+                if (!HelperParents.TryGetValue(__instance, out var parent))
+                {
+                    parent = _parentField.GetValue(__instance) as SlimeAppearanceApplicator;
+                    if (parent != null) HelperParents.Add(__instance, parent);
+                }
                 if (parent != null && !string.IsNullOrEmpty(ImportedSpawner.ResolveImportedCanonical(parent)))
                 {
                     if (parent.LODGroup != null) parent.LODGroup.RecalculateBounds();

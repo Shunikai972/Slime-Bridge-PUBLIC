@@ -119,6 +119,20 @@ namespace SlimeBridge.SR2
             return loaded;
         }
         internal static void Unregister(Il2Cpp.SlimeDefinition definition) { Bindings.Remove(definition.Pointer); }
+
+        /// <summary>Containment-verified extracted asset cache folder for one canonical species, or null.</summary>
+        internal static string? CacheDirFor(string canonicalId)
+        {
+            if (string.IsNullOrEmpty(canonicalId)) return null;
+            if (_cache != null && _cache.CanonicalId == canonicalId && Directory.Exists(_cache.Directory))
+                return _cache.Directory;
+            if (string.IsNullOrEmpty(_cacheRoot) || string.IsNullOrEmpty(_repoRoot)) return null;
+            var folder = Path.Combine(_cacheRoot, canonicalId);
+            if (!Directory.Exists(folder)) return null;
+            if (!LabSpecPathGuard.IsAllowedDirectory(Path.Combine(_repoRoot, LabSpecPathGuard.AssetCacheRelativeRoot), folder, out _))
+                return null;
+            return folder;
+        }
         internal static bool IsImported(GameObject actor)
         {
             var ident = actor.GetComponentInParent<Il2Cpp.Identifiable>(true) ?? actor.GetComponentInChildren<Il2Cpp.Identifiable>(true);

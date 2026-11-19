@@ -19,7 +19,7 @@ namespace SlimeBridge.SR2
     /// </summary>
     public sealed class BridgeMod : MelonMod
     {
-        public const string PluginVersion = "0.2.12";
+        public const string PluginVersion = "0.2.13";
         private static readonly int Pid = Environment.ProcessId;
         private static readonly HttpClient Http = new HttpClient(new HttpClientHandler { UseProxy = false })
         {
@@ -506,6 +506,8 @@ namespace SlimeBridge.SR2
         /// <summary>The optional performance profile (launcher setting): applied once the game has settled, again when the quality level changes.</summary>
         public override void OnLateUpdate()
         {
+            // Keep imported species appearances, groups and save persistence bound whenever a gameplay world loads.
+            _speciesRegistrar?.TickWorldSync(_perfLog ??= text => LoggerInstance.Msg(text));
             // Developer mode only (SLIMEBRIDGE_DEV=1): F7 / F9 pick an imported species or Largo, F8 spawns it.
             if (_devSpawner == null && !_devSpawnerChecked) { _devSpawnerChecked = true; _devSpawner = Sr2DevSpawner.TryCreate(_speciesRegistrar); }
             _devSpawner?.Tick();

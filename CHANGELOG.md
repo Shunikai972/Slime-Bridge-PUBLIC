@@ -3,6 +3,35 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.13] - 2026-11-19
+
+### Fixed
+- Slime Rancher 2: imported species (Mosaic, Quantum, Rad and their Largos/plorts) no longer crash the vacpack HUD
+  (`AmmoSlotViewHolder.UpdateAmmoDisplay`) or save/load persistence (`SaveReferenceTranslation` /
+  `GameModelPullHelpers.PullPlayer`). Every imported definition receives an owned `SlimeAppearance` with its icon,
+  complete template metadata, leaf + ancestor group membership, and automatic save/load persistence hooks.
+- Slime Rancher 2: cloned reference prefabs now keep `activeSelf = true` under their inactive container so actors shot
+  from the vacpack, produced as plorts, or reloaded from disk wake up active and visible.
+- Slime Rancher 2: `slimebridge spawn` and `F8` dev spawn now instantiate through `InstantiationHelpers.InstantiateActor`
+  so spawned slimes and Largos register in `GameModel` and persist across save/reload; imported plorts can also be
+  spawned and multiple spawns spread cleanly in front of the player.
+- Slime Rancher 2: the 3D return portal now builds immediately inside `PlacePlayer()` before the transition overlay opens.
+- Slime Rancher: fixed Ringtail icon validation for SR2 1.x composed icons so Ringtail and all 21 Ringtail Largos
+  register cleanly (150/150 imported species), removed the missing journal title translation warning, honored `[count]`
+  for imported species and plorts in `slimebridge spawn`, and silenced `FrameWatch` SLOW spam while background-throttled.
+- Vacpack transfers in both SR1 and SR2 are now atomic per slot with rollback on native/UI exceptions.
+- Launcher: clicking Play (Home, Play menu, Games) no longer passes the DOM click event as `resume=true`, so Play
+  reliably opens the main menu for selecting or creating a new save while Continue loads the last pair directly.
+- Launcher: foreground game launches now call `AllowSetForegroundWindow` and bring the Unity window to the front, strip
+  stale per-launch travel environment variables, and restore SR2's actual registry display settings
+  (`Software\MonomiPark\SlimeRancher2`) while ignoring Unity's `Default_` resolution keys.
+
+### Performance
+- Reduced idle BridgeHost polling overhead by 80% during normal gameplay (adaptive 4 Hz idle / 20 Hz active crossing,
+  with fast-path empty mailbox parsing and cached request headers).
+- Eliminated per-frame string allocations in `TravelOverlay`, cached shader property IDs and ring-block steady state in
+  `SanctuaryPortalGlow`, and cached face-expression targets/materials and bounds-helper parents in SR1 Harmony hooks.
+
 ## [0.2.12] - 2026-11-19
 
 ### Changed

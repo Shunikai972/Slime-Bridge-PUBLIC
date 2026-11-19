@@ -494,8 +494,18 @@ class ApiTests(unittest.TestCase):
         with patch.object(runtime.HostProcess, 'start', side_effect=runtime.RuntimeErrorWithCode('HOST_TIMEOUT', 'x')):
             result = self.api.launch('BOTH')
         self.assertTrue(result['ok'])
-        self.assertEqual(len(result['launched']), 2)
+        # Play with both games starts the chosen game; the other follows once a save is open there.
+        self.assertEqual(len(result['launched']), 1)
+        self.assertIsNotNone(self.api._travel._follow)
         self.assertTrue(result['warnings'])
+        # Continue starts both games at once
+        self.api._travel._links.remember('pair-sr1', 'pair-sr2')
+        self.api._session.set('SR1', 'pair-sr1')
+        for child in self.api._launcher._children.values():
+            child.kill(); child.wait()
+        with patch.object(runtime.HostProcess, 'start', side_effect=runtime.RuntimeErrorWithCode('HOST_TIMEOUT', 'x')):
+            resumed = self.api.launch('SR1', resume=True)
+        self.assertEqual(len(resumed['launched']), 2)
 
     def test_unknown_game_is_reported_not_guessed(self):
         api = LauncherAPI(config_path=self.root / 'c2.json', known_paths=(), lab_games=self.root / 'x')

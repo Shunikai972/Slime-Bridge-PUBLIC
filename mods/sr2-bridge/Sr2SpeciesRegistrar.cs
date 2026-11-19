@@ -287,7 +287,21 @@ namespace SlimeBridge.SR2
             try
             {
                 var translation = director._saveReferenceTranslation?.TryCast<Il2CppMonomiPark.SlimeRancher.SaveReferenceTranslation>();
-                if (translation == null) return false;
+                return EnsurePersistence(translation, director, log);
+            }
+            catch (Exception ex)
+            {
+                log?.Invoke("species registrar: save persistence sync failed: " + ex.GetType().Name + ": " + ex.Message);
+                return false;
+            }
+        }
+
+        internal bool EnsurePersistence(Il2CppMonomiPark.SlimeRancher.SaveReferenceTranslation? translation,
+            Il2CppMonomiPark.SlimeRancher.AutoSaveDirector? director = null, Action<string>? log = null)
+        {
+            if (_types.Count == 0 || translation == null) return false;
+            try
+            {
                 var lookup = translation._identifiableTypeLookup;
                 var reverse = translation._identifiableTypeToPersistenceId?._reverseIndex;
                 var allPresent = lookup != null && reverse != null;
@@ -311,7 +325,8 @@ namespace SlimeBridge.SR2
                     if (string.IsNullOrEmpty(id) || !seenIds.Add(id)) return;
                     combined.Add(t);
                 }
-                var group = director._configuration?.IdentifiableTypes;
+                director ??= Il2Cpp.GameContext.Instance?.AutoSaveDirector;
+                var group = director?._configuration?.IdentifiableTypes;
                 if (group != null)
                 {
                     var members = group.GetAllMembers().GetEnumerator();

@@ -175,6 +175,7 @@ def test_sr1_and_sr2_critical_contracts():
 
     patch = (REPO_ROOT / 'mods' / 'sr2-bridge' / 'Sr2PersistencePatch.cs').read_text(encoding='utf-8')
     assert 'SaveGameImpl' in patch and 'CreateLoadReferenceTranslation' in patch
+    assert 'PullGame' in patch and 'PushGame' in patch and 'Priority.First' in patch
 
     spawner = (REPO_ROOT / 'mods' / 'sr2-bridge' / 'Sr2DevSpawner.cs').read_text(encoding='utf-8')
     assert 'InstantiationHelpers.InstantiateActor' in spawner

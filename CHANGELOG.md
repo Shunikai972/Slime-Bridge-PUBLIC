@@ -3,6 +3,15 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.14] - 2026-11-19
+
+### Fixed
+- Slime Rancher 2: added `Priority.First` Harmony prefixes on `GameModelPullHelpers.PullGame` and
+  `GameModelPushHelpers.PushGame` (in addition to `AutoSaveDirector.SaveGameImpl` and
+  `SaveReferenceTranslation.CreateLoadReferenceTranslation`) so imported slimes, Largos, and plorts sync into the
+  exact `SaveReferenceTranslation` instance passed to any save or load path, including alongside Starlight Core
+  Essentials and Ranching Together.
+
 ## [0.2.13] - 2026-11-19
 
 ### Fixed

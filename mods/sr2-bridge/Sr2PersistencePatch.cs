@@ -21,16 +21,29 @@ namespace SlimeBridge.SR2
             try
             {
                 var patched = 0;
+                HarmonyMethod First(string name) => new HarmonyMethod(typeof(Sr2PersistencePatch), name) { priority = Priority.First };
                 var saveImpl = AccessTools.Method(typeof(AutoSaveDirector), "SaveGameImpl");
                 if (saveImpl != null)
                 {
-                    harmony.Patch(saveImpl, prefix: new HarmonyMethod(typeof(Sr2PersistencePatch), nameof(BeforeSave)));
+                    harmony.Patch(saveImpl, prefix: First(nameof(BeforeSave)));
                     patched++;
                 }
                 var loadTrans = AccessTools.Method(typeof(SaveReferenceTranslation), "CreateLoadReferenceTranslation");
                 if (loadTrans != null)
                 {
-                    harmony.Patch(loadTrans, prefix: new HarmonyMethod(typeof(Sr2PersistencePatch), nameof(BeforeLoadTranslation)));
+                    harmony.Patch(loadTrans, prefix: First(nameof(BeforeLoadTranslation)));
+                    patched++;
+                }
+                var pullGame = AccessTools.Method(typeof(GameModelPullHelpers), "PullGame");
+                if (pullGame != null)
+                {
+                    harmony.Patch(pullGame, prefix: First(nameof(BeforePullGame)));
+                    patched++;
+                }
+                var pushGame = AccessTools.Method(typeof(GameModelPushHelpers), "PushGame");
+                if (pushGame != null)
+                {
+                    harmony.Patch(pushGame, prefix: First(nameof(BeforePushGame)));
                     patched++;
                 }
                 if (patched == 0)
@@ -55,9 +68,41 @@ namespace SlimeBridge.SR2
             catch (Exception) { }
         }
 
-        private static void BeforeLoadTranslation()
+        private static void BeforeLoadTranslation(SaveReferenceTranslation __instance)
         {
-            try { Sr2SpeciesRegistrar.Active?.EnsurePersistence(Il2Cpp.GameContext.Instance?.AutoSaveDirector); }
+            try
+            {
+                var active = Sr2SpeciesRegistrar.Active;
+                if (active == null) return;
+                if (__instance != null) active.EnsurePersistence(__instance);
+                else active.EnsurePersistence(Il2Cpp.GameContext.Instance?.AutoSaveDirector);
+            }
+            catch (Exception) { }
+        }
+
+        private static void BeforePullGame(ISaveReferenceTranslation saveReferenceTranslation)
+        {
+            try
+            {
+                var active = Sr2SpeciesRegistrar.Active;
+                if (active == null) return;
+                var concrete = saveReferenceTranslation?.TryCast<SaveReferenceTranslation>();
+                if (concrete != null) active.EnsurePersistence(concrete);
+                else active.EnsurePersistence(Il2Cpp.GameContext.Instance?.AutoSaveDirector);
+            }
+            catch (Exception) { }
+        }
+
+        private static void BeforePushGame(ISaveReferenceTranslation saveReferenceTranslation)
+        {
+            try
+            {
+                var active = Sr2SpeciesRegistrar.Active;
+                if (active == null) return;
+                var concrete = saveReferenceTranslation?.TryCast<SaveReferenceTranslation>();
+                if (concrete != null) active.EnsurePersistence(concrete);
+                else active.EnsurePersistence(Il2Cpp.GameContext.Instance?.AutoSaveDirector);
+            }
             catch (Exception) { }
         }
     }

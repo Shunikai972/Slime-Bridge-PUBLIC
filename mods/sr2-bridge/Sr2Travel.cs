@@ -167,7 +167,8 @@ namespace SlimeBridge.SR2
                     _throttle.Restore();
                     _held = false; _arrived = true;
                     TravelScreen.FullscreenAgainOnArrival();          // started small behind the other game: the player's fullscreen comes back
-                    var placed = Sr2ReturnPortalHook.PlacePlayer?.Invoke() ?? false;
+                    // A vac sync (the player is already here) moves items only: the player is not placed at the portal.
+                    var placed = message.Reason != "sync" && (Sr2ReturnPortalHook.PlacePlayer?.Invoke() ?? false);
                     if (!_overlay.IsCovering) { done(true, placed ? "portal" : "in_place", accepted); return; }
                     _overlay.Open(0.22f, () => done(true, placed ? "portal" : "in_place", accepted));
                     break;

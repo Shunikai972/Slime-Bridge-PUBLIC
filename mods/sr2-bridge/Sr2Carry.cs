@@ -29,6 +29,38 @@ namespace SlimeBridge.SR2
             return _byCanonical = map;
         }
 
+        /// <summary>
+        /// An imported species is a member of the groups that directly hold its template, but a vac slot accepts a parent
+        /// group whose runtime member cache was built before the import: the slot refuses it. Admit the imported type in
+        /// every slot group that already admits its native counterpart (pink slime, pink plort or a pink Largo).
+        /// </summary>
+        internal static bool AllowInVac(Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager ammo, Il2Cpp.IdentifiableType type)
+        {
+            var admitted = false;
+            try
+            {
+                var lookup = Il2Cpp.GameContext.Instance?.LookupDirector;
+                if (lookup == null) return false;
+                var slime = type.TryCast<Il2Cpp.SlimeDefinition>();
+                var siblingRef = slime == null ? "IdentifiableType.PinkPlort" : (slime.IsLargo ? "SlimeDefinition.PinkRock" : "SlimeDefinition.Pink");
+                if (!lookup.TryFindIdentifiableTypeByReferenceId(siblingRef, out var sibling) || sibling == null) return false;
+                foreach (var slot in ammo.Slots)
+                {
+                    var definition = slot?.Definition;
+                    var group = definition?.SlotTypeGroup;
+                    if (group == null || !definition!.IsAllowed(sibling) || definition.IsAllowed(type)) continue;
+                    var members = group.ImmediateMemberTypes;
+                    if (members != null && !members.Contains(type)) members.Add(type);
+                    var runtime = group._runtimeObject?._memberTypes;
+                    if (runtime != null && !runtime.Contains(type)) runtime.Add(type);
+                    admitted |= definition.IsAllowed(type);
+                }
+                MelonLoader.MelonLogger.Msg("carry: " + (type.ReferenceId ?? "?") + (admitted ? " admitted in the vac slots of " : " still refused by the vac slots of ") + siblingRef);
+            }
+            catch (Exception ex) { MelonLoader.MelonLogger.Msg("carry: vac admission failed: " + ex.GetType().Name); }
+            return admitted;
+        }
+
         private static Il2CppMonomiPark.SlimeRancher.Player.AmmoSlotManager? Vac() => Il2Cpp.SceneContext.Instance?.PlayerState?.Ammo;
 
         internal static Dictionary<string, int> Snapshot(string mode)
@@ -61,7 +93,8 @@ namespace SlimeBridge.SR2
                 var table = ByCanonical();
                 foreach (var item in offered)
                 {
-                    if (!table.TryGetValue(CarryNames.Canonical(item.Key), out var type) || !ammo.CouldAdd(type)) continue;
+                    if (!table.TryGetValue(CarryNames.Canonical(item.Key), out var type)) continue;
+                    if (!ammo.CouldAdd(type) && (!AllowInVac(ammo, type) || !ammo.CouldAdd(type))) continue;
                     var remaining = item.Value;
                     var slots = ammo.Slots;
                     for (var pass = 0; pass < 2 && remaining > 0; pass++)

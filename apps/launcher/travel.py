@@ -144,6 +144,8 @@ class TravelCoordinator:
         self._parked_child = None
         # A game the launcher started in the background (behind the one being played), still loading its save.
         self._waiting = {}
+        # Both games started with the front one not being the game played last: its vac must come over (no teleport).
+        self._pending_sync = None
         # Online play with one shared code (hosting / joining both games' online mods).
         self.online = OnlineSession(self._send, self._heartbeat, self._launcher.running, self._world_ready,
                                     lambda record_id: self._events.get(record_id, []), self._clock, cancel=self._cancel)
@@ -459,6 +461,11 @@ class TravelCoordinator:
 
     def _rollback(self, transition, code):
         source = transition['from']
+        if transition.get('sync'):
+            # a vac sync failed: the game played last keeps its vac and stays parked behind the one in front
+            self._cancel(transition)
+            self._send(source, 'resume', transition, reason=code[:60])
+            return self._finish(transition, 'ROLLED_BACK', code)
         self._cancel(transition)
         self._select_audio_front(source)
         self._send(source, 'resume', transition, reason=code[:60])
@@ -490,6 +497,12 @@ class TravelCoordinator:
                     sr1, sr2 = ((transition['source_save'], created) if src == 'SR1' else (created, transition['source_save']))
                     self._links.remember(sr1, sr2)
                     self._log(transition, f'linked {src} {transition["source_save"]} <-> {dst} {created} (new save)')
+            if transition.get('sync') and self._saw(transition, src, 'departure_ready') and self._world_ready(dst):
+                offer = self._latest_carry(transition, src, 'departure_ready') if self._carry_mode() != 'NONE' else {}
+                transition['carry_offered'] = offer
+                if not self._send(dst, 'arrive', transition, source=src, reason='sync', **({'carry': offer} if offer else {})):
+                    return self._rollback(transition, 'DESTINATION_QUEUE_FAILED')
+                return self._enter(transition, 'SWITCHING', 'vac offered to the game in front')
             if self._saw(transition, src, 'departure_ready') and self._world_ready(dst) and self._launcher.running(dst):
                 dest_save = (self._heartbeat(dst).get('status') or {}).get('save_id')
                 if transition['dest_save'] and dest_save != transition['dest_save']:
@@ -529,7 +542,8 @@ class TravelCoordinator:
                 if left:
                     transition['carry_left'] = left
                     self._log(transition, f'left in the {src} vacpack (no room in the {dst} vac, or {dst} has no such item): ' + ', '.join(f'{k} x{v}' for k, v in sorted(left.items())))
-                self._window(transition, 'minimize', src)
+                # The game left behind stays behind the one in front, not minimized: bringing a minimized fullscreen Unity
+                # window back flashes the desktop, a plain focus swap does not.
                 self._enter(transition, 'HOLDING', 'player arrived: the other game is being throttled')
         elif state == 'HOLDING':
             if self._saw(transition, src, 'failed'):
@@ -578,6 +592,7 @@ class TravelCoordinator:
             if not self.session_close_unconfirmed(transition['to']):
                 self._advance_session_close(transition)
         self._watch_session_end()
+        self._maybe_start_sync()
         reply = self._call('GET', '/v1/portal/requests') or {}
         for request in reply.get('requests', []):
             rid = request.get('request_id')
@@ -588,6 +603,32 @@ class TravelCoordinator:
         if not paired or (self._parked is None and self._front is not None):
             self._note_session()
         return [self.public(t) for t in self.transitions]
+
+    def request_sync(self, source, destination):
+        """Once both games have their save open, move the vac of ``source`` (played last) into ``destination`` (in front)."""
+        with self._lock:
+            self._pending_sync = {'from': source, 'to': destination, 'since': self._clock()}
+
+    def _maybe_start_sync(self):
+        pending = self._pending_sync
+        if pending is None:
+            return
+        src, dst = pending['from'], pending['to']
+        if self._clock() - pending['since'] > DEADLINES['PREPARING_COLD'] or not (self._launcher.running(src) and self._launcher.running(dst)):
+            self._pending_sync = None
+            return
+        if any(t['state'] in ACTIVE for t in self.transitions) or not (self._world_ready(src) and self._world_ready(dst)):
+            return
+        self._pending_sync = None
+        save = lambda realm: (self._heartbeat(realm).get('status') or {}).get('save_id')
+        transition = {'id': uuid.uuid4().hex[:16], 'request_id': None, 'portal_id': None, 'from': src, 'to': dst, 'state': 'PREPARING',
+                      'since': self._clock(), 'started': self._clock(), 'detail': None, 'history': [], 'launched': False,
+                      'deadline': DEADLINES['PREPARING_WARM'], 'dest_save': save(dst), 'source_save': save(src), 'candidates': [],
+                      'sync': True}
+        self._append(transition)
+        self._log(transition, f'{src} was played last: its vac moves to {dst}, where the player is')
+        if not self._send(src, 'prepare_departure', transition, destination=dst, portal_id='sync', carry_mode=self._carry_mode()):
+            self._finish(transition, 'FAILED', 'SYNC_QUEUE_FAILED')
 
     def note_waiting(self, realm, save):
         """``realm`` was started to wait behind the portal on ``save`` (None: a new save is being made for the session)."""

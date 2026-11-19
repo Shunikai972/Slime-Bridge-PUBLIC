@@ -380,7 +380,7 @@ def test_crossing_completed_between_startup_passes_keeps_destination_in_front(tm
         api._keep_in_front('SR1', api._audio_startup_epoch)
         thread.call_args.kwargs['target']()
     assert row['state'] == 'COMPLETE'
-    assert control.minimize.call_args_list == [mock.call(222), mock.call(111)]
+    assert control.minimize.call_args_list == [mock.call(222)]   # the game left behind is not minimized (no desktop flash)
     assert control.focus_startup.call_args_list == [mock.call(111)]
     assert control.focus.call_args_list == [mock.call(222)]
     assert api._audio_startup_deadline == 0
@@ -505,3 +505,21 @@ def test_the_typed_online_name_reaches_slime_rancher(tmp_path):
         assert api.launch('BOTH_SR1',confirmed=True)['ok']
     envs=dict(started)
     assert envs['SR1']['SLIMEBRIDGE_ONLINE_NAME']=='Noam_42' and 'SLIMEBRIDGE_ONLINE_NAME' not in envs['SR2']
+
+
+def test_starting_the_other_game_in_front_brings_the_vac_of_the_game_played_last(tmp_path):
+    api,started,patches=_launch_fixture(tmp_path)
+    api._travel._links.remember('ranch-sr1','ranch-sr2')
+    api._session.set('SR1','ranch-sr1')                          # SR1 was played last
+    with patches[0],patches[1],patches[2],patches[3]:
+        assert api.launch('BOTH_SR2',confirmed=True)['ok']
+    assert api._travel._pending_sync['from']=='SR1' and api._travel._pending_sync['to']=='SR2'
+
+
+def test_starting_the_game_played_last_in_front_needs_no_sync(tmp_path):
+    api,started,patches=_launch_fixture(tmp_path)
+    api._travel._links.remember('ranch-sr1','ranch-sr2')
+    api._session.set('SR1','ranch-sr1')
+    with patches[0],patches[1],patches[2],patches[3]:
+        assert api.launch('BOTH_SR1',confirmed=True)['ok']
+    assert api._travel._pending_sync is None

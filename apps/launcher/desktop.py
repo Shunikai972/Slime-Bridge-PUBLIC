@@ -540,6 +540,7 @@ class LauncherAPI:
         if target.startswith('BOTH'):
             target = 'BOTH'
         other = 'SR2' if front == 'SR1' else 'SR1'
+        previous = self._session.get()                     # the game played last, before this launch changes it
         pair = self._session_pair()
         # Continue of one game with a linked partner starts both (the partner waits behind its portal).
         if (resume and resume_partner and target != 'BOTH' and not background and pair.get(other)
@@ -618,6 +619,9 @@ class LauncherAPI:
             self._keep_in_front(front, launch_epoch)
             # One session: closing the game the player is in saves and closes the waiting one too.
             self._travel.park(front, other)
+            if previous and previous.get('realm') == other and pair.get(other) and pair.get(front):
+                # The player played the other game last: its vac comes to the front game once both saves are open.
+                self._travel.request_sync(other, front)
         elif background and launched and self._launcher.running(other):
             self._keep_in_front(other, launch_epoch)               # the started game waits behind the one being played
             self._travel.park(other, target)

@@ -3,6 +3,21 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.10] - 2026-11-19
+
+### Fixed
+- Slime Rancher species carried into Slime Rancher 2 (Mosaic, Quantum, Rad and their Largos) were refused by the vac and
+  stayed behind. The vac slots now accept them like their native counterparts.
+- The second crossing no longer shows the desktop for a frame. The game you leave now stays behind the one in front
+  instead of being minimized.
+
+### Added
+- Starting both games with the other game in front brings the vac of the game you played last, once both saves are
+  open, without moving you. The vac stays where you play.
+- Developer mode (environment variable `SLIMEBRIDGE_DEV=1`, off in normal use): in Slime Rancher 2, F7 / F9 pick an
+  imported species or Largo and F8 spawns it in front of you. Slime Rancher uses its console command
+  `slimebridge spawn <id>`.
+
 ## [0.2.9] - 2026-11-19
 
 ### Fixed

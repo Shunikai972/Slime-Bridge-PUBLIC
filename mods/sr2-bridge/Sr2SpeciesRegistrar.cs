@@ -92,6 +92,9 @@ namespace SlimeBridge.SR2
 
         public bool TryResolveDefinition(string canonicalId, out Il2Cpp.SlimeDefinition def) => _defs.TryGetValue(canonicalId, out def);
 
+        /// <summary>Canonical ids registered in this session (dev tools).</summary>
+        internal IEnumerable<string> Canonicals => _defs.Keys;
+
         public bool TryResolvePrefab(string canonicalId, out UnityEngine.GameObject prefab) => _prefabs.TryGetValue(canonicalId, out prefab);
 
         /// <summary>

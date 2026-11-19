@@ -131,7 +131,7 @@ class CoordinatorTests(unittest.TestCase):
         self.assertEqual(self.windows.calls, [('restore', 222), ('focus', 222)])
         self.assertEqual(plugin_reply(self.host, 'SR2', 'arrived')['kind'], 'arrive')
         self.assertEqual(self.state(), 'HOLDING')
-        self.assertIn(('minimize', 111), self.windows.calls)
+        self.assertNotIn(('minimize', 111), self.windows.calls, 'the game left behind is not minimized (no desktop flash on return)')
         message = plugin_reply(self.host, 'SR1', 'held')
         self.assertEqual((message['kind'], message['policy']), ('hold', 'FREEZE'))
         done = self.coord.poll()[-1]
@@ -794,3 +794,28 @@ class MenuDestinationTests(CoordinatorTests):
         self.assertEqual(last['state'], 'PREPARING')
         self.assertEqual(self.launcher.started, [])
         self.assertEqual(self.coord.transitions[-1]['deadline'], travel.DEADLINES['PREPARING_COLD'])
+
+
+class VacSyncTests(CoordinatorTests):
+    def test_the_vac_of_the_game_played_last_moves_to_the_front_game_without_a_teleport(self):
+        self.links.remember('sr1-save', 'sr2-save')
+        self.launcher._running |= {'SR1', 'SR2'}
+        self.coord.request_sync('SR1', 'SR2')                    # SR1 played last, SR2 started in front
+        self.coord.poll()
+        self.assertIsNone(self.host.travel_peek('SR1'), 'nothing before both saves are open')
+        self.proc.alive('SR1', 'sr1-save', 111)
+        self.proc.alive('SR2', 'sr2-save', 222)
+        self.coord.poll()
+        self.assertEqual(self.host.travel_peek('SR1')['kind'], 'prepare_departure')
+        plugin_reply(self.host, 'SR1', 'departure_ready', carry={'MOSAIC_SLIME': 1, 'CARROT_VEGGIE': 4})
+        self.coord.poll()
+        arrive = self.host.travel_peek('SR2')
+        self.assertEqual((arrive['kind'], arrive['reason'], arrive['carry']), ('arrive', 'sync', {'MOSAIC_SLIME': 1, 'CARROT_VEGGIE': 4}))
+        plugin_reply(self.host, 'SR2', 'arrived', carry={'MOSAIC_SLIME': 1, 'CARROT_VEGGIE': 4})
+        self.coord.poll()
+        self.assertEqual(self.host.travel_peek('SR1')['carry'], {'MOSAIC_SLIME': 1, 'CARROT_VEGGIE': 4})
+        plugin_reply(self.host, 'SR1', 'held', carry={'MOSAIC_SLIME': 1, 'CARROT_VEGGIE': 4})
+        done = self.coord.poll()[-1]
+        self.assertEqual(done['state'], 'COMPLETE')
+        self.assertEqual(self.windows.calls, [], 'a vac sync never moves windows')
+        self.assertEqual((self.coord._front, self.coord._parked), ('SR2', 'SR1'))

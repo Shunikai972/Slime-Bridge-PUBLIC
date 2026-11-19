@@ -210,7 +210,7 @@ namespace SlimeBridge.SR1
                     Resume(message.Reason, done);
                     break;
                 case "arrive":
-                    Arrive(message.Carry, message.Source, done);
+                    Arrive(message.Carry, message.Source, done, message.Reason == "sync");
                     break;
                 case "save_quit":
                     SaveAndQuit(message, done);
@@ -275,7 +275,7 @@ namespace SlimeBridge.SR1
             _overlay.Open(1.2f, () => { LockInput(false); done?.Invoke(true, report); });
         }
 
-        private void Arrive(Dictionary<string, int> offered, string source, TravelDone done)
+        private void Arrive(Dictionary<string, int> offered, string source, TravelDone done, bool syncOnly = false)
         {
             if (!WorldReady()) { done(false, "no_world"); return; }
             var accepted = offered.Count > 0 ? Sr1Carry.Receive(offered) : new Dictionary<string, int>();
@@ -290,8 +290,9 @@ namespace SlimeBridge.SR1
             var report = HeldReport();
             _held = false; _arrived = true;
             TravelScreen.FullscreenAgainOnArrival();          // started small behind the other game: the player's fullscreen comes back
-            var placed = SanctuaryHost.Instance?.PlacePlayerAtPortal(true) ?? false;
-            SanctuaryHost.Instance?.PulsePortal();
+            // A vac sync (the player is already here) moves items only: the player is not placed at the portal.
+            var placed = !syncOnly && (SanctuaryHost.Instance?.PlacePlayerAtPortal(true) ?? false);
+            if (!syncOnly) SanctuaryHost.Instance?.PulsePortal();
             var how = (placed ? "portal" : "in_place") + (report.Length > 0 ? "; " + report : "");
             if (!_overlay.IsCovering) { LockInput(false); done(true, how, accepted); return; }
             _overlay.Open(0.22f, () => { LockInput(false); done(true, how, accepted); });

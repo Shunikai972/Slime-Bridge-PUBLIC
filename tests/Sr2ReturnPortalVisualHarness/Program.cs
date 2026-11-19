@@ -105,6 +105,7 @@ sealed class TravelOverlay
 }
 static class TravelText
 {
+    public static bool IsFrench() => false;
     public static string Failure(string reason, string realm) => reason;
     public static string Opening(string realm) => realm;
 }

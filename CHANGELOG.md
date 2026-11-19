@@ -3,6 +3,16 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); the release script reads the section
 whose title matches `VERSION`.
 
+## [0.2.12] - 2026-11-19
+
+### Changed
+- Play with both games opens the game you chose on its menu, and you pick your save.
+  - The other game starts once that save is open, in the background (minimized, muted, lowest graphics).
+  - It opens the linked save. If you started a new game, it makes a new game too, silently, and links the two.
+  - Continue still opens both games straight on your last pair of saves.
+- A save is only made in the background game when you start a new game yourself.
+- The vac sync at launch only moves the vac between the two saves that belong together.
+
 ## [0.2.11] - 2026-11-19
 
 ### Added

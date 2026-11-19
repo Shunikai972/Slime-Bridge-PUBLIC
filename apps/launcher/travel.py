@@ -146,6 +146,8 @@ class TravelCoordinator:
         self._waiting = {}
         # Both games started with the front one not being the game played last: its vac must come over (no teleport).
         self._pending_sync = None
+        # Play with both games: start the other game once the player opened a save in the chosen one.
+        self._follow = None
         # Online play with one shared code (hosting / joining both games' online mods).
         self.online = OnlineSession(self._send, self._heartbeat, self._launcher.running, self._world_ready,
                                     lambda record_id: self._events.get(record_id, []), self._clock, cancel=self._cancel)
@@ -592,6 +594,7 @@ class TravelCoordinator:
             if not self.session_close_unconfirmed(transition['to']):
                 self._advance_session_close(transition)
         self._watch_session_end()
+        self._maybe_follow()
         self._maybe_start_sync()
         reply = self._call('GET', '/v1/portal/requests') or {}
         for request in reply.get('requests', []):
@@ -604,10 +607,58 @@ class TravelCoordinator:
             self._note_session()
         return [self.public(t) for t in self.transitions]
 
-    def request_sync(self, source, destination):
-        """Once both games have their save open, move the vac of ``source`` (played last) into ``destination`` (in front)."""
+    def request_sync(self, source, destination, source_save=None):
+        """Once both games have their save open, move the vac of ``source`` (played last) into ``destination`` (in front).
+        With ``source_save``, only when that is the save open over there (the player may have picked another ranch)."""
         with self._lock:
-            self._pending_sync = {'from': source, 'to': destination, 'since': self._clock()}
+            self._pending_sync = {'from': source, 'to': destination, 'since': self._clock(), 'source_save': source_save}
+
+    def follow(self, front, back, start):
+        """``back`` starts (``start(realm, env)``) once the player opened a save in ``front``: its linked save, or a new one."""
+        with self._lock:
+            self._follow = {'front': front, 'back': back, 'start': start, 'since': self._clock(), 'launched': False}
+
+    def _maybe_follow(self):
+        f = self._follow
+        if f is None:
+            return
+        front, back = f['front'], f['back']
+        save = lambda realm: (self._heartbeat(realm).get('status') or {}).get('save_id') if self._world_ready(realm) else None
+        if not self._launcher.running(front) or self._clock() - f['since'] > 3600:
+            self._follow = None
+            return
+        if f['launched']:
+            if f.get('new_name'):
+                made = save(back)
+                if made:
+                    # the new game made for the player's new ranch is its partner from now on
+                    sr1, sr2 = (f['front_save'], made) if front == 'SR1' else (made, f['front_save'])
+                    self._links.remember(sr1, sr2)
+                    self._follow = None
+                elif not self._launcher.running(back):
+                    self._follow = None
+            return
+        if self._launcher.running(back):
+            self._follow = None                                    # started by hand meanwhile: leave it alone
+            return
+        front_save = save(front)
+        if not front_save:
+            return                                                 # still on the menu
+        partner = self._links.lookup(front, front_save)
+        env = {'SLIMEBRIDGE_TRAVEL_MODE': 'DESTINATION'}
+        if partner:
+            env['SLIMEBRIDGE_TRAVEL_SAVE'] = partner
+        else:
+            f['new_name'] = NEW_NAME.sub('', f"SlimeBridge {front_save}"[:48]).strip() or 'SlimeBridge'
+            env['SLIMEBRIDGE_TRAVEL_NEW'] = f['new_name']
+        f.update(launched=True, front_save=front_save)
+        try:
+            f['start'](back, env)
+        except Exception:                                          # noqa: BLE001 - the player keeps playing; portal starts it later
+            self._follow = None
+            return
+        if partner:
+            self._follow = None
 
     def _maybe_start_sync(self):
         pending = self._pending_sync
@@ -621,6 +672,10 @@ class TravelCoordinator:
             return
         self._pending_sync = None
         save = lambda realm: (self._heartbeat(realm).get('status') or {}).get('save_id')
+        if pending.get('source_save') and save(src) != pending['source_save']:
+            return                                                 # another ranch is open over there: its vac is not this one's
+        if self._links.lookup(src, save(src) or '') not in (None, save(dst)):
+            return                                                 # the two open saves are not partners
         transition = {'id': uuid.uuid4().hex[:16], 'request_id': None, 'portal_id': None, 'from': src, 'to': dst, 'state': 'PREPARING',
                       'since': self._clock(), 'started': self._clock(), 'detail': None, 'history': [], 'launched': False,
                       'deadline': DEADLINES['PREPARING_WARM'], 'dest_save': save(dst), 'source_save': save(src), 'candidates': [],

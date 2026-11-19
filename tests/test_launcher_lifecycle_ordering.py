@@ -454,18 +454,36 @@ def _launch_fixture(tmp_path, running=(), beats=None, plugin_state='missing'):
 
 
 @pytest.mark.parametrize('front,back',[('SR1','SR2'),('SR2','SR1')])
-def test_play_both_opens_the_session_pair_and_the_back_game_waits_on_its_save(tmp_path,front,back):
-    api,started,patches=_launch_fixture(tmp_path)
+def test_play_both_opens_the_chosen_game_on_its_menu_and_the_other_follows_its_save(tmp_path,front,back):
+    beats={}
+    api,started,patches=_launch_fixture(tmp_path,beats=beats)
     api._travel._links.remember('ranch-sr1','ranch-sr2')
     api._session.set('SR1','ranch-sr1')
     with patches[0],patches[1],patches[2],patches[3]:
         assert api.launch('BOTH_'+front,confirmed=True)['ok']
-    envs=dict(started)
-    assert [g for g,_ in started]==[front,back]
-    assert (envs[front]['SLIMEBRIDGE_TRAVEL_MODE'],envs[front]['SLIMEBRIDGE_TRAVEL_SAVE'])==('RESUME','ranch-'+front.lower())
-    assert (envs[back]['SLIMEBRIDGE_TRAVEL_MODE'],envs[back]['SLIMEBRIDGE_TRAVEL_SAVE'])==('DESTINATION','ranch-'+back.lower())
-    assert api._travel._waiting[back]['save']=='ranch-'+back.lower()
+        assert [g for g,_ in started]==[front], 'only the chosen game starts, on its menu'
+        assert 'SLIMEBRIDGE_TRAVEL_MODE' not in started[0][1]
+        api._travel._maybe_follow()
+        assert len(started)==1, 'nothing more while the player is on the menu'
+        beats[front]={'pid':111,'status':{'player_alive':True,'save_id':'ranch-'+front.lower()}}
+        api._travel._maybe_follow()
+    (game,env)=started[1]
+    assert (game,env['SLIMEBRIDGE_TRAVEL_MODE'],env['SLIMEBRIDGE_TRAVEL_SAVE'])==(back,'DESTINATION','ranch-'+back.lower())
     assert (api._travel._front,api._travel._parked)==(front,back)
+
+
+def test_a_new_game_in_front_makes_a_new_game_behind_and_links_them(tmp_path):
+    beats={}
+    api,started,patches=_launch_fixture(tmp_path,beats=beats)
+    with patches[0],patches[1],patches[2],patches[3]:
+        assert api.launch('BOTH_SR1',confirmed=True)['ok']
+        beats['SR1']={'pid':111,'status':{'player_alive':True,'save_id':'brand-new'}}
+        api._travel._maybe_follow()
+        (game,env)=started[1]
+        assert (game,env['SLIMEBRIDGE_TRAVEL_NEW'])==('SR2','SlimeBridge brand-new')
+        beats['SR2']={'pid':222,'status':{'player_alive':True,'save_id':'made-for-it'}}
+        api._travel._maybe_follow()
+    assert api._travel._links.lookup('SR1','brand-new')=='made-for-it'
 
 
 def test_online_starts_the_missing_game_behind_the_one_being_played(tmp_path):
@@ -504,7 +522,7 @@ def test_the_typed_online_name_reaches_slime_rancher(tmp_path):
     with patches[0],patches[1],patches[2],patches[3]:
         assert api.launch('BOTH_SR1',confirmed=True)['ok']
     envs=dict(started)
-    assert envs['SR1']['SLIMEBRIDGE_ONLINE_NAME']=='Noam_42' and 'SLIMEBRIDGE_ONLINE_NAME' not in envs['SR2']
+    assert envs['SR1']['SLIMEBRIDGE_ONLINE_NAME']=='Noam_42'
 
 
 def test_starting_the_other_game_in_front_brings_the_vac_of_the_game_played_last(tmp_path):

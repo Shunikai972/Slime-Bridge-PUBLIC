@@ -532,7 +532,12 @@ class LauncherAPI:
                 pair[other(anchor[0])] = partner
         return pair
 
-    def _launch(self, target, confirmed=False, remember=False, resume=False, *, resume_partner=False, background=False):
+    def _launch_follower(self, realm, env):
+        """Started by the coordinator once the player opened a save in the other game (Play with both games)."""
+        return self._launch(realm, confirmed=True, background=True, forced_env=env)
+
+    def _launch(self, target, confirmed=False, remember=False, resume=False, *, resume_partner=False, background=False,
+                forced_env=None):
         """``background``: start ``target`` as the waiting half of a session (online, or next to the game being played)."""
         if target not in ('SR1', 'SR2', 'BOTH', 'BOTH_SR1', 'BOTH_SR2'):
             raise ValueError('target must be SR1, SR2, BOTH, BOTH_SR1 or BOTH_SR2')
@@ -546,13 +551,18 @@ class LauncherAPI:
         if (resume and resume_partner and target != 'BOTH' and not background and pair.get(other)
                 and pair.get(front) and self._primary(other) is not None and not self._launcher.running(other)):
             target = 'BOTH'
-        waiting = other if target == 'BOTH' else (target if background else None)
-        realms = ((front, other) if target == 'BOTH' else (target,))
+        # Play (not Continue) with both games: the chosen game opens on its menu and the player picks a save; the other one
+        # starts once that save is open, on its linked save, or as a new game when the player started a new one.
+        follow = target == 'BOTH' and not resume
+        waiting = other if target == 'BOTH' and not follow else (target if background else None)
+        realms = ((front,) if follow else (front, other)) if target == 'BOTH' else (target,)
         closing = [r for r in EXECUTABLES if self._travel.session_closing(r) or (r in realms and self._launcher.closing(r))]
         if closing:
             return {'ok': False, 'launched': [], 'errors': [{'realm': r, 'error': 'GAME_CLOSING'} for r in closing]}
         envs = {}
-        if target == 'BOTH' and pair.get(front):
+        if follow:
+            pass                                               # the front game shows its menu
+        elif target == 'BOTH' and pair.get(front):
             # Both games: the front one opens the session's save straight away, so the portal is instant.
             envs[front] = {'SLIMEBRIDGE_TRAVEL_MODE': 'RESUME', 'SLIMEBRIDGE_TRAVEL_SAVE': pair[front]}
         elif resume and not background:
@@ -561,7 +571,9 @@ class LauncherAPI:
                 envs[front] = {'SLIMEBRIDGE_TRAVEL_MODE': 'RESUME', 'SLIMEBRIDGE_TRAVEL_SAVE': last['save']}
         if waiting is not None:
             partner_realm = 'SR2' if waiting == 'SR1' else 'SR1'
-            if pair.get(waiting):
+            if forced_env:
+                envs[waiting] = dict(forced_env)
+            elif pair.get(waiting):
                 # The waiting game loads its linked save behind the portal card: minimized, muted, frozen until the crossing.
                 envs[waiting] = {'SLIMEBRIDGE_TRAVEL_MODE': 'DESTINATION', 'SLIMEBRIDGE_TRAVEL_SAVE': pair[waiting]}
             elif pair.get(partner_realm) and self._launcher.running(partner_realm):
@@ -615,7 +627,15 @@ class LauncherAPI:
                     self._session.set(realm, resume_env.get('SLIMEBRIDGE_TRAVEL_SAVE') if resume_env.get('SLIMEBRIDGE_TRAVEL_MODE') == 'RESUME' else None)
             except RuntimeErrorWithCode as exc:
                 errors.append({'realm': realm, 'error': exc.code, 'detail': exc.detail})
-        if target == 'BOTH' and len(launched) == 2:
+        if follow and launched:
+            self._travel.follow(front, other, self._launch_follower)
+            if previous and previous.get('realm') == other and previous.get('save'):
+                # Played last in the other game: once the pair is open, its vac comes to the game the player is in.
+                self._travel.request_sync(other, front, previous['save'])
+            with self._audio_policy_lock:
+                if launch_epoch == self._audio_startup_epoch:
+                    self._audio_startup_deadline = 0.0
+        elif target == 'BOTH' and len(launched) == 2:
             self._keep_in_front(front, launch_epoch)
             # One session: closing the game the player is in saves and closes the waiting one too.
             self._travel.park(front, other)
